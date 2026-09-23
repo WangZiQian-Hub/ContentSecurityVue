@@ -1,0 +1,14 @@
+{
+  "primaryPages": 9,
+  "secondaryRoutes": 37,
+  "errors": [],
+  "checked": [
+    "navigation",
+    "nested routes",
+    "mock invocation",
+    "task drawer",
+    "notifications",
+    "global search",
+    "mobile layout"
+  ]
+}

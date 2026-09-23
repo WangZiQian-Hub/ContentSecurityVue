@@ -1,0 +1,7 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": { "files.encoding": "utf8", "editor.tabSize": 2 },
+  "extensions": {
+    "recommendations": ["Vue.volar", "dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+  },
+}
