@@ -1,0 +1,61 @@
+/*
+ * 通用表格、状态文本与页脚
+ *
+ * .el-table 规则是对 Element Plus 表格的全局主题覆盖，会影响所有业务表格。
+ * status-* 仅表达任务状态颜色；page-footer 负责页面底部的辅助信息布局。
+ * 若只想调整某个页面的表格，请使用页面父类限定选择器，不要直接改全局变量。
+ */
+/* ==================== 09. 表格主题、任务状态与页脚 ==================== */
+/* 使用组件支持的 CSS 变量统一表头、行悬停、边框及正文颜色。 */
+/* shared-data-table 标记采用本规则的表格，页面级规则会跳过它。 */
+.el-table {
+  --el-table-header-bg-color: #eaf3fb;
+  --el-table-header-text-color: #365783;
+  --el-table-row-hover-bg-color: #f0f7ff;
+  --el-table-border-color: #e8f0f9;
+  --el-table-text-color: #47658d;
+}
+.el-table .cell {
+  font-size: 15px;
+  font-weight: 600;
+}
+.el-table th.el-table__cell {
+  font-weight: 600;
+}
+.task-detail-drawer .el-drawer__title {
+  font-size: 24px;
+}
+.task-detail-drawer .el-drawer__body > h3 {
+  font-size: 18px;
+ }
+.task-detail-drawer .el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+  font-size: 18px;
+}
+.task-detail-drawer pre { font-size: 16px; }
+/* 通用资源表格搜索框，供多个业务页面复用。 */
+.table-search {
+  max-width: 300px;
+  margin-bottom: 16px;
+}
+/* 任务状态：成功绿、运行蓝、等待/取消灰、失败红。 */
+.status-succeeded {
+  color: #00b581;
+}
+.status-running {
+  color: #1677ff;
+}
+.status-pending,
+.status-cancelled {
+  color: #96a6bb;
+}
+.status-failed {
+  color: #ff4263;
+}
+/* 页脚两端对齐；手机端隐藏右侧标语。 */
+.page-footer {
+  padding: 2px 2px;
+  color: #99abc0;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+}

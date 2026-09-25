@@ -16,7 +16,6 @@ const result = ref<Task>()
 const error = ref('')
 const actions = computed(() =>
   CAPABILITIES.filter((item) => {
-    if (route.path.startsWith('/model-training')) return item.code === 'training_monitor'
     return item.route.split('/')[1] === route.path.split('/')[1]
   }),
 )

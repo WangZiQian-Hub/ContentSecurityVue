@@ -33,18 +33,11 @@ export const navigation: NavItem[] = [
     path: '/data-governance',
     title: '数据治理',
     icon: 'Share',
-    description: '围绕数据处理、价值分析、异常治理、风险识别，构建高质量数据体系',
+    description: '数据处理 · 编排治理流程，生成可用数据版本',
     tabs: tabs(
       ['process', 'value-analysis', 'anomaly', 'risk-classification', 'quality'],
       ['数据处理', '数据价值分析', '异常数据治理', '风险识别与分级', '数据质量评估'],
     ),
-  },
-  {
-    path: '/model-training',
-    title: '模型训练',
-    icon: 'Cpu',
-    description: '训练任务编排、资源调度与训练过程监控',
-    tabs: tabs(['training', 'tasks', 'checkpoints'], ['训练工作台', '训练任务', '模型检查点']),
   },
   {
     path: '/model-train',

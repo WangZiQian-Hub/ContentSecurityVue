@@ -1,0 +1,80 @@
+/*
+ * 模型训推页面样式（对应 views/model-train）
+ *
+ * 负责模型分类入口、训练信息、键值详情、底部部署区域和相关网格比例。
+ * dl/dt/dd 当前是全局标签规则；如其他页面也使用这些标签，需留意连带影响。
+ * 模型页面在窄屏下的列数调整集中在 responsive.css。
+ */
+/* ==================== 12. 模型训推（views/model-train） ==================== */
+/* 顶部三类模型入口：图标、名称、说明和右侧箭头。 */
+.model-categories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.model-categories > a {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 19px 28px;
+  border: 5px solid white;
+  border-radius: 8px;
+}
+.model-categories .el-icon {
+  font-size: 43px;
+}
+.model-categories h2 {
+  font-size: 19px;
+  color: #082566;
+  margin-bottom: 8px;
+}
+.model-categories p {
+  font-size: 11px;
+  color: #647d9f;
+}
+.model-categories span {
+  margin-left: auto;
+  font-size: 30px;
+}
+/* 主区域左右列宽比例；training-content 设置训练信息文字。 */
+.model-grid {
+  grid-template-columns: 1.35fr 1fr;
+}
+.training-content h3 {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.training-content p {
+  font-size: 12px;
+  margin-bottom: 9px;
+  color: #8093ae;
+}
+/* 键值详情列表：dt 是 90px 宽的标签，dd 是值；这些标签规则全站生效。 */
+dl {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  font-size: 12px;
+  line-height: 2.2;
+}
+dt {
+  color: #7990b0;
+}
+dd {
+  margin: 0;
+}
+/* 模型底部三栏；1400px 以下最后一栏跨满一行。 */
+.model-bottom {
+  grid-template-columns: 1.7fr 1fr 0.75fr;
+}
+.deployment p {
+  padding: 17px 9px;
+  margin-bottom: 7px;
+  border-radius: 5px;
+  background: #f2f8ff;
+  font-size: 12px;
+}
+.deployment b {
+  float: right;
+  color: #1677ff;
+}

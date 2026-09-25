@@ -5,9 +5,6 @@ import AppIcon from '../../components/AppIcon.vue'
 import DataChart from '../../components/DataChart.vue'
 import CapabilityForm from '../../components/CapabilityForm.vue'
 import ResourceTable from '../../components/ResourceTable.vue'
-import TaskTable from '../../components/TaskTable.vue'
-import { useRoute } from 'vue-router'
-const route = useRoute()
 </script>
 <template>
   <KpiStrip kind="model" />
@@ -33,12 +30,9 @@ const route = useRoute()
       <span>›</span></router-link
     >
   </div>
-  <PanelCard v-if="route.params.tab === 'tasks'" title="训练任务" icon="Tickets"
-    ><TaskTable
-  /></PanelCard>
   <div class="grid model-grid">
     <PanelCard
-      :title="route.params.tab === 'checkpoints' ? '模型检查点 · epoch 7' : '模型训练'"
+      title="模型训练"
       icon="Setting"
       ><div class="grid two training-content">
         <div>
@@ -67,14 +61,12 @@ const route = useRoute()
           <DataChart :height="225" />
         </div></div></PanelCard
     ><PanelCard
-      :title="route.path.startsWith('/model-training') ? '训练监控调用' : '模型调用'"
+      title="模型调用"
       icon="VideoPlay"
       ><CapabilityForm
-        :capability="
-          route.path.startsWith('/model-training') ? 'training_monitor' : 'model_risk_governance'
-        "
-        :text-input="!route.path.startsWith('/model-training')"
-        :title="route.path.startsWith('/model-training') ? '查询训练状态' : '开始调用'"
+        capability="model_risk_governance"
+        text-input
+        title="开始调用"
     /></PanelCard>
   </div>
   <div class="grid model-bottom">

@@ -9,9 +9,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { navigation } from './navigation'
 const views = {
   '/dashboard': () => import('../views/dashboard/DashboardPage.vue'),
-  '/data-resource': () => import('../views/data-resource/DataResourcePage.vue'),
-  '/data-governance': () => import('../views/data-governance/DataGovernancePage.vue'),
-  '/model-training': () => import('../views/model-train/ModelPage.vue'),
   '/model-train': () => import('../views/model-train/ModelPage.vue'),
   '/compliance': () => import('../views/compliance/CompliancePage.vue'),
   '/evaluation': () => import('../views/evaluation/EvaluationPage.vue'),
@@ -22,12 +19,49 @@ export default createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/dashboard' },
-    ...navigation.map((item) => ({
-      path: `${item.path}/:tab?`,
-      component: views[item.path as keyof typeof views],
-      beforeEnter: (to: { params: Record<string, unknown> }) =>
-        !to.params.tab || item.tabs.some((tab) => tab.path === to.params.tab) ? true : item.path,
-    })),
+    {
+      path: '/data-governance',
+      component: () => import('../views/data-governance/DataGovernancePage.vue'),
+      children: [
+        { path: '', alias: 'process', name: 'governance-process', component: () => import('../views/data-governance/DataProcessPage.vue') },
+        { path: ':pathMatch(.*)*', redirect: '/data-governance' },
+      ],
+    },
+    {
+      path: '/data-resource',
+      component: () => import('../views/data-resource/DataResourcePage.vue'),
+      children: [
+        {
+          path: '',
+          name: 'resource-overview',
+          component: () => import('../views/data-resource/ResourceOverviewPage.vue'),
+        },
+        {
+          path: 'ingest',
+          name: 'resource-ingest',
+          component: () => import('../views/data-resource/DataIngestPage.vue'),
+        },
+        {
+          path: 'datasets',
+          name: 'resource-datasets',
+          component: () => import('../views/data-resource/DatasetManagePage.vue'),
+        },
+        {
+          path: 'statistics',
+          name: 'resource-statistics',
+          component: () => import('../views/data-resource/ResourceStatisticsPage.vue'),
+        },
+        { path: ':pathMatch(.*)*', redirect: '/data-resource' },
+      ],
+    },
+    ...navigation
+      .filter((item) => !['/data-resource', '/data-governance'].includes(item.path))
+      .map((item) => ({
+        path: `${item.path}/:tab?`,
+        component: views[item.path as keyof typeof views],
+        beforeEnter: (to: { params: Record<string, unknown> }) =>
+          !to.params.tab || item.tabs.some((tab) => tab.path === to.params.tab) ? true : item.path,
+      })),
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })

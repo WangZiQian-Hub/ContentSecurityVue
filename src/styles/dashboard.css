@@ -1,0 +1,218 @@
+/*
+ * 工作台首页样式（对应 views/dashboard/DashboardPage.vue）
+ *
+ * 负责核心治理链路、应用场景入口、支撑能力入口和算力一体化服务底座。
+ * 首页内部模块均以 dashboard 模板中的语义类名为入口，避免影响其他页面。
+ * 基础设施区域的标题、说明、资源名称和图标尺寸统一在本文件末段维护。
+ */
+/* ==================== 08. 首页模块（views/dashboard） ==================== */
+/* 8.1 核心治理链路：横排节点、圆形图标与连接箭头。 */
+.core-chain {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 20px 8px;
+}
+.chain-node {
+  text-align: center;
+  flex: 1;
+}
+/* 通用圆形流程节点：审计、血缘模块也复用，并单独覆盖大小。 */
+.orb {
+  height: 93px; /* 外部圆圈高度 */
+  width: 93px; /* 外部圆圈宽度 */
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 10px;
+  font-size: 45px; /* 圆圈内部图标大小 */
+  border: 5px solid #ffffff88;
+  box-shadow:
+    0 0 0 4px #dbeaff88,
+    inset 0 0 18px #ffffff60;
+  background: linear-gradient(145deg, #6fc6ff, #0674ff);
+  color: #fff;
+}
+/* 同时拥有 orb 和 tone-* 类时，用流程节点专用渐变覆盖基础配色。 */
+.orb.tone-1,
+.orb.tone-3 {
+  background: linear-gradient(145deg, #b499ff, #7045ed);
+}
+.orb.tone-2 {
+  background: linear-gradient(145deg, #ffabb8, #ff375e);
+}
+.orb.tone-4 {
+  background: linear-gradient(145deg, #75e4e8, #00b4cf);
+}
+/* 任务链中的标题*/
+.core-chain h3 {
+  font-size: 20px;
+  margin: 8px 0 7px;
+  color: #08216a;
+}
+/* 任务连中的标题下方的小字 */
+.core-chain p {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0px 0 0 7px;
+  line-height: 1.5;
+  color: #647b9e;
+  white-space: pre-line;
+}
+.chain-arrow {
+  width: 120px; /* 箭头长度 */
+  height: 40px; /* 箭头整体高度 */
+  flex-shrink: 0;
+  margin-top: -75px; /* 上下位置 */
+
+  /* 从左侧透明逐渐变成蓝色 */
+  background: linear-gradient(
+    90deg,
+    rgba(71, 154, 255, 0) 0%,
+    rgba(71, 154, 255, 0.3) 30%,
+    rgba(71, 154, 255, 0.75) 65%,
+    #278cff 100%
+  );
+
+  /* 裁剪成箭头形状 */
+  clip-path: polygon(
+    0 25%,
+    /* ① 箭杆左上 */ 76% 25%,
+    /* ② 箭杆右上 */ 76% 0,
+    /* ③ 箭头尖部的右上起点 */ 100% 50%,
+    /* ④ 最右侧箭头尖端 */ 76% 100%,
+    /* ⑤ 箭头尖部的右下终点 */ 76% 75%,
+    /* ⑥ 箭杆右下 */ 0 75% /* ⑦ 箭杆左下 */
+  );
+}
+/* 8.2 应用场景入口：桌面三列；悬停时卡片上移 2px。 */
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+/* 蓝色小卡片 */
+.scene-tile {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  border: 1px solid #dcecff;
+  background: linear-gradient(110deg, #f0f8ff, #eaf5ff);
+  border-radius: 7px;
+  padding: 15px 20px;
+  transition: transform 0.2s;
+  height: 90px;
+}
+.scene-tile:hover {
+  transform: translateY(-2px);
+  border-color: #78b9ff;
+}
+.scene-tile > .el-icon {
+  font-size: 40px;
+  color: #0877ff;
+}
+.scene-tile h3 {
+  font-size: 18px;
+  margin-bottom: 7px;
+}
+.scene-tile p {
+  font-size: 15px;
+  color: #7189aa;
+  white-space: nowrap;
+}
+.scene-tile .text-tone-1 {
+  color: #ff4868;
+}
+.scene-tile .text-tone-2 {
+  color: #7755ed;
+}
+/* 8.3 支撑能力入口：桌面五列，窄屏逐步变为三列和两列。 */
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.support-tile {
+  display: flex;
+  padding: 15px 12px;
+  align-items: center;
+  border-radius: 6px;
+  gap: 18px;
+  font-size: 30px;
+}
+.support-tile > .el-icon {
+  font-size: 45px;
+  margin-left: 7px;
+}
+.support-tile > span {
+  margin-left: auto;
+  font-size: 22px;
+}
+.support-tile h3 {
+  color: #10275f;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.support-tile p {
+  color: #6881a4;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-line; /* 让字符串中的 \n 显示为换行 */
+}
+/* 8.4 基础设施：外框、渐变标题条以及内部资源介绍。 */
+.infrastructure {
+  border: 3px solid #bedaff;
+  border-radius: 9px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.infrastructure > h2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: white;
+  font-size: 20px;
+  background: linear-gradient(90deg, #3184f8, #59a0fa, #3184f8);
+  padding: 9px 15px;
+}
+.infrastructure > h2 > .el-icon {
+  font-size: 28px; /* 左侧图标大小 */
+}
+.infrastructure h2 small {
+  margin-left: auto;
+  font-size: 15px;
+  color: #f3f5f8;
+  font-weight: 500px;
+}
+.infrastructure > .grid {
+  padding: 6px;
+  gap: 12px;
+}
+.infrastructure .grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: #eaf4ff;
+  padding: 12px;
+  border-radius: 6px;
+}
+.infrastructure .grid .el-icon {
+  font-size: 45px;
+  color: #0877ff;
+}
+.infrastructure h3 {
+  font-size: 17px;
+  margin-bottom: 5px;
+}
+.infrastructure p {
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+.infrastructure small {
+  font-size: 12px;
+  color: #758eaf;
+}

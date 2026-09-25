@@ -1,0 +1,40 @@
+/*
+ * 通用表单与结果展示
+ *
+ * 包含全宽工具类、Element Plus 表单间距、调用结果面板及 pre 代码块。
+ * Element Plus 和原生标签选择器均为全局规则，修改字号或间距时要检查所有表单页。
+ * 业务页面独有的字段排列应写入对应业务样式文件，而不是继续扩大本文件范围。
+ */
+/* ==================== 11. 通用表单与结果展示 ==================== */
+/* 全宽辅助类，以及 Element Plus 表单标签和表单项间距。 */
+.full-width {
+  width: 100%;
+}
+.el-form-item__label {
+  font-size: 12px !important;
+}
+.el-form-item {
+  margin-bottom: 16px;
+}
+/* 绿色结果面板；summary 是可展开详情的标题。 */
+.result-box {
+  background: #ebfaf4;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.result-box p {
+  margin: 10px 0;
+}
+.result-box summary {
+  cursor: pointer;
+  color: #16875c;
+}
+/* 代码/JSON 保留原换行，同时允许超长连续字符串折行。影响全站 pre。 */
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.6;
+}

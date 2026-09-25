@@ -29,14 +29,14 @@ function showTask(task: Task) {
         new Date(row.createdAt).toLocaleString('zh-CN', { hour12: false })
       }}</template></el-table-column
     >
-    <el-table-column label="操作" width="80"
+    <el-table-column label="操作" width="100"
       ><template #default="{ row }"
         ><el-button link type="primary" @click="showTask(row)">查看</el-button></template
       ></el-table-column
     >
     </el-table>
     
-    <el-drawer v-model="isOpen" title="任务详情" size="480px"
+    <el-drawer v-model="isOpen" title="任务详情" size="480px" class="task-detail-drawer"
     ><template v-if="selected"
       ><h3>{{ selected.name }}</h3>
       <el-descriptions :column="1" border

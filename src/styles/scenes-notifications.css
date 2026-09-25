@@ -1,0 +1,56 @@
+/*
+ * 应用场景页面与全局通知样式
+ *
+ * scenario-* 对应场景页面顶部介绍区域；notification 对应 AppLayout 消息抽屉。
+ * 两组样式虽然同处一个文件，但选择器入口相互独立，不共享布局状态。
+ * 修改 notification 会影响所有消息条目，页面专属通知应增加父级范围限制。
+ */
+/* ==================== 15. 应用场景与通知 ==================== */
+/* 场景页顶部介绍横幅：英文小标、标题和说明。 */
+.scenario-banner {
+  padding: 25px 35px;
+  margin-bottom: 15px;
+  border: 1px solid #d0e6ff;
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at right, #b9dcff, transparent 70%),
+    linear-gradient(100deg, #e1efff, #fafdff);
+}
+.scenario-banner > span {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #6795d3;
+}
+.scenario-banner h2 {
+  font-size: 23px;
+  margin: 10px 0;
+}
+.scenario-banner p {
+  color: #6a88b3;
+  font-size: 12px;
+}
+/* AppLayout 消息抽屉中的通知条目，以底部边框分隔。 */
+.notification {
+  border-bottom: 1px solid #e6edf5;
+  padding: 20px 0;
+}
+.notification b {
+   font-size: 18px;  /* 平台初始化完成、前端原型演示 */
+  }
+.notification p {
+  color: #7485a0;
+  line-height: 1.8;
+  font-size: 16px;  /* 每条消息的说明*/
+  margin: 10px 0;
+}
+.notification small {
+  color: #98abc2;
+  font-size: 16px;  /* 系统通知 · 未读 */
+}
+.notice-drawer .el-drawer__title {
+  font-size: 22px;  /* “系统消息”标题 */
+  font-weight: 700;
+}
+.notice-drawer .el-button {
+  font-size: 16px;
+}

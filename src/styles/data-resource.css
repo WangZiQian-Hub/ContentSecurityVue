@@ -1,0 +1,472 @@
+/*
+ * 2 数据资源页面样式（对应 views/data-resource）
+ *
+ * 仅维护资源列表与侧栏的列宽比例，以及表格搜索框的最大宽度。
+ * 公共表格外观位于 tables-footer.css，公共网格能力位于 shared-components.css。
+ * 如果增加数据资源专属模块，请继续放在本文件并使用页面语义类名限定范围。
+ */
+/* ====================  数据资源（views/data-resource） ==================== */
+/* 左侧资源区较宽；搜索框最大宽度 300px。 */
+.resource-grid {
+  grid-template-columns: 1.65fr 1fr;
+}
+.table-search {
+  max-width: 300px;
+  margin-bottom: 16px;
+}
+
+/* 数据资源拥有独立父容器，避免全局 KPI 的负边距影响子页面。 */
+.resource-workspace {
+  min-width: 0;
+}
+.resource-tabs {  /* 整个导航栏 */
+  display: flex;
+  align-items: center;
+  gap: 12px;  /* 菜单项之间的间距 */
+  background: #ffffffd9;
+  border-radius: 8px;
+  padding: 0 15px;  /* 整个导航栏左右留白 */
+  margin-bottom: 14px;
+}
+.resource-tabs a {  /* 导航栏里面的所有链接 */
+  display: flex;
+  align-items: center;
+  gap: 13px;  /* 图标与文字间距 */
+  padding: 15px 22px;  /* 菜单项高度、宽度：上下 / 左右 */
+  border-bottom: 3px solid transparent;
+  font-size: 18px;    /* 文字大小 */
+  font-weight: 600;
+  color: #43608e;
+}
+.resource-tabs a .el-icon {
+  font-size: 23px;  /* 图标大小 */
+}
+.resource-tabs a:hover,  /* 鼠标悬停的链接 */
+.resource-tabs a.selected {  /* 当前被选中的链接 */
+  color: #087bff;
+}
+.resource-tabs a.selected {
+  border-bottom-color: #087bff;
+}
+.resource-page-body {
+  min-height: 450px;
+}
+.resource-overview-top {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+.resource-overview-bottom {
+  display: grid;
+  grid-template-columns: 2.1fr 1.1fr 1fr;
+  gap: 14px;
+}
+.resource-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 12px;
+  background: linear-gradient(110deg, #f6fbff, #fff);
+  border: 1px solid #deedff;
+  border-radius: 7px;
+  margin-bottom: 9px;
+}
+.resource-shortcut > .el-icon {
+  flex-shrink: 0;
+  background: #087bff;
+  color: white;
+  border-radius: 50%;
+  font-size: 26px;
+  width: 44px;
+  height: 44px;
+}
+.resource-shortcut b {
+  color: #087bff;
+  font-size: 17px;
+}
+.resource-shortcut p {
+  color: #8193ae;
+  font-size: 15px;
+  margin-top: 6px;
+}
+.resource-shortcut > span {
+  margin-left: auto;
+  color: #087bff;
+  font-size: 25px;
+}
+.resource-bars {
+  padding: 10px 0;
+  display: grid;
+  gap: 28px;  /* 每一行之间的上下距离 */
+}
+.resource-bar-row {
+  display: grid;
+  grid-template-columns: 70px minmax(50px, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;  /*语言名称和右侧百分比的文字大小*/
+  font-weight: 700;
+}
+.resource-bar-row > span:last-child {
+  text-align: right;
+}
+.resource-bar-row .el-progress-bar__outer {
+  background: #eaf2fc;
+  border-radius: 3px;
+}
+.resource-bar-row .el-progress-bar__inner {
+  border-radius: 3px;
+}
+.resource-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 18px;
+}
+.resource-toolbar > .el-input {
+  max-width: 260px;
+}
+.resource-toolbar > .el-select {
+  width: 160px;
+}
+.resource-workspace .el-table:not(.shared-data-table) {
+  --el-table-header-bg-color: #eaf4ff;
+  --el-table-header-text-color: #315181;
+  --el-table-border-color: #edf3fa;
+  color: #254b81;
+  font-size: 13px;
+}
+.resource-workspace .el-table:not(.shared-data-table) th.el-table__cell {
+  padding: 10px 0;
+}
+.resource-workspace .el-table:not(.shared-data-table) td.el-table__cell {
+  padding: 10px 0;
+}
+.resource-workspace .el-pagination {
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+/* 数据接入趋势右边日期选择 */
+.trend-days-select .el-select__wrapper {
+  min-height: 30px; /* 下拉框高度 */
+  font-size: 16px;  /* 文字大小 */
+}
+.trend-days-popper .el-select-dropdown__item {
+  font-size: 22px; /* 展开后“最近7天 / 最近3天”的文字大小 */
+}
+.resource-ingest-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.75fr 1.1fr;
+  gap: 14px;
+}
+.resource-source-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.resource-source-grid button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 104px;
+  border: 1px solid #dbe8fa;
+  border-radius: 6px;
+  background: #fff;
+  color: #284777;
+}
+.resource-source-grid button > .el-icon {
+  font-size: 31px;
+  color: #087bff;
+}
+.resource-source-grid button.selected {
+  border-color: #087bff;
+  background: #f0f8ff;
+  box-shadow: inset 0 0 0 1px #087bff;
+}
+.resource-source-grid button b {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border-radius: 0 5px;
+  background: #087bff;
+  color: white;
+  padding: 0 5px;
+}
+.resource-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 18px;
+}
+.resource-ingest-form .el-form-item {
+  margin-bottom: 12px;
+}
+.resource-ingest-form .el-form-item__label {
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.resource-upload-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 18px;
+}
+.resource-ingest-form .el-upload {
+  width: 100%;
+}
+.resource-ingest-form .el-upload-dragger {
+  padding: 20px 10px;
+  background: #f9fcff;
+}
+.resource-ingest-form .el-upload-dragger .el-icon {
+  font-size: 42px;
+  color: #73aaff;
+  display: block;
+  margin: 0 auto 8px;
+}
+.resource-ingest-form .el-upload-dragger p {
+  margin-top: 7px;
+  font-size: 11px;
+  color: #8194b0;
+  line-height: 1.6;
+}
+.ingest-task-detail .el-dialog__title {
+  font-size: 22px; /* 弹窗标题 */
+  font-weight: 700;
+}
+.ingest-task-detail .el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+  font-size: 18px; /* “任务名称”等标签及右侧内容 */
+}
+.resource-switches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 15px;
+  margin-top: 8px;
+}
+.resource-switches label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.resource-switches .el-switch {
+  --el-switch-height: 18px;
+  --el-switch-button-size: 14px;
+}
+.resource-submit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  gap: 10px;
+}
+.resource-submit small {
+  font-size: 11px;
+  color: #8d9bb3;
+}
+.resource-submit .el-button {
+  min-width: 170px;
+  margin-left: auto;
+}
+.resource-source-hint {
+  min-height: 147px;
+  text-align: center;
+  background: #f6faff;
+  padding: 15px;
+  border: 1px dashed #bad7fb;
+  border-radius: 6px;
+}
+.resource-source-hint .el-icon {
+  display: block;
+  margin: 0 auto 8px;
+  font-size: 35px;
+  color: #087bff;
+}
+.resource-source-hint p {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #7b91b1;
+}
+.resource-task-progress {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  min-height: 215px;
+}
+.resource-task-progress .el-progress__text b {
+  font-size: 29px;
+  color: #082e78;
+}
+.resource-task-progress .el-progress__text p {
+  font-size: 13px;
+  margin-top: 9px;
+}
+.resource-task-progress .el-step__title {
+  font-size: 13px;
+  line-height: 28px;
+}
+.resource-task-name {
+  font-size: 12px;
+  color: #7c92b2;
+  border-bottom: 1px solid #e7f0fc;
+  padding-bottom: 15px;
+  margin-bottom: 12px;
+}
+.resource-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.resource-result-grid > div {
+  padding: 14px 8px;
+  text-align: center;
+  border: 1px solid #e5effb;
+  border-radius: 6px;
+}
+.resource-result-grid span {
+  display: block;
+  font-size: 12px;
+}
+.resource-result-grid b {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+}
+.resource-result-grid > div:first-child {
+  color: #08a87f;
+}
+.resource-result-grid > div:last-child {
+  color: #ff4260;
+}
+.resource-detail-metrics {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 5px 0 25px;
+}
+.resource-detail-metrics span,
+.resource-detail-metrics b {
+  display: block;
+}
+.resource-detail-metrics span {
+  color: #7b8daa;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.resource-detail-metrics b {
+  font-size: 18px;
+  color: #153c77;
+}
+.resource-description {
+  background: #f1f6fd;
+  border-radius: 6px;
+  padding: 15px;
+  line-height: 1.8;
+  margin-bottom: 22px;
+  color: #61799e;
+}
+.resource-detail .el-descriptions__cell {
+  padding-bottom: 22px !important;
+}
+.resource-json {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f3f7fc;
+  padding: 14px;
+  font-size: 12px;
+}
+.resource-statistics-filter {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.resource-statistics-filter .el-select {
+  width: 200px;
+}
+.resource-statistics-filter .el-date-editor {
+  max-width: 380px;
+}
+.resource-statistics-filter .el-button {
+  min-width: 130px;
+}
+.resource-statistics-top {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 14px;
+}
+.resource-statistics-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 14px;
+}
+.resource-quality {
+  display: flex;
+  align-items: center;
+}
+.resource-quality > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.resource-quality > div:last-child {
+  width: 120px;
+  text-align: center;
+  background: #f4f9ff;
+  border-radius: 8px;
+  padding: 20px 12px;
+}
+.resource-quality b {
+  display: block;
+  font-size: 36px;
+  color: #087bff;
+  padding: 10px 0;
+}
+.resource-quality span {
+  font-size: 13px;
+  color: #5d78a2;
+}
+.resource-issue {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+.resource-issue > i {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  text-align: center;
+  background: #ffad36;
+  color: #fff;
+  font-style: normal;
+  font-weight: bold;
+}
+.resource-issue > i.danger {
+  background: #ff4260;
+}
+.resource-issue > b {
+  margin-left: auto;
+}
+.resource-issue-track {
+  width: 90px;
+  height: 7px;
+  background: #fff0e8;
+  border-radius: 4px;
+}
+.resource-issue-track i {
+  height: 100%;
+  display: block;
+  background: #ffa13c;
+  border-radius: inherit;
+}
+.resource-demo-note {
+  color: #8295b0;
+  font-size: 12px;
+  margin: 0 0 10px;
+}

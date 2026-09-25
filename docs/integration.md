@@ -6,7 +6,7 @@
 
 - Vue 3 + TypeScript strict + Vite + Pinia + Element Plus + ECharts。
 - 页面按整体平台能力组织，不显示课题编号。
-- 用户要求九个一级入口，单独增加 `/model-training`；规范的 `/model-train` 保留。
+- 当前保留八个一级入口，模型相关功能统一由 `/model-train`（模型训推）提供。
 - 所有能力统一 `POST /api/v1/tasks/execute`，前端不访问 adapter；补充材料的 `/api/tasks/execute` 采用正式 API 规范的带版本路径。
 - 20 项能力与示例输入见 `src/api/capability.ts`；各业务页下方提供能力入口。
 - 请求序列化为 snake_case，响应转换为 camelCase。注入 token、Request ID，并回传后端 Trace ID。

@@ -3,15 +3,28 @@ import type { Kpi } from '../types'
 type KpiKind =
   | 'dashboard'
   | 'governance'
+  | 'governance-process'
   | 'model'
   | 'compliance'
   | 'evaluation'
-  | 'resource'
+  | 'resource-overview'
+  | 'resource-ingest'
+  | 'resource-datasets'
+  | 'resource-statistics'
   | 'system'
 
 const icons = ['Coin', 'Document', 'WarningFilled', 'Box', 'CircleCheckFilled', 'PieChart']
 
-const rawKpis: Record<KpiKind, Array<[string, number, string]>> = {
+// 名称、数值、单位；可选变化率、图标和稳定 ID。
+// 旧页面保留原来的三项写法，新页面可提供完整展示信息。
+type KpiRow = [string, number, string, number?, string?, string?]
+const rawKpis: Record<KpiKind, KpiRow[]> = {
+  'governance-process': [
+    ['处理任务总数', 128, '个', 12, 'Coin', 'process-total'],
+    ['正在运行', 3, '个', -25, 'VideoPlay', 'process-running'],
+    ['今日处理量', 268400, '条次', 18, 'Document', 'process-today'],
+    ['任务成功率', 98.4, '%', 0.6, 'Shield', 'process-success'],
+  ],
   dashboard: [
     ['数据资源总量', 12560, 'TB'],
     ['高价值语料数量', 2318, '万条'],
@@ -47,11 +60,33 @@ const rawKpis: Record<KpiKind, Array<[string, number, string]>> = {
     ['平均耗时', 2.6, '小时'],
     ['留痕完整率', 98.7, '%'],
   ],
-  resource: [
-    ['数据集总数', 128, '个'],
-    ['数据资源总量', 12560, 'TB'],
-    ['接入数据源', 36, '个'],
-    ['数据可用率', 98.2, '%'],
+  'resource-overview': [
+    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
+    ['数据总量', 12.56, 'TB', 8, 'Document', 'storage'],
+    ['接入数据源', 36, '个', 20, 'Share', 'sources'],
+    ['今日新增', 8.6, 'GB', 35, 'Calendar', 'today'],
+    ['数据可用率', 98.2, '%', 0.6, 'CircleCheckFilled', 'availability'],
+    ['异常数据', 23, '条', -42, 'WarningFilled', 'anomalies'],
+  ],
+  'resource-ingest': [
+    ['接入任务', 326, '个', 12, 'List', 'tasks'],
+    ['运行中', 8, '个', 33, 'VideoPlay', 'running'],
+    ['今日接入', 8.6, 'GB', 35, 'Coin', 'today'],
+    ['成功率', 98.7, '%', 1.2, 'CircleCheckFilled', 'success'],
+  ],
+  'resource-datasets': [
+    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
+    ['可用数据集', 116, '个', 8, 'Document', 'ready'],
+    ['处理中', 8, '个', 33, 'Loading', 'processing'],
+    ['异常数据集', 4, '个', -50, 'WarningFilled', 'poor'],
+  ],
+  'resource-statistics': [
+    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
+    ['数据总量', 12.56, 'TB', 8, 'Document', 'storage'],
+    ['本月新增', 1.28, 'TB', 35, 'CirclePlusFilled', 'month'],
+    ['数据记录', 3.68, '亿条', 20, 'Document', 'records'],
+    ['数据可用率', 98.2, '%', 0.6, 'CircleCheckFilled', 'availability'],
+    ['接入成功率', 98.7, '%', 1.2, 'Connection', 'success'],
   ],
   system: [
     ['平台用户', 128, '人'],
@@ -64,13 +99,13 @@ const rawKpis: Record<KpiKind, Array<[string, number, string]>> = {
 export function getMockKpis(kind: string): Kpi[] {
   const safeKind: KpiKind = kind in rawKpis ? (kind as KpiKind) : 'dashboard'
 
-  return rawKpis[safeKind].map(([label, value, unit], index) => ({
-    id: `${safeKind}-${index + 1}`,
+  return rawKpis[safeKind].map(([label, value, unit, changeRate, icon, id], index) => ({
+    id: id ?? `${safeKind}-${index + 1}`,
     label,
     value,
     unit,
     // 保留当前原型效果：第三张卡片下降 26%，其余卡片上升 12%。
-    changeRate: index === 2 ? -26 : 12,
-    icon: icons[index] || 'DataLine',
+    changeRate: changeRate ?? (index === 2 ? -26 : 12),
+    icon: icon ?? icons[index] ?? 'DataLine',
   }))
 }

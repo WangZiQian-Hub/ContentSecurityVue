@@ -1,32 +1,47 @@
+// “数据资源”
 <script setup lang="ts">
-import KpiStrip from '../../components/KpiStrip.vue'
-import PanelCard from '../../components/PanelCard.vue'
-import ResourceTable from '../../components/ResourceTable.vue'
-import CapabilityForm from '../../components/CapabilityForm.vue'
-import DataChart from '../../components/DataChart.vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import KpiStrip from '../../components/KpiStrip.vue'
+import AppIcon from '../../components/AppIcon.vue'
+import { useDataResourceStore } from '../../stores/data-resource'
+import type { ResourceView } from '../../types/data-resource'
 const route = useRoute()
+const store = useDataResourceStore()
+const view = computed(() => String(route.name).replace('resource-', '') as ResourceView)
+// 与其他模块统一：卡片通过 kind 调用 GET /api/v1/kpis。生成 KpiKind
+const kpiKind = computed(() => `resource-${view.value}`)
+const links = [
+  { path: '/data-resource', title: '资源总览', icon: 'House' },
+  { path: '/data-resource/ingest', title: '数据接入', icon: 'UploadFilled' },
+  { path: '/data-resource/datasets', title: '数据集管理', icon: 'FolderOpened' },
+  { path: '/data-resource/statistics', title: '数据资源统计', icon: 'Histogram' },
+]
+watch(
+  view,
+  (value) => {
+    void store.loadSummary(value)
+  },
+  { immediate: true },
+)
 </script>
 <template>
-  <KpiStrip kind="resource" />
-  <div class="grid resource-grid">
-    <PanelCard title="数据集管理" icon="Coin"
-      ><ResourceTable resource="datasets" searchable /></PanelCard
-    ><PanelCard
-      :title="route.params.tab === 'statistics' ? '数据资源统计' : '数据接入'"
-      icon="UploadFilled"
-      ><DataChart
-        v-if="route.params.tab === 'statistics'"
-        kind="bar"
-        :height="300" /><CapabilityForm
-        v-else
-        capability="data_ingest"
-        title="创建数据接入任务"
-        text-input
-    /></PanelCard>
-  </div>
-  <div class="grid two">
-    <PanelCard title="数据质量分布" icon="PieChart"><DataChart kind="donut" /></PanelCard
-    ><PanelCard title="数据价值维度" icon="DataAnalysis"><DataChart kind="radar" /></PanelCard>
+  <div class="resource-workspace">
+    <KpiStrip :kind="kpiKind" />
+    <nav class="resource-tabs" aria-label="数据资源页面导航">
+      <router-link
+        v-for="link in links"
+        :key="link.path"
+        :to="link.path"
+        :class="{ selected: route.path === link.path }"
+        :aria-current="route.path === link.path ? 'page' : undefined"
+      >
+        <AppIcon :name="link.icon" />{{ link.title }}
+      </router-link>
+    </nav>
+    <el-alert v-if="store.error" :title="store.error" type="error" :closable="false" show-icon>
+      <el-button link type="primary" @click="store.loadSummary(view)">重新加载</el-button>
+    </el-alert>
+    <div v-loading="store.loading" class="resource-page-body"><router-view /></div>
   </div>
 </template>

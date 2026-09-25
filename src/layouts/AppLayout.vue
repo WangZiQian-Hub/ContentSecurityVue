@@ -5,7 +5,7 @@
 - 当前任务按钮。
 - 系统消息按钮。
 - 用户入口。
-- 左侧九个一级菜单。
+- 左侧八个一级菜单。
 - 当前页面标题和说明。
 - 当前日期时间。
 - Mock 演示标记。
@@ -50,7 +50,7 @@ const matches = computed(() =>
   navigation
     .flatMap((item) => [
       { value: item.title, path: item.path },
-      ...item.tabs.map((tab) => ({
+      ...item.tabs.filter((tab) => item.path !== '/data-governance' || tab.path === 'process').map((tab) => ({
         value: `${item.title} / ${tab.title}`,
         path: `${item.path}/${tab.path}`,
       })),
@@ -81,6 +81,7 @@ function openUserManagement() {
       ><span class="brand-tagline">AI赋能安全治理 · 构建清朗数字空间</span>
       <div class="top-actions">
         <el-autocomplete
+          popper-class="global-search-dropdown"
           v-model="query"   
           :fetch-suggestions="searchPages"
           placeholder="搜索功能、数据、任务等…"
@@ -105,7 +106,7 @@ function openUserManagement() {
       </div>
     </header>
 
-    /** 左侧菜单显示代码 */
+    <!-- 左侧菜单显示代码 -->
     <aside class="sidebar">
       <nav aria-label="主导航">
         <router-link
@@ -125,11 +126,13 @@ function openUserManagement() {
     <main class="main-content">
       <div class="page-title">
         <div>
+          <!-- 页面标题和描述 -->
           <h1>{{ current.title }}</h1>
           <span>{{ current.description }}</span>
         </div>
         <div class="page-meta">
           <div v-if="isMock" class="demo-label"><span></span>原型演示 · 示例数据</div>
+          <!-- 时间 -->
           <time>
             {{ now.toLocaleDateString('zh-CN') }}
             {{ now.toLocaleDateString('zh-CN', { weekday: 'long' }) }}
@@ -137,27 +140,31 @@ function openUserManagement() {
           ><span class="motto">让内容更安全 · 让社会更美好</span>
         </div>
       </div>
-      <nav v-if="current.tabs.length" class="page-tabs" aria-label="页面子导航">
+      <!-- 数据资源在父页面中维护自己的总览与子页面导航。 -->
+      <nav v-if="current.tabs.length && !['/data-resource', '/data-governance'].includes(current.path)" class="page-tabs" aria-label="页面子导航">
+        <!-- 遍历当前模块配置的所有二级页签 -->
         <router-link
           v-for="(tab, index) in current.tabs"
           :key="tab.path"
           :to="`${current.path}/${tab.path}`"
           :class="{ selected: route.params.tab === tab.path || (!route.params.tab && index === 0) }"
-          >{{ tab.title }}</router-link
-        >
+          >
+          <!-- 显示页签名称 -->
+          {{ tab.title }}
+        </router-link>
       </nav>
-      <router-view /><CapabilityDock />
+      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance'].includes(current.path)" />
       <footer class="page-footer">
         内容安全治理原型平台 <span>统一数据 · 智能治理 · 全程可溯</span>
       </footer>
     </main>
-    <el-drawer v-model="isTasksOpen" title="当前任务" size="720px"><TaskTable /></el-drawer
+    <el-drawer v-model="isTasksOpen" title="当前任务" size="720px" class="current-tasks-drawer"><TaskTable /></el-drawer
     >
-    <el-drawer v-model="isNoticeOpen" title="系统消息" size="400px"
+    <el-drawer v-model="isNoticeOpen" title="系统消息" size="400px" class="notice-drawer"
       ><el-button link type="primary" @click="hasUnread = false">全部标记已读</el-button>
       <div class="notification">
         <b>平台初始化完成</b>
-        <p>九个业务模块已就绪，可通过左侧导航访问。</p>
+        <p>八个业务模块已就绪，可通过左侧导航访问。</p>
         <small>系统通知 · {{ hasUnread ? '未读' : '已读' }}</small>
       </div>
       <div class="notification">
@@ -165,7 +172,7 @@ function openUserManagement() {
         <p>当前展示示例数据，业务能力等待后端接入。</p>
       </div></el-drawer
     >
-    <el-dialog v-model="isProfileOpen" title="个人信息" width="420px"
+    <el-dialog v-model="isProfileOpen" title="个人信息" width="420px" class="profile-dialog"
       ><el-descriptions :column="1" border
         ><el-descriptions-item label="用户">张三</el-descriptions-item
         ><el-descriptions-item label="角色">平台管理员（演示）</el-descriptions-item
@@ -173,7 +180,7 @@ function openUserManagement() {
           >内容安全治理中心</el-descriptions-item
         ></el-descriptions
       ><template #footer
-        ><el-button type="primary" @click="openUserManagement">用户管理</el-button></template
+        ><el-button type="primary" @click="openUserManagement" class="profile-dialog">用户管理</el-button></template
       ></el-dialog
     >
   </div>

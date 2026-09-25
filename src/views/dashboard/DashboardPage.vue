@@ -100,9 +100,10 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
     ><PanelCard title="最近任务" icon="Download" link="/evaluation/tasks"><TaskTable /></PanelCard>
   </div>
   <PanelCard title="一体化平台支撑能力" icon="HelpFilled"
-    ><template #extra
-      ><span class="muted">构建数据、模型、治理、合规一体化的内容安全治理体系</span></template
-    >
+    ><template #extra>
+      <span class="title-description">构建数据、模型、治理、合规一体化的内容安全治理体系</span>
+      <span class="muted">以统一算力底座为基础，为上层业务提供全栈能力支撑</span>
+    </template>
     <div class="support-grid">
       <router-link
         v-for="(item, index) in supports"
@@ -120,7 +121,7 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
         ><AppIcon :name="['Coin', 'PriceTag', 'Box', 'Setting', 'Checked'][index]" />
         <div>
           <h3>{{ item }}</h3>
-          <p>全流程管理 · 安全可信<br />统一服务 · 智能协同</p>
+          <p>{{['数据采集、清洗、增强 \n 集管理、应用', '在线标注、智能校验 \n 任务管理、人员调度', '分级鉴定、异常识别 \n 数据分类、知识图谱', '模型训练、管理 \n 评估、部署、调用', '数据排查、动态监控 \n 风险预警、审计追踪'][index]}}</p>
         </div>
         <span>›</span></router-link
       >
@@ -141,7 +142,7 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
             <p>
               {{ ['CPU / GPU / NPU / DCU', '对象、文件、NFS 等', 'IB / RoCE / 统一调度'][index] }}
             </p>
-            <small>高性能 · 弹性扩展 · 多元异构</small>
+            <small>{{ ['高性能 · 弹性扩展 · 多元异构', '海量存储 · 高可靠 · 高并发', '高速互联 · 智能调度 · 安全隔离'][index] }}</small>
           </section>
         </div>
       </div>

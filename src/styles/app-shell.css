@@ -1,0 +1,247 @@
+/*
+ * 应用外壳布局（对应 layouts/AppLayout.vue）
+ *
+ * 依次包含顶部导航、左侧导航和主内容容器。三者通过 base.css 中的
+ * --app-topbar-height 与 --app-sidebar-width 保持定位一致。
+ * fixed 元素的层级和内容区预留距离互相关联，调整时应同时检查三部分。
+ */
+/* ==================== 02. 顶部导航（layouts/AppLayout.vue） ==================== */
+/* fixed 固定在视口顶部；z-index 20 使其覆盖侧栏（15）及普通内容。 */
+.topbar {
+  height: var(--app-topbar-height);
+  /* 两层渐变：第一层提供蓝色光晕，第二层提供深蓝底色。 */
+  background:
+    radial-gradient(ellipse at 48% 120%, #276fce 0, transparent 47%),
+    linear-gradient(115deg, #0e274c, #143d76 55%, #0e274c);
+  color: white;
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 24px;
+  box-shadow: 0 1px 0 #6b9ece33;
+}
+/* 品牌图标和平台名称水平排列，不在中间换行。 */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+/* 主标题 “内容安全治理原型平台” */
+.brand strong {
+  font-size: 27px;
+  letter-spacing: 1px;
+}
+/* 盾牌图标 */
+.brand-shield {
+  display: grid;
+  place-items: center;
+  color: #61e2fc;
+  font-size: 35px;
+  filter: drop-shadow(0 3px 7px #149dff);
+}
+/* 主标题右边的小字标语 */
+.brand-tagline {
+  font-size: 16px;
+  color: #b6ceee;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+/* 顶部操作区域 */
+.top-actions {
+  margin-left: auto; /* 自动推到顶部栏右侧 */
+  display: flex;
+  align-items: center;
+  gap: 20px; /* 搜索、任务、铃铛、用户之间的距离 */
+}
+/* 顶部搜索框：覆盖 Element Plus 内部的输入容器、文本及占位提示。 */
+.top-actions .el-autocomplete {
+  width: 300px; /* 搜索框宽度 */
+}
+.top-actions .el-input__wrapper {
+  border-radius: 24px;
+  background: #ffffff12;
+  box-shadow: 0 0 0 1px #86a8d44d inset;
+  height: 45px; /* 搜索框高度 */
+  padding: 0 16px; /* 左右内部留白 */
+}
+.top-actions .el-input__inner {
+  color: #fff;
+  font-size: 15px; /* 搜索文字大小 */
+}
+.top-actions .el-input__inner::placeholder {
+  color: #adc3e0;
+}
+/* 搜索下拉选项的字号和行高 */
+.global-search-dropdown .el-autocomplete-suggestion__list li {
+  font-size: 20px;
+  line-height: 40px;
+}
+.current-tasks-drawer .el-drawer__header {
+  margin-bottom: 13px; /* 标题栏与内容区的距离 */
+}
+.current-tasks-drawer .el-drawer__title {
+  font-size: 24px; /* “当前任务” */
+  font-weight: 700;
+}
+.current-tasks-drawer .el-table .cell {
+  font-size: 16px; /* 表头和表格内容 */
+}
+
+.current-tasks-drawer .el-table .el-button {
+  font-size: 16px; /* “查看”按钮 */
+}
+.profile-dialog .el-descriptions__body
+.el-descriptions__table.is-bordered
+.el-descriptions__cell {
+  font-size: 17px;    /* 左右两列文字 */
+  padding: 12px 14px; /* 单元格留白，增大后每行也会变高 */
+}
+.profile-dialog .el-dialog__footer .el-button {
+  min-width: 110px; /* 按钮宽度 */
+  height: 40px;     /* 按钮高度 */
+  font-size: 16px;  /* “用户管理”文字大小 */
+}
+.profile-dialog .el-dialog__title { font-size: 21px; font-weight: 700;}
+/* 任务、消息、用户按钮的共同外观；b 是任务数量标记。 */
+.top-button {
+  border: 0;
+  background: transparent;
+  color: #edf5ff;
+  display: flex;
+  align-items: center;
+  gap: 8px; /* 图标与文字的距离 */
+  white-space: nowrap;
+  font-size: 17px;
+}
+.top-button > .el-icon {
+  font-size: 22px; /* 任务图标、铃铛、下拉箭头大小 */
+}
+.top-button b {
+  /* 任务数量方块 */
+  padding: 1px 5px;
+  background: #6f97c7;
+  border-radius: 3px;
+}
+/* 按钮建立定位参照；没有 el-icon 类的 i 元素是未读消息红点。 */
+.notice-button {
+  position: relative;
+}
+.notice-button > i:not(.el-icon) {
+  width: 7px;
+  height: 7px;
+  background: #ff5570;
+  position: absolute;
+  top: -2px;
+  right: 3px;
+  border-radius: 50%;
+}
+/* 圆形用户头像；grid + place-items 让姓名缩写水平、垂直居中。 */
+.avatar {
+  width: 35px;
+  height: 35px;
+  border: 2px solid #c5e5ff;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(130deg, #49aafa, #2c66c2);
+  font-weight: bold;
+}
+/* ==================== 03. 左侧导航（layouts/AppLayout.vue） ==================== */
+/* 从顶部栏下沿延伸到视口底部；菜单过多时可在侧栏内滚动。 */
+.sidebar {
+  width: var(--app-sidebar-width);
+  position: fixed;
+  left: 0;
+  top: var(--app-topbar-height);
+  bottom: 0;
+  background: linear-gradient(155deg, #102748, #10315c);
+  color: #e0eafa;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  z-index: 15;
+}
+.sidebar nav {
+  /*菜单整体位置*/
+  padding: 12px 6px;
+  padding-left: 3px; /* 菜单距离侧栏左边 */
+  padding-top: 2px; /* 菜单整体距离顶部 */
+}
+/* 紧凑菜单：字号控制文字大小，min-height 和 margin 控制菜单的纵向疏密。 */
+.sidebar nav > a {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* 图标和文字之间的距离 */
+  min-height: 45px; /* 每个菜单项的高度 */
+  margin: 20px 0; /* 菜单项之间的上下距离 */
+  padding: 0 15px; /* 菜单项左右留白 */
+  border-radius: 7px;
+  font-size: 18px;
+  white-space: nowrap;
+  transition: background 0.18s;
+}
+.sidebar nav > a:hover {
+  background: #ffffff0c;
+}
+/* 当前页面的菜单高亮；左边框占 3px，因此内边距相应减去 3px。 */
+.sidebar nav > a.active {
+  background: linear-gradient(105deg, #1688ff, #1449d5);
+  color: #fff;
+  box-shadow: 0 4px 15px #061c4b55;
+  border-left: 3px solid #30c7ff;
+  padding-left: 14px;
+  font-weight: bold;
+}
+/* 左侧主图标 */
+.sidebar nav .el-icon {
+  font-size: 23px;
+}
+/* 右侧下拉箭头 */
+.sidebar nav .nav-arrow {
+  margin-left: auto;
+  font-size: 9px;
+}
+/* margin-top: auto 将装饰和标语推到侧栏底部。 */
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 0 25px 30px;
+  position: relative;
+  overflow: hidden;
+  min-height: 255px;
+}
+/* 左下底部中文字体大小*/
+.sidebar-bottom p {
+  font-size: 15px;
+  line-height: 1.4; /* 两行中文的行间距 */
+  position: relative;
+  padding: 0 15px 70px;
+}
+/* 纯 CSS 城市装饰：i 是楼宇，伪元素绘制网格地面；楼高由模板提供。 */
+.cityscape {
+  width: 128%; /*装饰区域占满父容器宽度*/
+  height: 300px; /* 图片显示区域高度 */
+  margin: -55px 0 0 -25px; /* 顺序：上 右 下 左 */
+  background-image: url('../assets/sidebar-city.webp');
+  background-repeat: no-repeat; /* 禁止图片重复平铺 */
+  background-position: center bottom; /* 图片水平方向居中、垂直方向贴底*/
+  background-size: contain; /* 图片比例*/
+  opacity: 0.55; /* 整个区域透明度 */
+  transform: none;
+  background-color: transparent;
+}
+
+/* ==================== 04. 主内容容器 ==================== */
+/* fixed 导航不占文档空间，因此用左外边距和上内边距为它们预留位置。 */
+.main-content {
+  /* 让直属页面模块可以通过 order 调整显示顺序。 */
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--app-sidebar-width);
+  padding: calc(var(--app-topbar-height) + var(--app-content-top-gap)) 22px 10px;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top right, #fcfeff, transparent 70%), #eff6fd;
+}

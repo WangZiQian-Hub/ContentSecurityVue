@@ -1,0 +1,396 @@
+/*
+ * 数据治理页面样式（对应 views/data-governance）
+ *
+ * 负责治理页面的列宽比例、图例说明、质量指标列表和质量统计卡片。
+ * governance-grid 通常与 shared-components.css 中的 grid 类组合使用。
+ * 页面变为单列或双列时的覆盖规则仍统一维护在 responsive.css。
+ */
+/* ==================== 10. 数据治理（views/data-governance） ==================== */
+/* 与 grid 类组合使用；三列宽度按 0.8 : 1.2 : 1.15 分配。 */
+.governance-grid {
+  grid-template-columns: 0.8fr 1.2fr 1.15fr;
+}
+.legend-note {
+  text-align: center;
+  color: #1677ff;
+  font-size: 12px;
+}
+.legend-note span {
+  color: #8ebcff;
+}
+/* 质量指标列表：每条纵向排列，数值 b 在本行靠右。 */
+.quality-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  color: #617c9f;
+}
+.quality-row b {
+  float: right;
+  color: #20457c;
+}
+/* 两列质量统计卡：名称、突出数值、单位和说明。 */
+.quality-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quality-grid > div {
+  background: linear-gradient(110deg, #f0f7ff, #fcfeff);
+  padding: 12px 18px;
+  border-radius: 6px;
+}
+.quality-grid span {
+  font-size: 12px;
+  display: block;
+}
+.quality-grid strong {
+  font-size: 26px;
+  color: #0b2b88;
+  display: block;
+  margin: 5px 0;
+}
+.quality-grid small {
+  font-size: 12px;
+}
+.quality-grid p {
+  font-size: 11px;
+}
+.process-comparison-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.process-comparison-header:not(.has-title) {
+  margin-top: -8px;
+}
+.process-comparison-filter .el-checkbox__label {
+  font-size: 16px;
+}
+.process-comparison-filter {
+  display: flex;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+.governance-workspace {
+  min-width: 0;
+}
+.governance-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffffd9;
+  border-radius: 8px;
+  padding: 0 15px;
+  margin-bottom: 14px;
+}
+.governance-tabs > a,
+.governance-tabs > button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 22px;
+  border-bottom: 3px solid transparent;
+  font-size: 18px;
+  font-weight: 600;
+  color: #43608e;
+}
+.governance-tabs > button {
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  font-family: inherit;
+  cursor: not-allowed;
+}
+.governance-tabs .el-icon {
+  font-size: 23px;
+}
+.governance-tabs > a:hover,
+.governance-tabs > a.selected {
+  color: #087bff;
+}
+.governance-tabs > a.selected {
+  border-bottom-color: #087bff;
+}
+.process-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.12fr);
+  gap: 14px;
+}
+.process-info {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #eaf4ff;
+  border: 1px solid #d8eaff;
+  color: #315791;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+.process-info .el-icon {
+  font-size: 21px;
+  color: #087bff;
+}
+.process-input-pair {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 18px;
+}
+.process-console .el-form-item {
+  margin-bottom: 14px;
+}
+.process-console .el-form-item__label {
+  color: #254a89;
+  font-size: 16px !important; /* 覆盖 forms-results.css 的全局标签字号 */
+  font-weight: 700 !important;
+  margin-bottom: 6px;
+  line-height: 21px;
+}
+.process-console .el-select {
+  width: 100%;
+  min-width: 0;
+}
+.process-console .el-select__wrapper {
+  min-height: 38px;
+  box-shadow: 0 0 0 1px #c7ddff inset;
+  font-size: 16px;
+}
+.process-console .el-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 13px;
+}
+.process-console .el-checkbox {
+  margin-right: 0;
+  height: 31px;
+}
+.process-console .el-checkbox__label {
+  font-size: 16px;  /* 多选框文字大小 */
+  padding-left: 10px;
+  color: #294c84;
+}
+.process-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+/*数据处理控制台下方按钮*/
+.process-actions .el-button {
+  margin: 0;
+  height: 40px;
+  font-size: 18px;  /* 按钮文字大小 */
+  font-weight: 600;
+}
+.process-actions .el-icon {
+  margin-right: 8px;
+  font-size: 19px;
+}
+.process-confirm-dialog.el-message-box {
+  width: 450px; /* 整个弹窗的宽度 */
+  height: auto;
+  max-width: calc(100vw - 32px);
+}
+.process-confirm-dialog .el-message-box__message {
+  font-size: 18px; /* 中间说明文字的大小 */
+}
+
+.process-confirm-dialog .el-message-box__title {
+  font-size: 22px; /* 顶部标题的大小 */
+}
+.process-confirm-dialog .el-message-box__btns .el-button {
+  font-size: 18px;  /* 下方按钮的大小*/
+  height: 40px;
+  padding: 0 18px;
+}
+/* 页面内的错误提示 */
+.process-page .el-alert__title {
+  font-size: 16px;
+}
+.process-console-note {
+  font-size: 12px;
+  margin: 9px 0 0;
+  color: #8395b4;
+}
+/* "当前处理任务" 右侧的文字*/
+.process-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 16px;
+  color: #536f9e;
+}
+/* "当前处理任务" 右侧的文字现实的状态*/
+.process-task-meta .el-tag {
+  font-size: 16px;
+}
+.process-steps {
+  list-style: none;
+  padding: 5px 0 0;
+  margin: 0 0 23px;
+  display: flex;
+}
+.process-steps li {
+  position: relative;
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.process-steps li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 22px;
+  height: 2px;
+  background: #a5bbdc;
+  left: calc(50% + 31px);
+  right: calc(-50% + 31px);
+}
+.process-steps li.succeeded::after {
+  background: #087bff;
+}
+.process-step-dot {
+  width: 43px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #91a9d1;
+  border: 5px solid #eef3fb;
+  margin: 0 auto 9px;
+  color: white;
+  font-size: 24px;
+}
+.succeeded .process-step-dot {
+  background: linear-gradient(135deg, #149dff, #0458ff);
+  border-color: #edf6ff;
+}
+.running .process-step-dot {
+  background: #087bff;
+  border-color: #dcecff;
+  box-shadow: 0 0 0 3px #bbd7ff;
+}
+.running .process-step-dot i {
+  width: 13px;
+  height: 13px;
+  background: #fff;
+  border-radius: 50%;
+}
+.failed .process-step-dot {
+  background: #f56c6c;
+}
+.process-steps b {
+  display: block;
+  color: #152e75;
+  font-size: 18px;
+}
+.process-steps small {
+  display: block;
+  color: #6a82a9;
+  margin-top: 4px;
+  font-size: 16px;
+}
+.process-steps .running small {
+  color: #087bff;
+}
+/*调整左边的“整体进度”和右边的“203,984 / 268,400 条”“预计剩余 2 分钟”。*/
+.process-progress {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin: 0 0 23px;
+  font-size: 18px;
+  color: #335a94;
+}
+.process-progress .el-progress {
+  flex: 1;
+  min-width: 80px;
+}
+/*中间的 76%*/
+.process-progress strong {
+  color: #087bff;
+  font-size: 18px;
+}
+.process-progress > span {
+  border-left: 1px solid #e7effa;
+  padding-left: 16px;
+  white-space: nowrap;
+}
+/* “处理前后对比” */
+.process-comparison-title {
+  font-size: 18px;
+  margin: 0;
+  color: #173675;
+}
+.governance-workspace .el-table:not(.shared-data-table),
+.governance-dialog .el-table:not(.shared-data-table) {
+  --el-table-header-bg-color: #eaf4ff;
+  --el-table-border-color: #dae9fc;
+  --el-table-text-color: #254780;
+  --el-table-header-text-color: #244579;
+  font-size: 15px;
+}
+.governance-workspace .el-table:not(.shared-data-table) .cell,
+.governance-dialog .el-table:not(.shared-data-table) .cell {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  padding: 0 12px;
+}
+.governance-workspace .el-table:not(.shared-data-table) th.el-table__cell,
+.governance-dialog .el-table:not(.shared-data-table) th.el-table__cell {
+  padding: 5px 0;
+}
+.governance-workspace .el-table:not(.shared-data-table) td.el-table__cell {
+  padding: 7px 0;
+}
+.process-sample {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.process-status {
+  white-space: nowrap;
+  color: #8495b0;
+}
+.process-status.running {
+  color: #087bff;
+}
+.process-status.succeeded {
+  color: #00b887;
+}
+.process-status.failed {
+  color: #f56c6c;
+}
+.process-data-note {
+  text-align: right;
+  font-size: 12px;
+  color: #8099bf;
+  margin-top: -5px;
+}
+.process-history-drawer .el-drawer__title {
+  font-size: 25px;  /*查看更多标题大小*/
+  font-weight: 700;
+}
+.process-history-drawer .el-pagination {
+  --el-pagination-font-size: 17px;  /*下方页码*/
+}
+.governance-dialog .el-descriptions {
+  margin-bottom: 20px;
+}
+/* “处理任务详情”标题 */
+.governance-dialog .el-dialog__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* “任务ID”等左侧标签，以及右侧的值 */
+.governance-dialog .el-descriptions__body
+.el-descriptions__table
+.el-descriptions__cell {
+  font-size: 18px;
+}

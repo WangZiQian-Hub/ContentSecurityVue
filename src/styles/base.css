@@ -1,0 +1,102 @@
+/*
+ * 全局基础与主题
+ *
+ * 负责全站 CSS 变量、字体、盒模型、默认标签行为及固定设计画布。
+ * 修改顶部高度或侧栏宽度时，优先调整 :root 中的变量，让关联布局自动跟随。
+ * 本文件加载最早，请不要放入只属于某一个业务页面的选择器。
+ */
+/* ==================== 01. 全局基础与主题 ==================== */
+:root {
+  /* 常改尺寸：顶部高度和侧栏宽度。相关定位通过 var() 自动跟随。 */
+  --app-topbar-height: 75px; /* 顶部栏高度 */
+  --app-sidebar-width: 230px; /* 导航栏整体宽度 */
+  --app-content-top-gap: 20px;
+  --app-demo-top-gap: 3px;
+  /* 字体按顺序回退；font-synthesis 禁止浏览器模拟缺失的粗体/斜体。 */
+  font-family: 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+  color: #153468;
+  background: #eff6fd;
+  font-synthesis: none;
+  font-size: 14px;
+  /* Element Plus 的主题变量：主色、圆角、文字及边框颜色。 */
+  --el-color-primary: #1677ff;
+  --el-border-radius-base: 6px;
+  --el-text-color-primary: #193967;
+  --el-border-color-light: #e4eef9;
+}
+/* border-box：设定的宽高包含 padding 和 border，便于计算布局。 */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+/*
+ * 页面使用 1900px 固定设计画布，由 App.vue 根据窗口宽度统一等比缩放。
+ * 不区分桌面与手机断点，任何宽度都保持相同的页面结构和列数。
+ */
+.design-viewport {
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  background: #eff6fd;
+}
+.design-stage {
+  position: relative;
+  margin: 0 auto;
+  overflow: hidden;
+}
+.design-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.desktop-design-canvas .app-shell {
+  width: var(--app-design-width);
+  min-height: var(--app-design-height);
+}
+.desktop-design-canvas .topbar {
+  right: auto;
+  left: var(--app-canvas-left);
+  width: var(--app-design-width);
+}
+.desktop-design-canvas .sidebar {
+  left: var(--app-canvas-left);
+}
+.desktop-design-canvas .main-content {
+  min-height: 0;
+  height: var(--app-design-height);
+  overflow: auto;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+/* 键盘 Tab 导航时显示焦点外框，帮助识别当前可操作元素。 */
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #57bbff;
+  outline-offset: 3px;
+}
+/* 红色 500 错误提示 */
+.el-message__content {
+  font-size: 20px;
+}

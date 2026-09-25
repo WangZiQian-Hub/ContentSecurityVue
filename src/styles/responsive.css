@@ -1,0 +1,296 @@
+/*
+ * 响应式覆盖汇总
+ *
+ * 必须在所有默认样式之后加载，依靠相同或更高优先级覆盖桌面规则。
+ * 当前项目使用固定设计画布，因此断点条件暂设为 max-width: 0px，不会实际触发；
+ * 若恢复自适应布局，应先还原真实断点，再按从宽到窄的顺序逐档验证页面。
+ * 修改默认样式时仍应搜索本文件中的同名选择器，避免将来启用断点后出现冲突。
+ */
+/* ==================== 16. 旧响应式适配（固定画布模式下停用） ==================== */
+/* max-width 条件会叠加：手机也匹配 1400px 和 1100px，后面的同优先级规则胜出。
+ * 修改断点时保留从大到小的顺序；!important 用于覆盖组件的行内 KPI 列数。
+ */
+/* 16.1 超宽屏（>=1600px）：增加卡片留白、圆形图标尺寸。 */
+@media (max-width: 0px) {
+  .main-content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .kpi-card {
+    min-height: 120px;
+  }
+  .core-chain {
+    padding: 12px 20px 14px;
+  }
+  .orb {
+    height: 90px;
+    width: 90px;
+  }
+  .scene-tile {
+    padding: 18px 10px;
+  }
+  .panel-content {
+    padding: 15px 16px;
+  }
+}
+/* 16.2 中等屏幕（<=1400px）：收紧卡片，场景两列，模型底部调整列数。 */
+@media (max-width: 0px) {
+  .brand-tagline {
+    display: inline;
+  }
+  .page-meta time {
+    display: none;
+  }
+  .page-title > div > span {
+    max-width: 470px;
+    line-height: 1.6;
+  }
+  .kpi-card {
+    padding: 16px 12px;
+    gap: 9px;
+  }
+  .kpi-icon {
+    width: 43px;
+    height: 43px;
+    font-size: 25px;
+  }
+  .kpi-card strong {
+    font-size: 17px;
+  }
+  .mini-bars {
+    opacity: 0.8;
+  }
+  .scene-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .support-tile {
+    padding: 12px 7px;
+    gap: 6px;
+  }
+  .support-tile > .el-icon {
+    font-size: 23px;
+  }
+  .page-tabs a {
+    padding: 13px 17px;
+  }
+  .model-bottom {
+    grid-template-columns: 1.5fr 1fr;
+  }
+  .model-bottom > .panel:last-child {
+    grid-column: 1/-1;
+  }
+  .deployment {
+    display: flex;
+    gap: 20px;
+  }
+  .deployment p {
+    flex: 1;
+  }
+}
+/* 16.3 小屏桌面/平板（<=1100px）：侧栏 100px，KPI 三列，审计四列。 */
+@media (max-width: 0px) {
+  :root {
+    --app-sidebar-width: 100px;
+  }
+  .sidebar nav > a {
+    gap: 10px;
+    font-size: 12px;
+    padding: 0 12px;
+  }
+  .main-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .brand strong {
+    font-size: 19px;
+  }
+  .top-actions {
+    gap: 10px;
+  }
+  .top-actions .el-autocomplete {
+    width: 210px;
+  }
+  .page-title > div:first-child {
+    display: block;
+  }
+  .page-title h1 {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .three,
+  .governance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .core-chain {
+    padding: 10px 0;
+  }
+  .orb {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+  }
+  .core-chain h3 {
+    font-size: 14px;
+  }
+  .core-chain p {
+    font-size: 10px;
+  }
+  .chain-arrow {
+    font-size: 27px;
+  }
+  .support-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .audit-chain {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 25px;
+  }
+  .model-categories > a {
+    padding: 14px 10px;
+    gap: 10px;
+  }
+  .model-categories h2 {
+    font-size: 15px;
+  }
+  .model-categories .el-icon {
+    font-size: 29px;
+  }
+  .training-content {
+    grid-template-columns: 1fr;
+  }
+  .model-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .muted {
+    display: none;
+  }
+}
+/* 16.4 手机/窄屏（<=760px）：侧栏仅图标，业务面板单列，KPI 两列。 */
+@media (max-width: 0px) {
+  :root {
+    --app-topbar-height: 60px;
+    --app-sidebar-width: 64px;
+    --app-content-top-gap: 23px;
+    --app-demo-top-gap: 4px;
+  }
+  .topbar {
+    padding: 0 12px;
+  }
+  .brand strong {
+    font-size: 16px;
+  }
+  .brand-shield {
+    font-size: 28px;
+  }
+  .top-actions .el-autocomplete,
+  .top-button:not(.notice-button) {
+    display: none;
+  }
+  .sidebar nav > a {
+    justify-content: center;
+    padding: 0 !important;
+  }
+  .sidebar nav > a span:not(.el-icon),
+  .sidebar .nav-arrow,
+  .sidebar-bottom {
+    display: none;
+  }
+  .main-content {
+    padding: calc(var(--app-topbar-height) + var(--app-content-top-gap)) 10px 10px;
+  }
+  .page-meta {
+    display: none;
+  }
+  .page-title h1 {
+    font-size: 22px;
+  }
+  .page-title > div > span {
+    font-size: 10px;
+  }
+  .demo-label {
+    right: 12px;
+  }
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px;
+  }
+  .kpi-card {
+    padding: 12px 8px;
+    min-height: 95px;
+  }
+  .kpi-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
+  .kpi-card h3 {
+    font-size: 10px;
+  }
+  .kpi-card strong {
+    font-size: 15px;
+  }
+  .kpi-card p span {
+    display: none;
+  }
+  .mini-bars {
+    display: none;
+  }
+  .grid.two,
+  .grid.three,
+  .governance-grid,
+  .model-grid,
+  .model-bottom {
+    grid-template-columns: 1fr;
+  }
+  .panel-heading h2 {
+    font-size: 16px;
+  }
+  .core-chain {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .chain-node {
+    flex: 0 0 40%;
+  }
+  .chain-arrow {
+    display: none;
+  }
+  .scene-tile {
+    padding: 12px 7px;
+    gap: 7px;
+  }
+  .scene-tile > .el-icon {
+    font-size: 25px;
+  }
+  .scene-tile p {
+    font-size: 9px;
+    white-space: normal;
+  }
+  .support-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .infrastructure h2 {
+    font-size: 15px;
+  }
+  .infrastructure h2 small {
+    display: none;
+  }
+  .model-categories {
+    grid-template-columns: 1fr;
+  }
+  .audit-chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page-footer span {
+    display: none;
+  }
+  .el-dialog {
+    max-width: calc(100vw - 30px);
+  }
+  .el-drawer {
+    max-width: 100vw;
+  }
+}

@@ -1,0 +1,327 @@
+/*
+ * 跨页面共享的展示组件
+ *
+ * 包含页面标题与页签、KPI 指标卡、通用面板以及两列/三列网格。
+ * 这些类会被多个 views 和 components 复用，修改前应检查首页及业务子页面。
+ * 小屏覆盖集中在 responsive.css，本文件只维护默认设计画布下的样式。
+ */
+/* ==================== 05. 页面标题、元信息与页签 ==================== */
+/* 标题/说明在左，时间/标语在右；窄屏时在第 16 区改变排列方式。 */
+.page-title {
+  order: -3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 0 0 17px;
+}
+/* 两个文字之间的距离 */
+.page-title > div:first-child {
+  display: flex;
+  gap: 20px; /* 标题和说明文字之间的距离 */
+  align-items: center;
+}
+/* 主标题样式 */
+.page-title h1 {
+  font-size: 30px; /* 字体大小 */
+  font-weight: 800; /* 字体粗细 */
+  color: #071f5d;
+  white-space: nowrap;
+  letter-spacing: -1px;
+  position: relative;
+  top: -20px; /* 负数向上，正数向下 */
+}
+/*左侧说明文字*/
+.page-title > div > span {
+  color: #607ca5;
+  font-size: 17px;
+  font-weight: 700; /* 字体粗细 */
+  position: relative;
+  top: -16px; /* 负数向上，正数向下 */
+}
+.page-meta {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #627da5;
+}
+/* 对时间进行调整 */
+.page-meta time {
+  font-size: 14px; /* 字体大小 */
+  font-weight: 600; /* 字体粗细 */
+  color: #627da5;
+  position: relative;
+  left: -10px; /* 负数向左，正数向右 */
+  top: -16px; /* 负数向上，正数向下 */
+}
+/* 右侧蓝色文字“让内容更安全，让社会更美好” */
+.motto {
+  padding: 6px 13px; /* 蓝色背景内部大小 */
+  background: #e6f2ff;
+  border-radius: 7px;
+  color: #257afa !important;
+  font-size: 14px; /* 文字大小 */
+  font-weight: 500; /* 文字粗细 */
+  letter-spacing: 0.5px; /* 字符间距 */
+  position: relative;
+  left: 0px; /* 正数向右，负数向左 */
+  top: -20px; /* 正数向下，负数向上 */
+}
+/* 演示数据标记位于顶部栏下方，上方留白由主题变量控制。 */
+.demo-label {
+  position: relative;
+  font-size: 11px;
+  color: #7d92ad;
+  display: flex; /* 把当前元素变成 Flex 布局容器，让内部元素默认从左到右排列*/
+  align-items: center; /* Flex 容器元素在垂直方向居中对齐 */
+  gap: 5px;
+  font-weight: 500;
+  white-space: nowrap; /* 文字不自动换行，即使空间不够*/
+  left: -10px; /* 正数向右，负数向左 */
+  top: -16px; /* 正数向下，负数向上 */
+}
+.demo-label > span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e7b951;
+  margin-right: 3px;
+}
+/* 子页面页签横向排列；放不下时允许滚动，selected 表示当前页签。 */
+.page-tabs {
+  /* 子页面选项条显示在 KPI 小卡片之后。 */
+  order: -1;
+  display: flex;
+  background: #fff;
+  border: 1px solid #e2eefa;
+  border-radius: 7px;
+  margin-bottom: 13px;
+  overflow: auto;
+}
+.page-tabs a {
+  padding: 14px 23px;
+  white-space: nowrap;
+  color: #546f98;
+  font-size: 13px;
+  border-bottom: 3px solid transparent;
+}
+.page-tabs a.selected {
+  color: #0872ff;
+  border-bottom-color: #0872ff;
+  font-weight: bold;
+  background: #f9fcff;
+}
+/* ==================== 06. KPI 指标卡（components/KpiStrip.vue） ==================== */
+/* 桌面列数由组件按指标数量写入行内样式；小屏 @media 用 !important 覆盖。 */
+.kpi-strip {
+  order: -2;
+  /* 卡片之间的距离 */
+  display: grid;
+  gap: 13px; /* 卡片之间的距离 */
+  margin-top: -30px; /* 整组卡片移动 */
+  margin-right: 0px; /* 卡片组右侧留白 */
+  margin-bottom: 14px;
+}
+.kpi-card {
+  min-height: 120px; /* 卡片高度 */
+  background: #fff;
+  border-radius: 8px;
+  padding: 19px 16px; /* 卡片内部留白 */
+  display: flex;
+  gap: 14px; /* 图标与文字间距 */
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px #b8d8f212;
+}
+/* 左侧圆形图标大小和位置。flex-shrink: 0 保证图标不会被较长的指标文本压扁。 */
+.kpi-icon {
+  width: 63px; /* 圆形背景宽度 */
+  height: 63px; /* 圆形背景高度 */
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 40px; /* 圆圈内部图标大小 */
+}
+/* 六组可复用配色：蓝、绿、红、紫、橙、青；其他业务卡片也会使用。 */
+.tone-0 {
+  background: #dfedff;
+  color: #087bff;
+}
+.tone-1 {
+  background: #e0f8ef;
+  color: #00b887;
+}
+.tone-2 {
+  background: #ffe8ed;
+  color: #ff3c60;
+}
+.tone-3 {
+  background: #efe8ff;
+  color: #8652f8;
+}
+.tone-4 {
+  background: #fff1e1;
+  color: #ff8a17;
+}
+.tone-5 {
+  background: #e0f8ff;
+  color: #00b7df;
+}
+/* h3 是指标名称，strong 是数值，small 是单位，p 是较上期变化。 */
+.kpi-card h3 {
+  font-size: 17px;
+  color: #17315e;
+  margin-bottom: 5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kpi-card strong {
+  font-size: 27px;
+  font-weight: 750;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  color: #082075;
+  line-height: 1.2;
+}
+.kpi-card strong small {
+  font-size: 17px;
+  font-weight: 750;
+}
+.kpi-card p {
+  font-size: 17px;
+  margin-top: 6px;
+  font-weight: 700;
+}
+.kpi-card p span {
+  color: #9eafc8;
+  font-size: 9px;
+  font-weight: 400;
+}
+/* 状态颜色由模板选择：increase 红色，positive 绿色，不在 CSS 中计算涨跌。 */
+.increase {
+  color: #ff4163;
+}
+.positive {
+  color: #00b982;
+}
+/* 卡片右下角的装饰柱形；柱高来自组件内联样式，不代表真实统计数据。 */
+.mini-bars {
+  position: absolute;
+  right: 20px; /* 距离卡片右边 */
+  bottom: 13px; /* 距离卡片底部 */
+  display: flex;
+  align-items: flex-end;
+  gap: 5px; /* 柱子之间的距离 */
+  height: 22px; /* 柱状图区域高度 */
+  opacity: 0.88;
+  pointer-events: none;
+}
+/* 调整每根柱子的宽度和形状 */
+.mini-bars i {
+  width: 8px;
+  border-radius: 1px 1px 0 0;
+  background: linear-gradient(to bottom, #3699ff, #cce8ff);
+}
+/* 第二、六张卡片的柱形跟随各自图标的绿色和青色主题。 */
+.kpi-card:nth-child(1) .mini-bars i {
+  background: linear-gradient(to bottom, #dfedff, #087bff);
+}
+.kpi-card:nth-child(2) .mini-bars i {
+  background: linear-gradient(to bottom, #e0f8ef, #00b887);
+}
+.kpi-card:nth-child(3) .mini-bars i {
+  background: linear-gradient(to bottom, #ffe8ed, #ff3c60);
+}
+.kpi-card:nth-child(4) .mini-bars i {
+  background: linear-gradient(to bottom, #efe8ff, #8652f8);
+}
+.kpi-card:nth-child(5) .mini-bars i {
+  background: linear-gradient(to bottom, #fff1e1, #ff8a17);
+}
+.kpi-card:nth-child(6) .mini-bars i {
+  background: linear-gradient(to bottom, #e0f8ff, #00b7df);
+}
+/* ==================== 07. 通用面板与网格布局 ==================== */
+/* 白色面板共用边框/圆角；min-width: 0 允许网格项收缩，避免撑宽容器。 */
+.panel {
+  background: #fff;
+  border: 1px solid #eaf2fa;
+  border-radius: 8px;
+  min-width: 0;
+  margin-bottom: 13px;
+  box-shadow: 0 4px 18px #b8d8f212;
+}
+/* 面板标题左对齐、更多操作右对齐，下方细线分隔内容。 */
+/* 整个标题栏的位置和高度 */
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 50px; /* 标题栏高度 */
+  border-bottom: 1px solid #e8f1fb;
+  margin: 0 15px; /* 左右位置：15px 越大，越向中间 */
+  gap: 10px;
+}
+/* 标题文字 */
+.panel-heading h2 {
+  font-size: 23px; /* 标题大小 */
+  font-weight: 600; /* 文字粗细 */
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 图标和文字之间的距离 */
+  color: #10275f;
+  white-space: nowrap;
+}
+/* 标题图标 */
+.panel-heading h2 .el-icon {
+  color: #0877ff;
+  font-size: 30px; /* 图标大小 */
+}
+/* 标题右侧“查看更多” */
+.panel-heading > a,
+.panel-heading > .panel-more {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5082d5;
+  white-space: nowrap;
+}
+.panel-heading > button.panel-more {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.panel-content {
+  padding: 13px 15px;
+}
+/* 右侧文字大小 */
+.muted {
+  color: #788dab;
+  font-size: 15px; /* 文字大小 */
+  font-weight: 600;
+}
+/* 标题旁边文字大小位置*/
+.title-description {
+  color: #788dab;
+  font-size: 15px;
+  margin-left: -550px;
+  font-weight: 600;
+}
+/* 用法：class="grid two" 或 "grid three"；1fr 平分剩余空间。
+ * minmax(0, 1fr) 允许列收缩到内容固有宽度以下，但内容本身仍需处理换行。 */
+.grid {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
