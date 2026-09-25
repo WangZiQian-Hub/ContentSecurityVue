@@ -63,3 +63,11 @@ export interface StatisticsQuery {
   datasetId?: number
   language?: string
 }
+
+export interface ResourceSample {
+  id: string
+  datasetId: number
+  versionId: string
+  text: string
+  language: string
+}

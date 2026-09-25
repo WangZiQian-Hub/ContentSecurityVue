@@ -4,7 +4,6 @@
 - 项目核心任务链。
 - 六个场景应用入口。
 - 最近任务。
-- 五类一体化支撑能力。
 - 算力、存储、网络和调度底座介绍。
 */
 
@@ -63,7 +62,11 @@ const scenes = [
   },
   { name: '网络空间安防', sub: '网络空间安全态势感知', icon: 'Checked', path: 'cyber-security' },
 ]
-const supports = ['数据管理', '数据标注', '数据治理体系', '模型训推体系', '全链路合规治理']
+const infrastructureDetails = [
+  '为数据清洗、内容识别和模型训练等任务统一分配 CPU、GPU、NPU 与 DCU 算力，按任务负载弹性调度，提升数据处理效率。',
+  '集中存放原始数据、治理结果、训练样本和模型文件，按对象、文件与 NFS 等方式管理，为数据集使用和结果追溯提供支撑。',
+  '连接数据接入、治理、训练和评估环节，利用高速网络与统一调度传输任务数据，并对不同业务的资源使用进行隔离。',
+]
 </script>
 <template>
   <KpiStrip />
@@ -104,28 +107,6 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
       <span class="title-description">构建数据、模型、治理、合规一体化的内容安全治理体系</span>
       <span class="muted">以统一算力底座为基础，为上层业务提供全栈能力支撑</span>
     </template>
-    <div class="support-grid">
-      <router-link
-        v-for="(item, index) in supports"
-        :key="item"
-        :to="
-          [
-            '/data-resource',
-            '/data-resource/datasets',
-            '/data-governance',
-            '/model-train',
-            '/compliance',
-          ][index]!
-        "
-        :class="`support-tile tone-${index}`"
-        ><AppIcon :name="['Coin', 'PriceTag', 'Box', 'Setting', 'Checked'][index]" />
-        <div>
-          <h3>{{ item }}</h3>
-          <p>{{['数据采集、清洗、增强 \n 集管理、应用', '在线标注、智能校验 \n 任务管理、人员调度', '分级鉴定、异常识别 \n 数据分类、知识图谱', '模型训练、管理 \n 评估、部署、调用', '数据排查、动态监控 \n 风险预警、审计追踪'][index]}}</p>
-        </div>
-        <span>›</span></router-link
-      >
-    </div>
     <div class="infrastructure">
       <h2>
         <AppIcon name="Coin" /> 算力一体化服务底座
@@ -135,6 +116,9 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
         <div
           v-for="(name, index) in ['统一计算资源', '统一存储资源', '统一网络与调度']"
           :key="name"
+          class="infrastructure-card"
+          tabindex="0"
+          :aria-describedby="`infrastructure-detail-${index}`"
         >
           <AppIcon :name="['Cpu', 'Coin', 'Share'][index]" />
           <section>
@@ -144,6 +128,10 @@ const supports = ['数据管理', '数据标注', '数据治理体系', '模型�
             </p>
             <small>{{ ['高性能 · 弹性扩展 · 多元异构', '海量存储 · 高可靠 · 高并发', '高速互联 · 智能调度 · 安全隔离'][index] }}</small>
           </section>
+          <div :id="`infrastructure-detail-${index}`" class="infrastructure-detail" role="tooltip">
+            <strong>{{ name }}</strong>
+            <p>{{ infrastructureDetails[index] }}</p>
+          </div>
         </div>
       </div>
     </div></PanelCard

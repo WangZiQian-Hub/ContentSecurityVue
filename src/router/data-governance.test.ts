@@ -16,7 +16,8 @@ describe('数据治理路由', () => {
   it('其他页签保留配置，但直接地址返回数据处理', () => {
     const tabs = navigation.find((item) => item.path === '/data-governance')!.tabs
     expect(tabs).toHaveLength(5)
-    for (const tab of tabs.filter((item) => item.path !== 'process')) {
+    expect(router.resolve('/data-governance/value-analysis').name).toBe('governance-value')
+    for (const tab of tabs.filter((item) => !['process', 'value-analysis'].includes(item.path))) {
       expect(router.resolve(`/data-governance/${tab.path}`).matched.at(-1)?.redirect).toBe(
         '/data-governance',
       )

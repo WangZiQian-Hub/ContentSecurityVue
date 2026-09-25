@@ -1,3 +1,4 @@
+import { resourceSamples } from './resource-samples'
 import { resourceDatasets } from './data-resource'
 import type { ProcessOptions, ProcessTask } from '../types/data-governance'
 export const processOptions: ProcessOptions = {
@@ -59,7 +60,7 @@ export const processTasks: ProcessTask[] = [0, 1, 2].map((index) => ({
   })),
   comparisons: [
     {
-      id: '1',
+      id: resourceSamples.find((sample) => sample.datasetId === [3, 1, 4][index]!)!.id,
       original: '【新闻】2026/09/20  北京 · 中美科技交流会召开，双方表示将进一步加强交流。',
       processed: '【新闻】2026-09-20 北京 中美科技交流会召开，双方表示将进一步加强交流。',
       actions: ['日期格式统一', '去除多余空格'],
@@ -69,7 +70,7 @@ export const processTasks: ProcessTask[] = [0, 1, 2].map((index) => ({
       ],
     },
     {
-      id: '2',
+      id: resourceSamples.filter((sample) => sample.datasetId === [3, 1, 4][index]!)[1]!.id,
       original: '用户ID：10086 ；    国家/地区：中国\n注册时间：2026/9/20 14:30:00',
       processed: '用户ID：10086；国家/地区：中国\n注册时间：2026-09-20 14:30:00',
       actions: ['空格规范化', '时间格式统一'],

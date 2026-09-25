@@ -52,6 +52,7 @@ export const useDataResourceStore = defineStore('data-resource', () => {
     }
   }
   const saveDataset = (data: Partial<ResourceDataset>) => api.saveDataset(data)
+  const deleteDataset = (id: number) => api.deleteDataset(id)
   const uploadFile = (file: File) => api.uploadResourceFile(file)
   const startIngest = (data: ExecuteTaskReq) => api.startIngest(data)
   return {
@@ -66,6 +67,7 @@ export const useDataResourceStore = defineStore('data-resource', () => {
     loadDatasets,
     loadTasks,
     saveDataset,
+    deleteDataset,
     uploadFile,
     startIngest,
   }

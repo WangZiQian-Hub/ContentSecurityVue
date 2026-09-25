@@ -24,6 +24,7 @@ export default createRouter({
       component: () => import('../views/data-governance/DataGovernancePage.vue'),
       children: [
         { path: '', alias: 'process', name: 'governance-process', component: () => import('../views/data-governance/DataProcessPage.vue') },
+        { path: 'value-analysis', name: 'governance-value', component: () => import('../views/data-governance/DataValuePage.vue') },
         { path: ':pathMatch(.*)*', redirect: '/data-governance' },
       ],
     },

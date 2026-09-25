@@ -1,4 +1,5 @@
 import type { Kpi } from '../types'
+import { getValueKpis } from './data-value'
 
 type KpiKind =
   | 'dashboard'
@@ -97,6 +98,7 @@ const rawKpis: Record<KpiKind, KpiRow[]> = {
 }
 
 export function getMockKpis(kind: string): Kpi[] {
+  if (kind === 'governance-value') return getValueKpis()
   const safeKind: KpiKind = kind in rawKpis ? (kind as KpiKind) : 'dashboard'
 
   return rawKpis[safeKind].map(([label, value, unit, changeRate, icon, id], index) => ({

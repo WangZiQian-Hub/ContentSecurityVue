@@ -77,13 +77,13 @@ function exportReport() {
     ><el-button type="primary" :loading="store.loading" @click="search">查询</el-button
     ><el-button :disabled="!summary" @click="exportReport">↓ 导出报表</el-button>
   </div>
-  <p v-if="isMock" class="resource-demo-note">示例统计快照 · 2024-12-09 至 2024-12-15</p>
   <div class="resource-statistics-top">
     <PanelCard title="数据增长趋势" icon="TrendCharts"
       ><ResourceChart kind="line" :trend="summary?.trend" cumulative :height="235" /></PanelCard
     ><PanelCard title="数据来源分布" icon="PieChart"
       ><ResourceChart
         kind="donut"
+        donut-layout="spacious"
         :data="summary?.sources"
         :center-text="`${summary?.kpis.find((item) => item.id === 'storage')?.value ?? '—'} TB`"
         :height="235" /></PanelCard

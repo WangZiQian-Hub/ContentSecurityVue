@@ -5,7 +5,7 @@ import AppIcon from './AppIcon.vue'
 import { getKpis } from '../api/kpi'
 import type { Kpi } from '../types'
 
-const props = defineProps<{ kind?: string }>()
+const props = defineProps<{ kind?: string; comparisonLabel?: string }>()
 
 //items 必须是数组，数组中的每一项都必须符合Kpi接口
 const items = ref<Kpi[]>([])
@@ -54,7 +54,8 @@ watch(
         <strong
           >{{ formatValue(item.value) }} <small>{{ item.unit }}</small></strong
         >
-        <p :class="item.changeRate < 0 ? 'positive' : 'increase'">
+        <p v-if="comparisonLabel">{{ comparisonLabel }}</p>
+        <p v-else :class="item.changeRate < 0 ? 'positive' : 'increase'">
           {{ formatChange(item.changeRate) }}
         </p>
       </div>

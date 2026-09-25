@@ -58,41 +58,8 @@
 }
 .resource-overview-bottom {
   display: grid;
-  grid-template-columns: 2.1fr 1.1fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 14px;
-}
-.resource-shortcut {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 15px 12px;
-  background: linear-gradient(110deg, #f6fbff, #fff);
-  border: 1px solid #deedff;
-  border-radius: 7px;
-  margin-bottom: 9px;
-}
-.resource-shortcut > .el-icon {
-  flex-shrink: 0;
-  background: #087bff;
-  color: white;
-  border-radius: 50%;
-  font-size: 26px;
-  width: 44px;
-  height: 44px;
-}
-.resource-shortcut b {
-  color: #087bff;
-  font-size: 17px;
-}
-.resource-shortcut p {
-  color: #8193ae;
-  font-size: 15px;
-  margin-top: 6px;
-}
-.resource-shortcut > span {
-  margin-left: auto;
-  color: #087bff;
-  font-size: 25px;
 }
 .resource-bars {
   padding: 10px 0;
@@ -122,6 +89,20 @@
   align-items: center;
   gap: 12px;
   margin: 8px 0 18px;
+}
+/* 搜索框文字和占位提示 */
+.resource-toolbar .el-input__inner {
+  font-size: 16px;
+}
+
+/* “全部状态”及选中后的状态文字 */
+.resource-toolbar .el-select__wrapper {
+  font-size: 16px;
+}
+
+/* “刷新记录”按钮文字 */
+.resource-toolbar > .el-button {
+  font-size: 16px;
 }
 .resource-toolbar > .el-input {
   max-width: 260px;
@@ -156,7 +137,7 @@
 }
 .resource-ingest-grid {
   display: grid;
-  grid-template-columns: 0.8fr 1.75fr 1.1fr;
+  grid-template-columns: 1.0fr 1.6fr 1.1fr;
   gap: 14px;
 }
 .resource-source-grid {
@@ -176,9 +157,11 @@
   border-radius: 6px;
   background: #fff;
   color: #284777;
+  font-size: 16px;
+  font-weight: 700;
 }
 .resource-source-grid button > .el-icon {
-  font-size: 31px;
+  font-size: 35px;
   color: #087bff;
 }
 .resource-source-grid button.selected {
@@ -201,11 +184,18 @@
   gap: 0 18px;
 }
 .resource-ingest-form .el-form-item {
-  margin-bottom: 12px;
+  margin-bottom: 12px;  /*标签、上传框、开关、底部按钮的字号和位置*/
+}
+.resource-ingest-form .el-select .el-tag__content {
+  font-size: 15px;
+}
+.el-select-dropdown__item {
+  font-size: 19px;
 }
 .resource-ingest-form .el-form-item__label {
   margin-bottom: 5px;
-  font-size: 13px;
+  font-size: 16px !important;
+  font-weight: 700 !important;
 }
 .resource-upload-grid {
   display: grid;
@@ -220,16 +210,19 @@
   background: #f9fcff;
 }
 .resource-ingest-form .el-upload-dragger .el-icon {
-  font-size: 42px;
+  font-size: 50px;
   color: #73aaff;
   display: block;
-  margin: 0 auto 8px;
+  margin: 0 auto 0px;
 }
 .resource-ingest-form .el-upload-dragger p {
-  margin-top: 7px;
-  font-size: 11px;
+  margin-top: 5px;
+  font-size: 13px;
   color: #8194b0;
   line-height: 1.6;
+}
+.resource-ingest-form .el-upload-dragger b {
+  font-size: 18px;
 }
 .ingest-task-detail .el-dialog__title {
   font-size: 22px; /* 弹窗标题 */
@@ -248,7 +241,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .resource-switches .el-switch {
   --el-switch-height: 18px;
@@ -266,27 +259,41 @@
   color: #8d9bb3;
 }
 .resource-submit .el-button {
-  min-width: 170px;
+  min-width: 160px;  /* 宽度 */
+  min-height: 40px;
+  font-size: 16px;
+  font-weight: 700;
   margin-left: auto;
 }
 .resource-source-hint {
-  min-height: 147px;
+  min-height: 160px;
   text-align: center;
-  background: #f6faff;
-  padding: 15px;
-  border: 1px dashed #bad7fb;
+  background: #f9fcff;
+  padding: 20px 10px;
+  border: 1px dashed var(--el-border-color);
   border-radius: 6px;
 }
 .resource-source-hint .el-icon {
   display: block;
-  margin: 0 auto 8px;
-  font-size: 35px;
-  color: #087bff;
+  margin: 0 auto 0px;
+  font-size: 50px;
+  color: #73aaff;
+}
+.resource-source-hint b {
+  font-size: 18px;
 }
 .resource-source-hint p {
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #8194b0;
+  line-height: 1.6;
+}
+.resource-address-help {
+  display: block;
+  margin-top: 5px;
   color: #7b91b1;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .resource-task-progress {
   display: flex;
@@ -304,11 +311,14 @@
   margin-top: 9px;
 }
 .resource-task-progress .el-step__title {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 28px;
 }
+.resource-task-progress .el-step__icon {
+  font-size: 16px;
+}
 .resource-task-name {
-  font-size: 12px;
+  font-size: 14px;
   color: #7c92b2;
   border-bottom: 1px solid #e7f0fc;
   padding-bottom: 15px;
@@ -326,9 +336,13 @@
   border: 1px solid #e5effb;
   border-radius: 6px;
 }
+.resource-ingest-grid h4 {
+  font-size: 20px;
+}
 .resource-result-grid span {
   display: block;
-  font-size: 12px;
+  font-size: 18px;
+  font-weight: 700;
 }
 .resource-result-grid b {
   display: block;
@@ -387,6 +401,25 @@
   border-radius: 8px;
   margin-bottom: 12px;
 }
+/* 开始日期、结束日期 */
+.resource-statistics-filter .el-range-input {
+  font-size: 18px;
+}
+
+/* 两个日期之间的“至” */
+.resource-statistics-filter .el-range-separator {
+  font-size: 18px;
+}
+
+/* 全部来源、全部语言 */
+.resource-statistics-filter .el-select__wrapper {
+  font-size: 18px;
+}
+
+/* 查询、导出报表 */
+.resource-statistics-filter .el-button {
+  font-size: 18px;
+}
 .resource-statistics-filter .el-select {
   width: 200px;
 }
@@ -398,7 +431,7 @@
 }
 .resource-statistics-top {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
+  grid-template-columns: 1.35fr 1.1fr 0.9fr;
   gap: 14px;
 }
 .resource-statistics-bottom {

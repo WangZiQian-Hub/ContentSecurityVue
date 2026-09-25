@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const backend = vi.hoisted(() => ({ isMock: true, request: vi.fn() }))
 vi.mock('./request', () => backend)
 import {
+  deleteDataset,
+  getDataset,
   getSummary,
   listDatasets,
   listIngestTasks,
@@ -66,6 +68,19 @@ describe('数据资源接口与示例数据', () => {
     expect(empty.total).toBe(0)
     expect(empty.items).toEqual([])
   })
+  it('按关键词查询数据集并通过 ID 加载已选数据集', async () => {
+    backend.isMock = false
+    backend.request
+      .mockResolvedValueOnce({ items: [], total: 0 })
+      .mockResolvedValueOnce({ id: 128, name: '目标数据集' })
+    await listDatasets({ page: 1, pageSize: 50, keyword: '目标' })
+    expect(backend.request).toHaveBeenNthCalledWith(1, {
+      url: '/datasets',
+      params: { page: 1, pageSize: 50, keyword: '目标' },
+    })
+    await getDataset(128)
+    expect(backend.request).toHaveBeenNthCalledWith(2, { url: '/datasets/128' })
+  })
   it('接入任务同时按关键词和状态筛选', async () => {
     const data = await listIngestTasks({
       page: 1,
@@ -101,5 +116,10 @@ describe('数据资源接口与示例数据', () => {
       data: payload,
       timeout: 300000,
     })
+  })
+  it('删除数据集调用真实删除接口', async () => {
+    backend.request.mockResolvedValue(undefined)
+    await deleteDataset(12)
+    expect(backend.request).toHaveBeenCalledWith({ url: '/datasets/12', method: 'DELETE' })
   })
 })

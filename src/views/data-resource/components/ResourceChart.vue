@@ -10,8 +10,9 @@ const props = withDefaults(
     cumulative?: boolean
     centerText?: string
     height?: number
+    donutLayout?: 'default' | 'spacious'
   }>(),
-  { height: 245, centerText: '', data: () => [], trend: undefined },
+  { height: 245, centerText: '', data: () => [], trend: undefined, donutLayout: 'default' },
 )
 const element = ref<HTMLDivElement>()
 let chart: ECharts | undefined
@@ -25,8 +26,9 @@ function option(): EChartsOption {
       title: {
         text: props.centerText,
         subtext: '总数据量',
-        left: '29%',  // 越大越向右
-        top: '39%',  // 越大越向下
+        left: props.donutLayout === 'spacious' ? '25%' : '29%',  // 越大越向右
+        top: props.donutLayout === 'spacious' ? '43%' : '45%',  // 越大越向下
+        padding: props.donutLayout === 'spacious' ? 0 : 5,
         textAlign: 'center',
         textStyle: { color: '#0a2c6b', fontSize: 26 },  // “12.56 TB”大小
         subtextStyle: { color: '#7c8799',
@@ -36,7 +38,7 @@ function option(): EChartsOption {
       },
       legend: {
         orient: 'vertical',
-        right: '12%',  // 越大越向左
+        right: props.donutLayout === 'spacious' ? '5%' : '12%',  // 越大越向左
         top: 'center',
         itemGap: 20,  // 每一行之间的距离
         itemWidth: 35,      // 彩色色块宽度
@@ -51,8 +53,8 @@ function option(): EChartsOption {
       series: [
         {
           type: 'pie',
-          center: ['30%', '50%'],  // 圆环位置：水平、垂直
-          radius: ['60%', '90%'],  // 内半径、外半径
+          center: [props.donutLayout === 'spacious' ? '25%' : '30%', '50%'],  // 圆环位置：水平、垂直
+          radius: props.donutLayout === 'spacious' ? ['55%', '82%'] : ['60%', '90%'],  // 内半径、外半径
           label: { show: false },
           data: props.data,
         },

@@ -34,6 +34,13 @@ export async function listDatasets(query: DatasetQuery): Promise<PageResult<Reso
     totalPages: Math.ceil(rows.length / query.pageSize),
   }
 }
+export function getDataset(id: number): Promise<ResourceDataset> {
+  if (isMock) {
+    const dataset = resourceDatasets.find((row) => row.id === id)
+    return dataset ? Promise.resolve(dataset) : Promise.reject(new Error('数据集不存在'))
+  }
+  return request({ url: `/datasets/${id}` })
+}
 export async function listIngestTasks(query: {
   page: number
   pageSize: number
@@ -63,6 +70,9 @@ export function saveDataset(data: Partial<ResourceDataset>) {
     data,
   })
 }
+export function deleteDataset(id: number) {
+  return request<void>({ url: `/datasets/${id}`, method: 'DELETE' })
+}
 export function uploadResourceFile(file: File) {
   const data = new FormData()
   data.append('file', file)
@@ -70,4 +80,19 @@ export function uploadResourceFile(file: File) {
 }
 export function startIngest(data: ExecuteTaskReq) {
   return request<Task>({ url: '/tasks/execute', method: 'POST', data, timeout: 300000 })
+}
+
+export async function getResourceSamples(datasetId: number, versionId: string, ids: string[]) {
+  if (isMock) {
+    const { resourceSamples } = await import('../mock/resource-samples')
+    return structuredClone(
+      resourceSamples.filter(
+        (row) => row.datasetId === datasetId && row.versionId === versionId && ids.includes(row.id),
+      ),
+    )
+  }
+  return request<import('../types/data-resource').ResourceSample[]>({
+    url: `/datasets/${datasetId}/versions/${encodeURIComponent(versionId)}/samples`,
+    params: { ids },
+  })
 }

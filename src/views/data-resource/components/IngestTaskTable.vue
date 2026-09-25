@@ -77,12 +77,12 @@ onMounted(load)
         }}</el-tag></template
       ></el-table-column
     >
-    <el-table-column label="接入时间" min-width="160"
+    <el-table-column label="接入时间" min-width="140"
       ><template #default="{ row }">{{
         new Date(row.createdAt).toLocaleString('zh-CN', { hour12: false })
       }}</template></el-table-column
     >
-    <el-table-column label="操作" width="65"
+    <el-table-column label="操作" width="85"
       ><template #default="{ row }"
         ><el-button link type="primary" @click.stop="select(row)">查看</el-button></template
       ></el-table-column

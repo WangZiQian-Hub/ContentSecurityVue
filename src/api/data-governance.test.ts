@@ -30,6 +30,13 @@ describe('数据处理接口契约', () => {
       url: '/data-governance/options',
       params: { kind: PROCESS_KIND },
     })
+    backend.request.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 2,
+      pageSize: 10,
+      totalPages: 0,
+    })
     await listProcessTasks(2, 10)
     expect(backend.request).toHaveBeenLastCalledWith({
       url: '/tasks',

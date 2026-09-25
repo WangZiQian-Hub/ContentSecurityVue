@@ -1,15 +1,14 @@
 // “数据集管理” 子页面
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
 import DatasetDetailContent from './components/DatasetDetailContent.vue'
 import { useDataResourceStore } from '../../stores/data-resource'
 import { isMock } from '../../api/request'
 import type { DatasetQuery, ResourceDataset } from '../../types/data-resource'
 const store = useDataResourceStore()
-const route = useRoute()
 const router = useRouter()
 const query = reactive<DatasetQuery>({
   page: 1,
@@ -25,6 +24,7 @@ const loading = ref(false)
 const failed = ref(false)
 const editorOpen = ref(false)
 const saving = ref(false)
+const deletingId = ref<number>()
 const editId = ref<number>()
 const form = reactive({
   name: '',
@@ -61,24 +61,37 @@ function reset() {
   })
   void load()
 }
-function openEditor(row?: ResourceDataset) {
-  editId.value = row?.id
+function sortByUpdatedAt(a: ResourceDataset, b: ResourceDataset) {
+  return Date.parse(a.updatedAt) - Date.parse(b.updatedAt)
+}
+const statusRank: Record<ResourceDataset['status'], number> = {
+  uploading: 0,
+  processing: 1,
+  ready: 2,
+  archived: 3,
+}
+function sortByStatus(a: ResourceDataset, b: ResourceDataset) {
+  return statusRank[a.status] - statusRank[b.status]
+}
+function openEditor(row: ResourceDataset) {
+  editId.value = row.id
   Object.assign(form, {
-    name: row?.name ?? '',
-    description: row?.description ?? '',
-    owner: row?.owner ?? '',
-    sourceType: row?.sourceType ?? 'business',
-    languages: row ? [...row.languages] : ['zh'],
+    name: row.name,
+    description: row.description,
+    owner: row.owner,
+    sourceType: row.sourceType,
+    languages: [...row.languages],
   })
   editorOpen.value = true
 }
 async function save() {
+  if (!editId.value) return
   if (!form.name.trim() || !form.owner.trim() || !form.languages.length) {
     ElMessage.warning('请填写数据集名称、所有者并选择语言')
     return
   }
   if (isMock) {
-    ElMessage.info('当前为示例模式，创建和编辑需连接后端服务。')
+    ElMessage.info('当前为示例模式，编辑需连接后端服务。')
     return
   }
   saving.value = true
@@ -94,13 +107,34 @@ async function save() {
     saving.value = false
   }
 }
-onMounted(async () => {
-  await load()
-  if (route.query.create === '1') {
-    openEditor()
-    void router.replace({ path: route.path })
+async function removeDataset(row: ResourceDataset) {
+  if (isMock) {
+    ElMessage.info('当前为示例模式，删除需连接后端服务。')
+    return
   }
-})
+  try {
+    await ElMessageBox.confirm(
+      `确定删除数据集“${row.name}”吗？删除后无法恢复，请确认其中的数据已不再需要。`,
+      '删除数据集',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  deletingId.value = row.id
+  try {
+    await store.deleteDataset(row.id)
+    if (selected.value?.id === row.id) selected.value = undefined
+    if (store.datasets.length === 1 && query.page > 1) query.page--
+    ElMessage.success('数据集已删除')
+    await load()
+  } catch {
+    /* 统一请求层已提示错误。 */
+  } finally {
+    deletingId.value = undefined
+  }
+}
+onMounted(load)
 </script>
 <template>
   <PanelCard title="数据集管理" icon="FolderOpened">
@@ -154,8 +188,7 @@ onMounted(async () => {
           label="良好"
           value="good" /><el-option label="异常" value="poor"
       /></el-select>
-      <el-button @click="reset">重置</el-button
-      ><el-button type="primary" @click="openEditor()">＋ 创建数据集</el-button>
+      <el-button @click="reset">重置</el-button>
     </div>
     <el-alert v-if="failed" title="数据集加载失败" type="error" :closable="false"
       ><el-button link @click="load">重试</el-button></el-alert
@@ -189,29 +222,36 @@ onMounted(async () => {
         ><template #default="{ row }">{{ row.storageGb }} GB</template></el-table-column
       >
       <el-table-column prop="sourceName" label="数据来源" min-width="110" />
-      <el-table-column label="质量评分" width="100"
+      <el-table-column prop="qualityScore" label="质量评分" width="120" sortable
         ><template #default="{ row }"
           ><el-tag :type="row.qualityStatus === 'poor' ? 'warning' : 'success'" round>{{
             row.qualityScore
           }}</el-tag></template
         ></el-table-column
       >
-      <el-table-column label="更新时间" min-width="145"
+      <el-table-column prop="updatedAt" label="更新时间" min-width="145" sortable :sort-method="sortByUpdatedAt"
         ><template #default="{ row }">{{
           new Date(row.updatedAt).toLocaleDateString('zh-CN')
         }}</template></el-table-column
       >
-      <el-table-column label="状态" width="95"
+      <el-table-column prop="status" label="状态" width="110" sortable :sort-method="sortByStatus"
         ><template #default="{ row }: { row: ResourceDataset }"
           ><el-tag :type="row.status === 'ready' ? 'success' : 'primary'" round>{{
             statusNames[row.status]
           }}</el-tag></template
         ></el-table-column
       >
-      <el-table-column label="操作" width="115"
-        ><template #default="{ row }"
+      <el-table-column label="操作" width="170"
+        ><template #default="{ row }: { row: ResourceDataset }"
           ><el-button link type="primary" @click.stop="selected = row">查看</el-button
-          ><el-button link type="primary" @click.stop="openEditor(row)">编辑</el-button></template
+          ><el-button link type="primary" @click.stop="openEditor(row)">编辑</el-button
+          ><el-button
+            link
+            type="danger"
+            :loading="deletingId === row.id"
+            @click.stop="removeDataset(row)"
+            >删除</el-button
+          ></template
         ></el-table-column
       >
     </el-table>
@@ -234,7 +274,7 @@ onMounted(async () => {
   >
     <DatasetDetailContent v-if="selected" :dataset="selected" />
     <template #footer
-      ><el-button @click="openEditor(selected)">编辑信息</el-button
+      ><el-button v-if="selected" @click="openEditor(selected)">编辑信息</el-button
       ><el-button
         type="primary"
         @click="router.push({ path: '/data-resource/ingest', query: { dataset: selected?.id } })"
@@ -242,7 +282,7 @@ onMounted(async () => {
       ></template
     >
   </el-drawer>
-  <el-dialog v-model="editorOpen" :title="editId ? '编辑数据集' : '创建数据集'" width="540px">
+  <el-dialog v-model="editorOpen" title="编辑数据集" width="540px">
     <el-alert
       v-if="isMock"
       title="示例模式：可填写表单，保存需连接后端服务"
