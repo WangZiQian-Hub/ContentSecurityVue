@@ -5,6 +5,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import ValueMetrics from './components/ValueMetrics.vue'
 import ValueChart from './components/ValueChart.vue'
 import { isMock } from '../../api/request'
+import { languageName } from '../../utils/governance-language'
 import * as api from '../../api/data-value'
 import type {
   ValueOptions,
@@ -96,7 +97,7 @@ const metrics = computed(() => {
       value: r?.languages.length ?? null,
       unit: '种',
       icon: 'Position',
-      note: r?.languages.join(' / ') ?? '等待分析结果',
+      note: r?.languages.map(languageName).join(' / ') ?? '等待分析结果',
     },
   ]
 })
@@ -301,14 +302,8 @@ onMounted(loadOptions)
 </script>
 <template>
   <div class="value-page">
-    <el-alert
-      v-if="isMock"
-      title="演示数据：展示预存分析快照；评分与证据仅用于演示，未连接真实模型服务。"
-      type="warning"
-      :closable="false"
-    />
     <PanelCard title="当前数据集分析" icon="DataAnalysis">
-      <template #extra><span class="muted">下方结果随分析范围变化</span></template>
+      <template #extra><span class="muted value-panel-note">下方结果随分析范围变化</span></template>
       <el-alert v-if="optionsFailed" title="分析选项加载失败" type="error" :closable="false"
         ><el-button link @click="loadOptions">重试</el-button></el-alert
       >
@@ -382,14 +377,16 @@ onMounted(loadOptions)
     <div v-if="result" class="value-charts">
       <PanelCard title="多维价值画像" icon="Odometer"
         ><template #extra
-          ><el-button link type="primary" @click="infoOpen = true">维度明细 ›</el-button></template
+          ><el-button class="panel-more" link type="primary" @click="infoOpen = true"
+            >维度明细 ›</el-button
+          ></template
         ><ValueChart v-if="result.validCount" kind="radar" :result="result" />
         <el-empty v-else description="暂无有效评分样本" :image-size="80" />
         <p class="chart-note">当前范围均值 · 评分方案定义维度权重</p></PanelCard
       >
       <PanelCard title="综合价值分数分布" icon="Histogram"
         ><template #extra
-          ><el-button link type="primary" @click="distributionOpen = true"
+          ><el-button class="panel-more" link type="primary" @click="distributionOpen = true"
             >分布明细 ›</el-button
           ></template
         ><ValueChart v-if="result.validCount" kind="bar" :result="result" @select-bin="chooseBin" />
@@ -400,7 +397,12 @@ onMounted(loadOptions)
       >
       <PanelCard title="样本价值解释" icon="Opportunity"
         ><template #extra
-          ><el-button link type="primary" :disabled="!selected" @click="detailOpen = true"
+          ><el-button
+            class="panel-more"
+            link
+            type="primary"
+            :disabled="!selected"
+            @click="detailOpen = true"
             >完整解释 ›</el-button
           ></template
         >
@@ -409,14 +411,20 @@ onMounted(loadOptions)
             {{ selected.id }} · 综合评分 {{ selected.score ?? '不可评估' }}
           </div>
           <h3 class="sample-title">{{ selected.text }}</h3>
-          <div v-for="item in selected.dimensions.slice(0, 3)" :key="item.name" class="reason-row">
-            <b>{{ item.name }} {{ item.score }}</b
-            ><span
-              >{{ item.reason }}
-              <blockquote v-for="(evidence, index) in item.evidence" :key="index">
-                原文证据：{{ evidence }}
-              </blockquote></span
+          <div class="reason-scroll" tabindex="0" aria-label="样本价值维度解释，可上下滚动">
+            <div
+              v-for="item in selected.dimensions.slice(0, 3)"
+              :key="item.name"
+              class="reason-row"
             >
+              <b>{{ item.name }} {{ item.score }}</b
+              ><span
+                >{{ item.reason }}
+                <blockquote v-for="(evidence, index) in item.evidence" :key="index">
+                  原文证据：{{ evidence }}
+                </blockquote></span
+              >
+            </div>
           </div>
           <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
           <p class="muted">解释对象为选中样本，不代表整个数据集。</p></template
@@ -584,13 +592,16 @@ onMounted(loadOptions)
 <style scoped>
 .value-page {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 .muted,
 .chart-note {
   color: #6c85ad;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 2;
+}
+.value-panel-note {
+  font-size: 15px;
 }
 .value-filters {
   display: flex;
@@ -602,8 +613,12 @@ onMounted(loadOptions)
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 600;
   color: #23467d;
+}
+.value-filters .el-button {
+  font-size: 16px;
 }
 .value-filters .el-select {
   width: 125px;
@@ -611,8 +626,11 @@ onMounted(loadOptions)
 .value-filters label:first-child .el-select {
   width: 220px;
 }
+.value-filters label:nth-child(2) .el-select {
+  width: 190px;
+}
 .value-filters label:nth-child(4) .el-select {
-  width: 185px;
+  width: 200px;
 }
 .value-filters .el-button + .el-button {
   margin-left: 0;
@@ -624,14 +642,17 @@ onMounted(loadOptions)
   gap: 8px;
   background: #edf6ff;
   padding: 5px 10px;
-  margin-top: 12px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 15px;
   color: #31588d;
   border-radius: 5px;
 }
+.value-result-line .el-button {
+  font-size: 15px;
+}
 .value-charts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 0.9fr 1fr 1.15fr;
   gap: 12px;
 }
 .chart-note {
@@ -652,6 +673,16 @@ onMounted(loadOptions)
   color: #133675;
   margin: 12px 0;
 }
+.reason-scroll {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 5px;
+  scrollbar-gutter: stable;
+}
+.reason-scroll:focus-visible {
+  outline: 2px solid #87bdff;
+  outline-offset: 2px;
+}
 .reason-row {
   display: flex;
   gap: 12px;
@@ -661,6 +692,12 @@ onMounted(loadOptions)
   border-radius: 5px;
   font-size: 12px;
   line-height: 1.6;
+}
+.reason-row:first-child {
+  margin-top: 0;
+}
+.reason-row:last-child {
+  margin-bottom: 0;
 }
 .reason-row b {
   color: #1265c3;

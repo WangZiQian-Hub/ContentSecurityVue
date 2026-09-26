@@ -8,6 +8,7 @@ import type {
   ResourceSummary,
   ResourceView,
   StatisticsQuery,
+  ResourceFilterOptions,
 } from '../types/data-resource'
 import type { ExecuteTaskReq } from '../types'
 export const useDataResourceStore = defineStore('data-resource', () => {
@@ -18,6 +19,16 @@ export const useDataResourceStore = defineStore('data-resource', () => {
   const taskTotal = ref(0)
   const loading = ref(false)
   const error = ref('')
+  const filterOptions = ref<ResourceFilterOptions>({ languages: [], sources: [], modalities: [] })
+  const optionsError = ref('')
+  async function loadOptions() {
+    optionsError.value = ''
+    try {
+      filterOptions.value = await api.getResourceFilterOptions()
+    } catch {
+      optionsError.value = '资源筛选选项加载失败，请重试。'
+    }
+  }
   let summaryRequest = 0
   let datasetRequest = 0
   let taskRequest = 0
@@ -28,7 +39,10 @@ export const useDataResourceStore = defineStore('data-resource', () => {
     summary.value = undefined
     try {
       const data = await api.getSummary(view, filters)
-      if (current === summaryRequest) summary.value = data
+      if (current === summaryRequest) {
+        summary.value = data
+        if (data.options) filterOptions.value = data.options
+      }
     } catch {
       if (current === summaryRequest) error.value = '资源统计加载失败，请检查服务后重试。'
     } finally {
@@ -56,6 +70,9 @@ export const useDataResourceStore = defineStore('data-resource', () => {
   const uploadFile = (file: File) => api.uploadResourceFile(file)
   const startIngest = (data: ExecuteTaskReq) => api.startIngest(data)
   return {
+    filterOptions,
+    optionsError,
+    loadOptions,
     summary,
     datasets,
     datasetTotal,

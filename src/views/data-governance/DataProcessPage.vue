@@ -8,11 +8,13 @@ import ProcessTaskHistory from './components/ProcessTaskHistory.vue'
 import ProcessComparisonTable from './components/ProcessComparisonTable.vue'
 import { useDataGovernanceStore } from '../../stores/data-governance'
 import { isMock } from '../../api/request'
-import type { ProcessInput, ProcessPreview } from '../../types/data-governance'
+import type { ProcessCreateInput, ProcessInput, ProcessPreview } from '../../types/data-governance'
+import { validateOutputVersionName } from '../../utils/process-output-version'
 const store = useDataGovernanceStore()
 const form = reactive<ProcessInput>({
   datasetId: 0,
   datasetVersionId: '',
+  outputVersionName: '',
   scope: 'all',
   rules: [],
   templateId: '',
@@ -29,6 +31,14 @@ const previewOpen = ref(false)
 const updatedAt = ref('')
 let disposed = false
 let pollTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => JSON.stringify(form),
+  () => {
+    previewResult.value = undefined
+    previewOpen.value = false
+  },
+  { flush: 'sync' },
+)
 watch(
   () => form.datasetId,
   () => {
@@ -86,23 +96,41 @@ function validatedInput(): ProcessInput | undefined {
 async function runAction(action: 'preview' | 'create') {
   const input = validatedInput()
   if (!input || busy.value) return
+  let createInput: ProcessCreateInput | undefined
+  if (action === 'create') {
+    const outputVersionName = form.outputVersionName?.trim() ?? ''
+    const versionError = validateOutputVersionName(outputVersionName, versions.value)
+    if (versionError) {
+      ElMessage.warning(versionError)
+      return
+    }
+    createInput = { ...input, outputVersionName }
+  }
   busy.value = true
   actionError.value = ''
+  const inputKey = JSON.stringify(form)
   try {
     if (action === 'preview') {
-      previewResult.value = await store.preview(input)
+      const preview = await store.preview(input)
+      if (disposed || inputKey !== JSON.stringify(form)) return
+      previewResult.value = preview
       previewOpen.value = true
     } else {
       try {
         await ElMessageBox.confirm(
-          `输入版本：${input.datasetVersionId}；规则顺序：${input.rules.map((code) => store.options?.rules.find((rule) => rule.code === code)?.label ?? code).join(' → ')}。处理完成后生成新版本，保留原始数据。`,
+          `输入版本：${input.datasetVersionId}；输出版本：${createInput!.outputVersionName}；规则顺序：${input.rules.map((code) => store.options?.rules.find((rule) => rule.code === code)?.label ?? code).join(' → ')}。处理完成后生成新版本，保留原始数据。`,
           '确认创建处理任务',
-          { confirmButtonText: '创建任务', cancelButtonText: '返回修改', type: 'info', customClass: 'process-confirm-dialog' },
+          {
+            confirmButtonText: '创建任务',
+            cancelButtonText: '返回修改',
+            type: 'info',
+            customClass: 'process-confirm-dialog',
+          },
         )
       } catch {
         return
       }
-      await store.createTask(input)
+      await store.createTask(createInput!)
       ElMessage.success('处理任务已创建')
       try {
         if (!isMock) await store.loadTasks()
@@ -181,12 +209,23 @@ onUnmounted(() => {
                   :value="item.versionId" /></el-select
             ></el-form-item>
           </div>
-          <el-form-item label="处理范围"
-            ><el-select v-model="form.scope" aria-label="处理范围"
-              ><el-option label="全量数据" value="all" /><el-option
-                label="指定批次"
-                value="batch" /><el-option label="筛选后的样本" value="filtered" /></el-select
-          ></el-form-item>
+          <div class="process-input-pair process-scope-output">
+            <el-form-item label="处理范围"
+              ><el-select v-model="form.scope" aria-label="处理范围"
+                ><el-option label="全量数据" value="all" /><el-option
+                  label="指定批次"
+                  value="batch" /><el-option label="筛选后的样本" value="filtered" /></el-select
+            ></el-form-item>
+            <el-form-item label="输出版本" required
+              ><el-input
+                v-model="form.outputVersionName"
+                class="process-output-version"
+                aria-label="输出版本"
+                placeholder="请输入，如 v1.1.0"
+                :maxlength="64"
+                clearable
+            /></el-form-item>
+          </div>
           <el-form-item v-if="form.scope === 'batch'" label="接入批次 ID"
             ><el-input v-model="form.batchId" placeholder="输入数据资源模块的批次 ID"
           /></el-form-item>
@@ -234,3 +273,17 @@ onUnmounted(() => {
     /></el-dialog>
   </div>
 </template>
+
+<style scoped>
+.process-scope-output {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.process-output-version {
+  --el-input-height: 38px;
+  --el-input-border-color: #c7ddff;
+  font-size: 16px;
+}
+.process-output-version :deep(.el-input__wrapper) {
+  min-height: 38px;
+}
+</style>

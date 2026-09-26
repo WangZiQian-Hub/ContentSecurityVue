@@ -5,7 +5,14 @@ import AppIcon from './AppIcon.vue'
 import { getKpis } from '../api/kpi'
 import type { Kpi } from '../types'
 
-const props = defineProps<{ kind?: string; comparisonLabel?: string }>()
+const props = defineProps<{
+  kind?: string
+  comparisonLabel?: string
+  snapshotItems?: Kpi[]
+  hideMiniBarsWithoutComparison?: boolean
+  hideComparison?: boolean
+  titleDescriptions?: Record<string, string>
+}>()
 
 //items 必须是数组，数组中的每一项都必须符合Kpi接口
 const items = ref<Kpi[]>([])
@@ -23,14 +30,15 @@ function formatChange(changeRate: number) {
 
 //KPI组件监听变化
 watch(
-  () => props.kind,
-  async (kind, _previousKind, onCleanup) => {
+  () => [props.kind, props.snapshotItems] as const,
+  async ([kind, provided], _previousKind, onCleanup) => {
     // 切换页签后忽略旧请求，避免上一页的卡片覆盖当前页。
     let isCurrent = true
     onCleanup(() => {
       isCurrent = false
     })
     items.value = []
+    if (provided !== undefined) { items.value = provided; return }
     try {
       const data = await getKpis(kind || 'dashboard')
       if (isCurrent) items.value = data
@@ -50,16 +58,24 @@ watch(
     <article v-for="(item, index) in items" :key="item.id" class="kpi-card">
       <div class="kpi-icon" :class="`tone-${index % 6}`"><AppIcon :name="item.icon" /></div>
       <div>
-        <h3>{{ item.label }}</h3>
+        <h3 :title="titleDescriptions?.[item.id]">{{ item.label }}</h3>
         <strong
-          >{{ formatValue(item.value) }} <small>{{ item.unit }}</small></strong
+          ><slot name="value" :item="item" :items="items"
+            >{{ item.displayValue ?? formatValue(item.value) }} <small>{{ item.unit }}</small></slot
+          ></strong
         >
-        <p v-if="comparisonLabel">{{ comparisonLabel }}</p>
-        <p v-else :class="item.changeRate < 0 ? 'positive' : 'increase'">
-          {{ formatChange(item.changeRate) }}
-        </p>
+        <slot v-if="!hideComparison" name="comparison" :item="item">
+          <p v-if="comparisonLabel">{{ comparisonLabel }}</p>
+          <p v-else :class="item.changeRate < 0 ? 'positive' : 'increase'">
+            {{ formatChange(item.changeRate) }}
+          </p>
+        </slot>
       </div>
-      <div class="mini-bars" aria-hidden="true">
+      <div
+        v-if="!hideMiniBarsWithoutComparison || !comparisonLabel"
+        class="mini-bars"
+        aria-hidden="true"
+      >
         <i v-for="bar in 5" :key="bar" :style="{ height: `${bar * 6 + 6}px` }"></i>
       </div>
     </article>

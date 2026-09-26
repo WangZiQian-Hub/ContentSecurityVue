@@ -3,6 +3,8 @@ export type ResourceView = 'overview' | 'ingest' | 'datasets' | 'statistics'
 export interface Distribution {
   name: string
   value: number
+  count?: number
+  code?: string
 }
 export interface ResourceDataset {
   id: number
@@ -21,6 +23,12 @@ export interface ResourceDataset {
   description: string
   createdAt: string
   updatedAt: string
+  statistics?: {
+    qualityDimensions?: Distribution[]
+    issues?: Distribution[]
+    usageCount?: number
+    storageEvents?: { at: string; deltaGb: number }[]
+  }
 }
 export interface IngestTask {
   taskId: string
@@ -35,17 +43,50 @@ export interface IngestTask {
   duplicateCount: number
   anomalyCount: number
   traceId: string
+  datasetId?: number
+  datasetVersionId?: string
 }
 export interface ResourceSummary {
+  asOf?: string
   kpis: Kpi[]
   trend: { dates: string[]; added: number[]; total: number[] }
   modalities: Distribution[]
   sources: Distribution[]
   languages: Distribution[]
   quality: Distribution[]
-  qualityScore: number
+  qualityScore: number | null
   issues: Distribution[]
   ranking: { name: string; source: string; storageGb: number; uses: number; share: number }[]
+  filters?: StatisticsQuery
+  generatedAt?: string
+  datasetIds?: number[]
+  modalityCount?: number
+  basis?: {
+    languages: string
+    modalities: string
+    sources: string
+    quality: string
+    trend: string
+    issues: string
+    ranking: string
+  }
+  options?: ResourceFilterOptions
+}
+export interface ResourceFilterOptions {
+  languages: { code: string; name: string }[]
+  sources: { code: string; name: string }[]
+  modalities: string[]
+}
+/** 日快照保存各数据集、各任务的原始状态，不保存预先编写的涨跌幅。 */
+export type ResourceKpiDataset = Pick<ResourceDataset,
+  'id' | 'sourceType' | 'sourceName' | 'languages' | 'createdAt' |
+  'rowCount' | 'storageGb' | 'status' | 'qualityStatus'>
+export type ResourceKpiTask = Pick<IngestTask, 'taskId' | 'datasetId' | 'status' | 'createdAt'>
+export interface ResourceDailyComparison {
+  currentAt: string
+  previousAt: string
+  datasets: ResourceKpiDataset[]
+  tasks: ResourceKpiTask[]
 }
 export interface DatasetQuery {
   page: number

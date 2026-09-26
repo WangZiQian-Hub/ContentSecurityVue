@@ -17,6 +17,16 @@ defineProps<{ task?: ProcessTask }>()
       </div></template
     >
     <template v-if="task">
+      <p class="process-info">
+        当前查看任务：{{ task.datasetName }} · 输入版本 {{ task.input.datasetVersionId }} ·
+        {{
+          task.input.scope === 'all'
+            ? '全量数据'
+            : task.input.scope === 'batch'
+              ? `批次 ${task.input.batchId}`
+              : `筛选：${task.input.filter?.keyword}`
+        }}。任务输入不随新任务表单变化。
+      </p>
       <ol class="process-steps" aria-label="数据处理阶段">
         <li v-for="(step, index) in task.steps" :key="`${index}-${step.name}`" :class="step.status">
           <span class="process-step-dot"

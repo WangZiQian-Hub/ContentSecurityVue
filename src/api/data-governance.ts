@@ -1,8 +1,10 @@
 import { getResourceSamples } from './data-resource'
+import { getGovernanceResources } from './governance-resources'
 import { isMock, request } from './request'
 import { processOptions, processTasks } from '../mock/data-governance'
 import { PROCESS_KIND } from '../types/data-governance'
 import type {
+  ProcessCreateInput,
   ProcessInput,
   ProcessOptions,
   ProcessPreview,
@@ -10,8 +12,22 @@ import type {
 } from '../types/data-governance'
 import type { PageResult } from '../types'
 export async function getProcessOptions(): Promise<ProcessOptions> {
-  if (isMock) return structuredClone(processOptions)
-  return request({ url: '/data-governance/options', params: { kind: PROCESS_KIND } })
+  const [options, datasets] = await Promise.all([
+    isMock
+      ? structuredClone(processOptions)
+      : request<ProcessOptions>({
+          url: '/data-governance/options',
+          params: { kind: PROCESS_KIND },
+        }),
+    getGovernanceResources(),
+  ])
+  return {
+    ...options,
+    datasets: datasets.map((d) => ({
+      ...d,
+      versions: d.versions.map((v) => ({ versionId: v.id, label: v.label })),
+    })),
+  }
 }
 export async function listProcessTasks(page = 1, pageSize = 3): Promise<PageResult<ProcessTask>> {
   if (isMock)
@@ -57,7 +73,7 @@ export async function previewProcess(input: ProcessInput): Promise<ProcessPrevie
   if (preview) preview.items = await resolveComparisons(input, preview.items)
   return preview
 }
-export function createProcessTask(input: ProcessInput): Promise<ProcessTask> {
+export function createProcessTask(input: ProcessCreateInput): Promise<ProcessTask> {
   return request({
     url: '/tasks',
     method: 'POST',

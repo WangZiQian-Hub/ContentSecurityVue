@@ -1,6 +1,6 @@
 // “数据集管理” 子页面
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
@@ -33,7 +33,7 @@ const form = reactive({
   sourceType: 'business' as ResourceDataset['sourceType'],
   languages: ['zh'],
 })
-const languageNames: Record<string, string> = { zh: '中文', en: '英文', ja: '日文', ar: '阿拉伯文' }
+const languageNames = computed<Record<string, string>>(() => Object.fromEntries(store.filterOptions.languages.map(l => [l.code, l.name])))
 const statusNames = { ready: '可用', processing: '处理中', uploading: '上传中', archived: '已归档' }
 async function load() {
   loading.value = true
@@ -101,6 +101,7 @@ async function save() {
     editorOpen.value = false
     ElMessage.success('数据集已保存')
     await load()
+    await Promise.all([store.loadOptions(), store.loadSummary('datasets')])
   } catch {
     /* 统一请求层已提示错误。 */
   } finally {
@@ -128,6 +129,7 @@ async function removeDataset(row: ResourceDataset) {
     if (store.datasets.length === 1 && query.page > 1) query.page--
     ElMessage.success('数据集已删除')
     await load()
+    await Promise.all([store.loadOptions(), store.loadSummary('datasets')])
   } catch {
     /* 统一请求层已提示错误。 */
   } finally {
@@ -153,7 +155,7 @@ onMounted(load)
         aria-label="数据类型"
         @change="search"
         ><el-option
-          v-for="name in ['文本', '图片', '视频', '音频']"
+          v-for="name in store.filterOptions.modalities"
           :key="name"
           :label="name"
           :value="name"
@@ -172,11 +174,7 @@ onMounted(load)
         clearable
         aria-label="数据来源"
         @change="search"
-        ><el-option label="互联网" value="internet" /><el-option
-          label="行业数据"
-          value="industry" /><el-option label="业务数据" value="business" /><el-option
-          label="合成数据"
-          value="synthetic"
+        ><el-option v-for="s in store.filterOptions.sources" :key="s.code" :label="s.name" :value="s.code"
       /></el-select>
       <el-select
         v-model="query.qualityStatus"

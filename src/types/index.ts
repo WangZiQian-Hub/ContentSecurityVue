@@ -44,6 +44,8 @@ export interface ResourceRow {
 }
 // KPI 卡片的数据契约。后端返回数值，千分位和箭头由前端统一展示。
 export interface Kpi {
+  comparison?: KpiComparison
+  displayValue?: string
   id: string
   label: string  //名称
   value: number  //数值
@@ -51,4 +53,14 @@ export interface Kpi {
   // 相比上一统计周期的变化率；正数上升、负数下降、0 表示持平。
   changeRate: number  //变化率
   icon: string  //图标
+}
+export interface KpiComparison {
+  period: 'day'
+  timezone: 'Asia/Shanghai'
+  currentAt: string
+  previousAt: string
+  previousValue: number | null
+  change: number | null
+  unit: '%' | 'pp'
+  status: 'available' | 'zero_baseline' | 'unavailable'
 }

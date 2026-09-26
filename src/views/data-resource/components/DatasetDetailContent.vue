@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { languageName } from '../../../utils/governance-language'
 import type { ResourceDataset } from '../../../types/data-resource'
 const props = defineProps<{ dataset: ResourceDataset }>()
 const tab = ref('basic')
-const languageNames: Record<string, string> = { zh: '中文', en: '英文', ja: '日文', ar: '阿拉伯文' }
 watch(
   () => props.dataset.id,
   () => {
@@ -32,7 +32,7 @@ watch(
           dataset.modalities.join(' / ')
         }}</el-descriptions-item>
         <el-descriptions-item label="数据语言">{{
-          dataset.languages.map((code) => languageNames[code] ?? code).join(' / ')
+          dataset.languages.map(languageName).join(' / ')
         }}</el-descriptions-item>
         <el-descriptions-item label="数据所有者">{{ dataset.owner }}</el-descriptions-item>
         <el-descriptions-item label="数据来源">{{ dataset.sourceName }}</el-descriptions-item>

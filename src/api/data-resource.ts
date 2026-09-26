@@ -8,13 +8,18 @@ import type {
   ResourceSummary,
   ResourceView,
   StatisticsQuery,
+  ResourceFilterOptions,
 } from '../types/data-resource'
 export async function getSummary(
   view: ResourceView,
   filters: StatisticsQuery = {},
 ): Promise<ResourceSummary> {
-  if (isMock) return getResourceSummary(view)
+  if (isMock) return getResourceSummary(view, filters)
   return request({ url: '/data-resources/summary', params: { view, ...filters } })
+}
+export async function getResourceFilterOptions(): Promise<ResourceFilterOptions> {
+  if (isMock) return (await import('../mock/resource-statistics')).resourceFilterOptions()
+  return request({ url: '/data-resources/options' })
 }
 export async function listDatasets(query: DatasetQuery): Promise<PageResult<ResourceDataset>> {
   if (!isMock) return request({ url: '/datasets', params: query })
@@ -84,12 +89,8 @@ export function startIngest(data: ExecuteTaskReq) {
 
 export async function getResourceSamples(datasetId: number, versionId: string, ids: string[]) {
   if (isMock) {
-    const { resourceSamples } = await import('../mock/resource-samples')
-    return structuredClone(
-      resourceSamples.filter(
-        (row) => row.datasetId === datasetId && row.versionId === versionId && ids.includes(row.id),
-      ),
-    )
+    const { resourceVersionSamples } = await import('../mock/governance-resources')
+    return resourceVersionSamples(datasetId, versionId).filter((row) => ids.includes(row.id))
   }
   return request<import('../types/data-resource').ResourceSample[]>({
     url: `/datasets/${datasetId}/versions/${encodeURIComponent(versionId)}/samples`,

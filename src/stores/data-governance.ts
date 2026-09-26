@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as api from '../api/data-governance'
-import type { ProcessInput, ProcessOptions, ProcessTask } from '../types/data-governance'
+import type { ProcessCreateInput, ProcessOptions, ProcessTask } from '../types/data-governance'
 export const useDataGovernanceStore = defineStore('data-governance', () => {
   const options = ref<ProcessOptions>()
   const tasks = ref<ProcessTask[]>([])
@@ -26,8 +26,16 @@ export const useDataGovernanceStore = defineStore('data-governance', () => {
     if (!taskId) return
     const task = await api.getProcessTask(taskId)
     if (requestId !== selection || currentTask.value?.taskId !== taskId) return
+    const completedNow =
+      task.status === 'succeeded' &&
+      currentTask.value.status !== 'succeeded' &&
+      !!task.outputVersion
     currentTask.value = task
     tasks.value = tasks.value.map((item) => (item.taskId === taskId ? task : item))
+    if (completedNow) {
+      const updated = await api.getProcessOptions()
+      if (requestId === selection) options.value = updated
+    }
   }
   async function loadTasks(page = 1, pageSize = 3) {
     const result = await api.listProcessTasks(page, pageSize)
@@ -57,14 +65,17 @@ export const useDataGovernanceStore = defineStore('data-governance', () => {
   }
   async function selectTask(taskId: string) {
     const requestId = ++selection
+    currentTask.value = undefined
     const task = await api.getProcessTask(taskId)
     if (requestId === selection) currentTask.value = task
     return task
   }
-  async function createTask(input: ProcessInput) {
+  async function createTask(input: ProcessCreateInput) {
     const task = await api.createProcessTask(input)
     selection++
     currentTask.value = task
+    if (!tasks.value.some((item) => item.taskId === task.taskId)) total.value++
+    tasks.value = [task, ...tasks.value.filter((item) => item.taskId !== task.taskId)].slice(0, 3)
     return task
   }
   return {

@@ -69,7 +69,7 @@ const infrastructureDetails = [
 ]
 </script>
 <template>
-  <KpiStrip />
+  <KpiStrip hide-mini-bars-without-comparison />
   <PanelCard title="项目核心任务链" icon="Connection"
     ><template #extra>
       <span class="title-description">聚焦数据价值发现与风险治理，构建安全可控的内容治理闭环</span>

@@ -27,12 +27,13 @@ defineProps<{
 .value-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 20px;
+  margin-top: -15px;
 }
 article {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 15px;
   padding: 16px;
   background: white;
   border: 1px solid #e1efff;
@@ -41,14 +42,14 @@ article {
   min-width: 0;
 }
 .value-icon {
-  flex: 0 0 54px;
-  height: 54px;
+  flex: 0 0 60px;
+  height: 60px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #d7eaff;
   color: #087bff;
-  font-size: 28px;
+  font-size: 35px;
 }
 .tone-1 {
   background: #d1f8ec;
@@ -60,7 +61,7 @@ article {
 }
 h3 {
   margin: 0 0 5px;
-  font-size: 14px;
+  font-size: 18px;
   color: #173774;
 }
 strong {
@@ -68,11 +69,11 @@ strong {
   font-size: 28px;
 }
 small {
-  font-size: 14px;
+  font-size: 16px;
 }
 p {
   margin: 5px 0 0;
-  font-size: 12px;
+  font-size: 14px;
   color: #6e85ab;
   line-height: 1.5;
 }

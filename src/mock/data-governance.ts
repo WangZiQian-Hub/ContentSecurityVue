@@ -1,12 +1,14 @@
 import { resourceSamples } from './resource-samples'
-import { resourceDatasets } from './data-resource'
-import type { ProcessOptions, ProcessTask } from '../types/data-governance'
+import { resourceDatasets } from './resource-catalog'
+import { governanceResources } from './governance-resources'
+import type { ProcessKpi, ProcessOptions, ProcessTask } from '../types/data-governance'
 export const processOptions: ProcessOptions = {
-  datasets: resourceDatasets.map((dataset) => ({
-    id: dataset.id,
-    name: dataset.name,
-    versions: [{ versionId: dataset.versionId, label: `当前版本 · ${dataset.versionId}` }],
-  })),
+  get datasets() {
+    return governanceResources().map((d) => ({
+      ...d,
+      versions: d.versions.map((v) => ({ versionId: v.id, label: v.label })),
+    }))
+  },
   rules: [
     {
       code: 'normalize_text',
@@ -51,8 +53,8 @@ export const processTasks: ProcessTask[] = [0, 1, 2].map((index) => ({
   outputVersion: index === 0 ? null : `demo_dsv_output_00${index}`,
   status: index === 0 ? 'running' : 'succeeded',
   progress: index === 0 ? 76 : 100,
-  processedCount: index === 0 ? 203984 : 268400,
-  totalCount: 268400,
+  processedCount: index === 0 ? 91 : 120,
+  totalCount: resourceSamples.filter((s) => s.datasetId === [3, 1, 4][index]!).length,
   remainingSeconds: index === 0 ? 120 : null,
   steps: ['读取数据', '规范化', '去重', '字段校验', '生成版本'].map((name, step) => ({
     name,
@@ -84,3 +86,23 @@ export const processTasks: ProcessTask[] = [0, 1, 2].map((index) => ({
   finishedAt: index === 0 ? null : `2026-09-24T09:${index === 1 ? '52' : '36'}:00+08:00`,
   traceId: `demo_trace_process_${index}`,
 }))
+
+export function getProcessKpis(tasks: readonly ProcessTask[] = processTasks): ProcessKpi[] {
+  const completed = tasks.filter((t) => ['succeeded', 'failed'].includes(t.status))
+  const succeededCount = completed.filter((t) => t.status === 'succeeded').length
+  const values = [
+    completed.length,
+    tasks.filter((t) => t.status === 'running').length,
+    tasks.reduce((n, t) => n + t.processedCount, 0),
+    completed.length ? (succeededCount / completed.length) * 100 : 0,
+  ]
+  return ['处理任务总数', '正在运行', '累计处理量', '已结束任务成功率'].map((label, i) => ({
+    id: `process-${i}`,
+    label,
+    value: values[i]!,
+    unit: ['个', '个', '条次', '%'][i]!,
+    icon: ['Coin', 'VideoPlay', 'Document', 'Shield'][i]!,
+    changeRate: 0,
+    ...(i === 3 ? { succeededCount } : {}),
+  }))
+}

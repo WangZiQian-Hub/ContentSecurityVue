@@ -9,10 +9,11 @@ const props = withDefaults(
     trend?: ResourceSummary['trend']
     cumulative?: boolean
     centerText?: string
+    centerLabel?: string
     height?: number
     donutLayout?: 'default' | 'spacious'
   }>(),
-  { height: 245, centerText: '', data: () => [], trend: undefined, donutLayout: 'default' },
+  { height: 245, centerText: '', centerLabel: '', data: () => [], trend: undefined, donutLayout: 'default' },
 )
 const element = ref<HTMLDivElement>()
 let chart: ECharts | undefined
@@ -25,9 +26,9 @@ function option(): EChartsOption {
       ...common,
       title: {
         text: props.centerText,
-        subtext: '总数据量',
+        subtext: props.centerLabel || '总数据量',
         left: props.donutLayout === 'spacious' ? '25%' : '29%',  // 越大越向右
-        top: props.donutLayout === 'spacious' ? '43%' : '45%',  // 越大越向下
+        top: props.donutLayout === 'spacious' ? '40%' : '40%',  // 越大越向下
         padding: props.donutLayout === 'spacious' ? 0 : 5,
         textAlign: 'center',
         textStyle: { color: '#0a2c6b', fontSize: 26 },  // “12.56 TB”大小
@@ -64,10 +65,11 @@ function option(): EChartsOption {
     return {
       ...common,
       radar: {
-        radius: '66%',
+        radius: '68%',
         indicator: props.data?.map((item) => ({ name: `${item.name}\n${item.value}`, max: 100 })),
-        axisName: { color: '#51709d' },
+        axisName: { color: '#51709d', fontSize:16},
         splitArea: { areaStyle: { color: ['#f8fbff', '#edf5ff'] } },
+        center: ['50%', '60%'],
       },
       series: [
         {
@@ -129,7 +131,7 @@ onMounted(async () => {
   observer.observe(element.value)
 })
 watch(
-  () => [props.data, props.trend, props.centerText, props.cumulative],
+  () => [props.data, props.trend, props.centerText, props.centerLabel, props.cumulative],
   () => chart?.setOption(option(), true),
   { deep: true },
 )

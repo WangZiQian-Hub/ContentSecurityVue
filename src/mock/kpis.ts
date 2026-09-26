@@ -1,18 +1,10 @@
+import { getResourceSummary } from './resource-statistics'
+import type { ResourceView } from '../types/data-resource'
 import type { Kpi } from '../types'
 import { getValueKpis } from './data-value'
+import { getProcessKpis } from './data-governance'
 
-type KpiKind =
-  | 'dashboard'
-  | 'governance'
-  | 'governance-process'
-  | 'model'
-  | 'compliance'
-  | 'evaluation'
-  | 'resource-overview'
-  | 'resource-ingest'
-  | 'resource-datasets'
-  | 'resource-statistics'
-  | 'system'
+type KpiKind = 'dashboard' | 'governance' | 'model' | 'compliance' | 'evaluation' | 'system'
 
 const icons = ['Coin', 'Document', 'WarningFilled', 'Box', 'CircleCheckFilled', 'PieChart']
 
@@ -20,12 +12,6 @@ const icons = ['Coin', 'Document', 'WarningFilled', 'Box', 'CircleCheckFilled', 
 // 旧页面保留原来的三项写法，新页面可提供完整展示信息。
 type KpiRow = [string, number, string, number?, string?, string?]
 const rawKpis: Record<KpiKind, KpiRow[]> = {
-  'governance-process': [
-    ['处理任务总数', 128, '个', 12, 'Coin', 'process-total'],
-    ['正在运行', 3, '个', -25, 'VideoPlay', 'process-running'],
-    ['今日处理量', 268400, '条次', 18, 'Document', 'process-today'],
-    ['任务成功率', 98.4, '%', 0.6, 'Shield', 'process-success'],
-  ],
   dashboard: [
     ['数据资源总量', 12560, 'TB'],
     ['高价值语料数量', 2318, '万条'],
@@ -61,34 +47,6 @@ const rawKpis: Record<KpiKind, KpiRow[]> = {
     ['平均耗时', 2.6, '小时'],
     ['留痕完整率', 98.7, '%'],
   ],
-  'resource-overview': [
-    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
-    ['数据总量', 12.56, 'TB', 8, 'Document', 'storage'],
-    ['接入数据源', 36, '个', 20, 'Share', 'sources'],
-    ['今日新增', 8.6, 'GB', 35, 'Calendar', 'today'],
-    ['数据可用率', 98.2, '%', 0.6, 'CircleCheckFilled', 'availability'],
-    ['异常数据', 23, '条', -42, 'WarningFilled', 'anomalies'],
-  ],
-  'resource-ingest': [
-    ['接入任务', 326, '个', 12, 'List', 'tasks'],
-    ['运行中', 8, '个', 33, 'VideoPlay', 'running'],
-    ['今日接入', 8.6, 'GB', 35, 'Coin', 'today'],
-    ['成功率', 98.7, '%', 1.2, 'CircleCheckFilled', 'success'],
-  ],
-  'resource-datasets': [
-    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
-    ['可用数据集', 116, '个', 8, 'Document', 'ready'],
-    ['处理中', 8, '个', 33, 'Loading', 'processing'],
-    ['异常数据集', 4, '个', -50, 'WarningFilled', 'poor'],
-  ],
-  'resource-statistics': [
-    ['数据集总数', 128, '个', 12, 'Coin', 'datasets'],
-    ['数据总量', 12.56, 'TB', 8, 'Document', 'storage'],
-    ['本月新增', 1.28, 'TB', 35, 'CirclePlusFilled', 'month'],
-    ['数据记录', 3.68, '亿条', 20, 'Document', 'records'],
-    ['数据可用率', 98.2, '%', 0.6, 'CircleCheckFilled', 'availability'],
-    ['接入成功率', 98.7, '%', 1.2, 'Connection', 'success'],
-  ],
   system: [
     ['平台用户', 128, '人'],
     ['角色数量', 6, '个'],
@@ -98,6 +56,13 @@ const rawKpis: Record<KpiKind, KpiRow[]> = {
 }
 
 export function getMockKpis(kind: string): Kpi[] {
+  if (
+    ['resource-overview', 'resource-ingest', 'resource-datasets', 'resource-statistics'].includes(
+      kind,
+    )
+  )
+    return getResourceSummary(kind.replace('resource-', '') as ResourceView).kpis
+  if (kind === 'governance-process') return getProcessKpis()
   if (kind === 'governance-value') return getValueKpis()
   const safeKind: KpiKind = kind in rawKpis ? (kind as KpiKind) : 'dashboard'
 

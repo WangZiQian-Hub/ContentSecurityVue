@@ -6,32 +6,50 @@ import { navigation } from '../../router/navigation'
 import { PROCESS_KIND } from '../../types/data-governance'
 import { useRoute } from 'vue-router'
 import { VALUE_KIND } from '../../types/data-value'
+import { ref } from 'vue'
+import AnomalyOverview from './components/AnomalyOverview.vue'
+import RiskOverview from './components/RiskOverview.vue'
+import ProcessOverview from './components/ProcessOverview.vue'
+const riskRevision = ref(0)
+const anomalyRevision = ref(0)
 const route = useRoute()
 const tabs = navigation.find((item) => item.path === '/data-governance')!.tabs
 const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
 </script>
 <template>
   <div class="governance-workspace">
+    <AnomalyOverview v-if="route.name === 'governance-anomaly'" :key="anomalyRevision" />
+    <RiskOverview v-else-if="route.name === 'governance-risk'" :key="riskRevision" />
+    <ProcessOverview v-else-if="route.name === 'governance-process'" />
     <KpiStrip
+      v-else
       :kind="route.name === 'governance-value' ? VALUE_KIND : PROCESS_KIND"
-      :comparison-label="route.name === 'governance-value' ? '暂无可比数据' : undefined"
+      comparison-label="暂无可比数据"
     />
     <nav class="governance-tabs" aria-label="数据治理子页面">
       <template v-for="(tab, index) in tabs" :key="tab.path">
         <router-link
-          v-if="['process', 'value-analysis'].includes(tab.path)"
-          :to="tab.path === 'process' ? '/data-governance' : '/data-governance/value-analysis'"
+          v-if="['process', 'value-analysis', 'anomaly', 'risk-classification'].includes(tab.path)"
+          :to="tab.path === 'process' ? '/data-governance' : `/data-governance/${tab.path}`"
           :class="{
             selected:
-              tab.path === 'value-analysis'
-                ? route.name === 'governance-value'
-                : route.name === 'governance-process',
+              tab.path === 'risk-classification'
+                ? route.name === 'governance-risk'
+                : tab.path === 'anomaly'
+                  ? route.name === 'governance-anomaly'
+                  : tab.path === 'value-analysis'
+                    ? route.name === 'governance-value'
+                    : route.name === 'governance-process',
           }"
           :aria-current="
             (
-              tab.path === 'value-analysis'
-                ? route.name === 'governance-value'
-                : route.name === 'governance-process'
+              tab.path === 'risk-classification'
+                ? route.name === 'governance-risk'
+                : tab.path === 'anomaly'
+                  ? route.name === 'governance-anomaly'
+                  : tab.path === 'value-analysis'
+                    ? route.name === 'governance-value'
+                    : route.name === 'governance-process'
             )
               ? 'page'
               : undefined
@@ -44,6 +62,6 @@ const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
         </button>
       </template>
     </nav>
-    <router-view />
+    <router-view @anomaly-updated="anomalyRevision++" @risk-updated="riskRevision++" />
   </div>
 </template>

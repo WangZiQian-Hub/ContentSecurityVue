@@ -32,14 +32,16 @@ const trend = computed(() => {
           ><el-option label="最近7天" :value="7" /><el-option
             label="最近3天"
             :value="3" /></el-select></template
-      ><ResourceChart kind="line" :trend="trend"
-    /></PanelCard>
+      ><ResourceChart v-if="trend?.dates.length" kind="line" :trend="trend"
+    /><p v-else>{{ store.summary?.basis?.trend || '暂无趋势数据' }}</p></PanelCard>
     <PanelCard title="数据类型分布" icon="PieChart"
       ><ResourceChart
+        v-if="store.summary?.modalities.length"
         kind="donut"
         :data="store.summary?.modalities"
-        :center-text="`${store.summary?.kpis.find((item) => item.id === 'storage')?.value ?? '—'} TB`"
-    /></PanelCard>
+        :center-text="`${store.summary?.modalityCount ?? '—'} 次`"
+        center-label="模态标签累计数"
+    /><p>{{ store.summary?.basis?.modalities }}</p></PanelCard>
   </div>
   <div class="resource-overview-bottom">
     <PanelCard title="最近接入任务" icon="List" link="/data-resource/ingest"
@@ -47,6 +49,6 @@ const trend = computed(() => {
     /></PanelCard>
     <PanelCard title="语言分布" icon="Location"
       ><DistributionBars :data="store.summary?.languages ?? []"
-    /></PanelCard>
+    /><p>{{ store.summary?.basis?.languages }}</p></PanelCard>
   </div>
 </template>

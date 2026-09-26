@@ -5,6 +5,7 @@ import ProcessTaskPanel from './ProcessTaskPanel.vue'
 import { useDataGovernanceStore } from '../../../stores/data-governance'
 import { TASK_STATUS } from '../../../utils/enums'
 import type { ProcessTask } from '../../../types/data-governance'
+import { processOutputVersionLabel } from '../../../utils/process-output-version'
 const store = useDataGovernanceStore()
 const historyOpen = ref(false)
 const page = ref(1)
@@ -59,7 +60,7 @@ watch(historyOpen, (open) => {
         <el-table-column prop="datasetName" label="数据集" min-width="190" show-overflow-tooltip />
         <el-table-column prop="ruleName" label="处理规则" min-width="180" />
         <el-table-column label="输出版本" min-width="150" show-overflow-tooltip
-          ><template #default="{ row }">{{ row.outputVersion ?? '—' }}</template></el-table-column
+          ><template #default="{ row }">{{ processOutputVersionLabel(row) }}</template></el-table-column
         >
         <el-table-column label="状态" width="120"
           ><template #default="{ row }: { row: ProcessTask }"
@@ -99,6 +100,9 @@ watch(historyOpen, (open) => {
             detail.input.datasetVersionId
           }}</el-descriptions-item
           ><el-descriptions-item label="输出版本">{{
+            processOutputVersionLabel(detail)
+          }}</el-descriptions-item
+          ><el-descriptions-item label="输出版本 ID">{{
             detail.outputVersion ?? '尚未生成'
           }}</el-descriptions-item
           ><el-descriptions-item label="数据集">{{ detail.datasetName }}</el-descriptions-item

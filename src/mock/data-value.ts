@@ -1,5 +1,4 @@
-import { resourceDatasets } from './resource-catalog'
-import { resourceSamples } from './resource-samples'
+import { governanceResources, resourceVersionSamples } from './governance-resources'
 import type { ValueOptions, ValueResult, ValueSample, ValueScope } from '../types/data-value'
 import type { Kpi } from '../types'
 
@@ -25,21 +24,9 @@ export function getValueKpis(): Kpi[] {
 }
 
 export const valueOptions: ValueOptions = {
-  datasets: [3, 1].map((id) => {
-    const dataset = resourceDatasets.find((item) => item.id === id)!
-    return {
-      id,
-      name: dataset.name,
-      versions: [dataset.versionId, `${dataset.versionId}_previous`].map((versionId) => ({
-        id: versionId,
-        label: versionId,
-        languages: dataset.languages.map((code) => ({
-          code,
-          name: ({ zh: '中文', en: '英文', ja: '日文' } as Record<string, string>)[code]!,
-        })),
-      })),
-    }
-  }),
+  get datasets() {
+    return governanceResources()
+  },
   schemes: [
     {
       id: 'general-v1',
@@ -80,11 +67,8 @@ export function demoSamples(scope: ValueScope): ValueSample[] {
     .find((item) => item.id === scope.datasetId)!
     .versions.find((item) => item.id === scope.versionId)!.languages
   const offset = scope.datasetId === 1 ? 3 : 0
-  const rows: ValueSample[] = resourceSamples
-    .filter(
-      (sample) => sample.datasetId === scope.datasetId && sample.versionId === scope.versionId,
-    )
-    .map((sample, index) => {
+  const rows: ValueSample[] = resourceVersionSamples(scope.datasetId, scope.versionId).map(
+    (sample, index) => {
       const score =
         index >= 118
           ? null
@@ -97,7 +81,7 @@ export function demoSamples(scope: ValueScope): ValueSample[] {
       return {
         id: sample.id,
         text: sample.text,
-        language: language.name,
+        language: language.code,
         score,
         tier:
           score === null ? 'unavailable' : score >= 85 ? 'high' : score >= 60 ? 'medium' : 'low',
@@ -118,9 +102,10 @@ export function demoSamples(scope: ValueScope): ValueSample[] {
               })),
         unavailableReason: score === null ? '正文信息不足，无法形成可靠评分' : undefined,
       }
-    })
+    },
+  )
   const selectedLanguage = languages.find((item) => item.code === scope.language)
-  return selectedLanguage ? rows.filter((item) => item.language === selectedLanguage.name) : rows
+  return selectedLanguage ? rows.filter((item) => item.language === selectedLanguage.code) : rows
 }
 export function demoResult(scope: ValueScope): ValueResult {
   const dataset = valueOptions.datasets.find((item) => item.id === scope.datasetId)!

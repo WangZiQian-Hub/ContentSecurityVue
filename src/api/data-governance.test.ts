@@ -9,10 +9,11 @@ import {
   getProcessTask,
 } from './data-governance'
 import { PROCESS_KIND } from '../types/data-governance'
-import type { ProcessInput } from '../types/data-governance'
-const input: ProcessInput = {
+import type { ProcessCreateInput } from '../types/data-governance'
+const input: ProcessCreateInput = {
   datasetId: 3,
   datasetVersionId: 'dsv_000003',
+  outputVersionName: '清洗版-v1.1.0',
   scope: 'batch',
   batchId: 'batch_1',
   templateId: 'standard',
@@ -25,11 +26,15 @@ describe('数据处理接口契约', () => {
   })
   it('真实查询统一传递 kind 和分页，不回退示例', async () => {
     backend.isMock = false
+    backend.request.mockImplementation(async ({ url }) =>
+      url === '/datasets' ? { items: [], total: 0 } : { rules: [], templates: [] },
+    )
     await getProcessOptions()
-    expect(backend.request).toHaveBeenLastCalledWith({
+    expect(backend.request).toHaveBeenCalledWith({
       url: '/data-governance/options',
       params: { kind: PROCESS_KIND },
     })
+    backend.request.mockReset()
     backend.request.mockResolvedValueOnce({
       items: [],
       total: 0,

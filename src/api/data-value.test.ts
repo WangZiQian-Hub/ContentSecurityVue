@@ -38,7 +38,7 @@ describe('数据价值分析口径与接口', () => {
     const all = (await getLatestValueResult(scope))!
     const zh = (await getLatestValueResult({ ...scope, language: 'zh' }))!
     expect(zh.targetCount).toBeLessThan(all.targetCount)
-    expect(zh.languages).toEqual(['中文'])
+    expect(zh.languages).toEqual(['zh'])
     const filtered = await listValueSamples(all.id, { ...query, pageSize: 5, bin: '4' })
     expect(filtered.total).toBe(all.bins[4]!.count)
     expect(filtered.items.every((item) => item.score! >= 80)).toBe(true)

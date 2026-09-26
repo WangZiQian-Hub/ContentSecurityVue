@@ -17,7 +17,9 @@ describe('数据治理路由', () => {
     const tabs = navigation.find((item) => item.path === '/data-governance')!.tabs
     expect(tabs).toHaveLength(5)
     expect(router.resolve('/data-governance/value-analysis').name).toBe('governance-value')
-    for (const tab of tabs.filter((item) => !['process', 'value-analysis'].includes(item.path))) {
+    expect(router.resolve('/data-governance/anomaly').name).toBe('governance-anomaly')
+    expect(router.resolve('/data-governance/risk-classification').name).toBe('governance-risk')
+    for (const tab of tabs.filter((item) => !['process', 'value-analysis', 'anomaly', 'risk-classification'].includes(item.path))) {
       expect(router.resolve(`/data-governance/${tab.path}`).matched.at(-1)?.redirect).toBe(
         '/data-governance',
       )

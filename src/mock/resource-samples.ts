@@ -2,7 +2,7 @@ import { resourceDatasets } from './resource-catalog'
 import type { ResourceSample } from '../types/data-resource'
 
 export const resourceSamples: ResourceSample[] = resourceDatasets.flatMap((dataset) =>
-  Array.from({ length: 120 }, (_, index) => ({
+  Array.from({ length: dataset.rowCount }, (_, index) => ({
     id: `sample_${dataset.id}_${String(index + 1).padStart(5, '0')}`,
     datasetId: dataset.id,
     versionId: dataset.versionId,

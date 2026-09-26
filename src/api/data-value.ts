@@ -1,4 +1,5 @@
 import { isMock, request } from './request'
+import { getGovernanceResources } from './governance-resources'
 import { latestDemoResult, savedDemoResult, valueOptions } from '../mock/data-value'
 import { getResourceSamples } from './data-resource'
 import { VALUE_KIND } from '../types/data-value'
@@ -13,9 +14,13 @@ import type {
 import type { PageResult } from '../types'
 
 export async function getValueOptions(): Promise<ValueOptions> {
-  return isMock
-    ? structuredClone(valueOptions)
-    : request({ url: '/data-governance/options', params: { kind: VALUE_KIND } })
+  const [options, datasets] = await Promise.all([
+    isMock
+      ? structuredClone(valueOptions)
+      : request<ValueOptions>({ url: '/data-governance/options', params: { kind: VALUE_KIND } }),
+    getGovernanceResources(),
+  ])
+  return { ...options, datasets }
 }
 export async function getLatestValueResult(scope: ValueScope): Promise<ValueResult | null> {
   return isMock
@@ -53,7 +58,7 @@ export async function listValueSamples(
         sample.text !== row.text
       )
         throw new Error('评分样本与数据资源版本不一致')
-      return { ...row, id: sample.id, text: sample.text }
+      return { ...row, id: sample.id, text: sample.text, language: sample.language }
     })
     return page
   }
@@ -108,6 +113,24 @@ export async function listValueTasks(scope: ValueScope): Promise<PageResult<Valu
     page: 1,
     pageSize: 20,
     totalPages: result ? 1 : 0,
+  }
+}
+export async function exportValueSamples(
+  id: string,
+  query: ValueSampleQuery,
+): Promise<ValueSample[]> {
+  const rows: ValueSample[] = []
+  let page = 1,
+    expected: number | undefined
+  while (true) {
+    const result = await listValueSamples(id, { ...query, page })
+    expected ??= result.total
+    if (result.total !== expected || rows.some((s) => result.items.some((n) => n.id === s.id)))
+      throw new Error('导出期间结果分页发生变化，请重试')
+    rows.push(...result.items)
+    if (rows.length === expected) return rows
+    if (!result.items.length || rows.length > expected) throw new Error('导出记录不完整')
+    page++
   }
 }
 export function createValueTask(scope: ValueScope): Promise<ValueTask> {

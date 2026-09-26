@@ -9,7 +9,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { navigation } from './navigation'
 const views = {
   '/dashboard': () => import('../views/dashboard/DashboardPage.vue'),
-  '/model-train': () => import('../views/model-train/ModelPage.vue'),
   '/compliance': () => import('../views/compliance/CompliancePage.vue'),
   '/evaluation': () => import('../views/evaluation/EvaluationPage.vue'),
   '/scenario': () => import('../views/scenario/ScenarioPage.vue'),
@@ -20,11 +19,25 @@ export default createRouter({
   routes: [
     { path: '/', redirect: '/dashboard' },
     {
+      path: '/model-train',
+      component: () => import('../views/model-train/ModelPage.vue'),
+      children: [
+        { path: '', alias: 'training', name: 'model-training', component: () => import('../views/model-train/TrainingPage.vue') },
+        { path: 'management', name: 'model-management', component: () => import('../views/model-train/ManagementPage.vue') },
+        { path: 'evaluation', name: 'model-evaluation', component: () => import('../views/model-train/EvaluationPage.vue') },
+        { path: 'deploy', name: 'model-deploy', component: () => import('../views/model-train/DeployPage.vue') },
+        { path: 'invoke', name: 'model-invoke', component: () => import('../views/model-train/InvokePage.vue') },
+        { path: ':pathMatch(.*)*', redirect: '/model-train' },
+      ],
+    },
+    {
       path: '/data-governance',
       component: () => import('../views/data-governance/DataGovernancePage.vue'),
       children: [
         { path: '', alias: 'process', name: 'governance-process', component: () => import('../views/data-governance/DataProcessPage.vue') },
         { path: 'value-analysis', name: 'governance-value', component: () => import('../views/data-governance/DataValuePage.vue') },
+        { path: 'anomaly', name: 'governance-anomaly', component: () => import('../views/data-governance/DataAnomalyPage.vue') },
+        { path: 'risk-classification', name: 'governance-risk', component: () => import('../views/data-governance/DataRiskPage.vue') },
         { path: ':pathMatch(.*)*', redirect: '/data-governance' },
       ],
     },
@@ -56,7 +69,7 @@ export default createRouter({
       ],
     },
     ...navigation
-      .filter((item) => !['/data-resource', '/data-governance'].includes(item.path))
+      .filter((item) => !['/data-resource', '/data-governance', '/model-train'].includes(item.path))
       .map((item) => ({
         path: `${item.path}/:tab?`,
         component: views[item.path as keyof typeof views],
