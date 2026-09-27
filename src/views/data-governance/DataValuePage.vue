@@ -427,7 +427,9 @@ onMounted(loadOptions)
             </div>
           </div>
           <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
-          <p class="muted">解释对象为选中样本，不代表整个数据集。</p></template
+          <p class="muted sample-explanation-note">
+            解释对象为选中样本，不代表整个数据集。
+          </p></template
         >
         <el-empty v-else description="请选择一个样本查看解释" :image-size="65" />
       </PanelCard>
@@ -474,12 +476,16 @@ onMounted(loadOptions)
         @sort-change="changeSort"
         @row-click="(row: ValueSample) => (selected = row)"
       >
-        <el-table-column prop="id" label="样本ID" width="120" /><el-table-column
+        <el-table-column prop="id" label="样本ID" width="160" /><el-table-column
           prop="text"
           label="语料摘要"
           min-width="250"
           show-overflow-tooltip
-        /><el-table-column prop="language" label="语种" width="90" />
+        /><el-table-column prop="language" label="语种" width="90"
+          ><template #default="{ row }: { row: ValueSample }">{{
+            languageName(row.language)
+          }}</template></el-table-column
+        >
         <el-table-column prop="score" label="综合评分" width="130" sortable="custom"
           ><template #default="{ row }">{{
             row.score === null ? '—' : row.score.toFixed(1)
@@ -532,11 +538,16 @@ onMounted(loadOptions)
           prop="count"
           label="样本数" /></el-table
     ></el-dialog>
-    <el-drawer v-model="detailOpen" title="样本价值完整解释" size="min(540px, 95vw)"
+    <el-drawer
+      v-model="detailOpen"
+      class="value-detail-drawer"
+      title="样本价值完整解释"
+      size="min(540px, 95vw)"
       ><template v-if="selected"
-        ><h3>{{ selected.id }} · {{ selected.text }}</h3>
-        <p>
-          语种：{{ selected.language }} · 综合评分：{{ selected.score ?? '不可评估' }} ·
+        ><h3 class="value-detail-heading">{{ selected.id }} · {{ selected.text }}</h3>
+        <p class="value-detail-meta">
+          语种：{{ languageName(selected.language) }} · 综合评分：{{ selected.score ?? '不可评估' }}
+          ·
           {{ tierNames[selected.tier] }}
         </p>
         <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
@@ -597,8 +608,13 @@ onMounted(loadOptions)
 .muted,
 .chart-note {
   color: #6c85ad;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 2;
+}
+.sample-explanation-note {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 20px 0 0;
 }
 .value-panel-note {
   font-size: 15px;
@@ -690,7 +706,7 @@ onMounted(loadOptions)
   padding: 10px;
   background: #f0f7ff;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .reason-row:first-child {
@@ -714,8 +730,9 @@ onMounted(loadOptions)
   flex-wrap: wrap;
 }
 .value-list-toolbar .el-input {
-  width: 225px;
+  width: 240px;
   margin-left: auto;
+  font-size: 14px;
 }
 .value-list-tabs {
   display: flex;
@@ -729,14 +746,33 @@ onMounted(loadOptions)
   color: #44628d;
   padding: 9px 12px;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
 }
 .value-list-tabs button.active {
   background: #eaf4ff;
   color: #087bff;
   border-bottom-color: #087bff;
 }
+.value-list-toolbar .el-button {
+  font-size: 16px;
+}
+/* 第一行：样本ID和语料内容 */
+.value-detail-heading {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+/* 第二行：语种、综合评分和价值档位 */
+.value-detail-meta {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
 .bin-tag {
   margin-bottom: 10px;
+}
+.value-page :deep(.el-table__header-wrapper th.el-table__cell .cell) {
+  font-size: 16px;
+  font-weight: 700;
 }
 .value-page :deep(.el-table) {
   --el-table-header-bg-color: #edf6ff;
@@ -747,6 +783,10 @@ onMounted(loadOptions)
 .value-page :deep(.el-pagination) {
   margin-top: 15px;
   justify-content: flex-end;
+}
+:global(.value-detail-drawer .el-drawer__title) {
+  font-size: 22px;
+  font-weight: 600;
 }
 @media (max-width: 1100px) {
   .value-charts {

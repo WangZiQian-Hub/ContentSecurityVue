@@ -1,0 +1,166 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useComplianceStore } from '../../stores/compliance'
+import PanelCard from '../../components/PanelCard.vue'
+import StateBadge from './components/StateBadge.vue'
+import { formatCount, formatTime } from './presentation'
+import type { AuditSummary, Handoff } from '../../types/compliance'
+const store = useComplianceStore(),
+  scope = ref('all'),
+  dates = ref(initialDateRange()),
+  gapsOnly = ref(false),
+  page = ref(1)
+function initialDateRange() {
+  if (store.demo) return ['2026-09-21', '2026-09-28']
+  const start = new Date(),
+    end = new Date()
+  start.setDate(start.getDate() - 6)
+  end.setDate(end.getDate() + 1)
+  return [start, end].map(
+    (date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+  )
+}
+const rows = computed(
+  () => store.overview?.handoffs.filter((h) => !gapsOnly.value || (h.missingCount ?? 0) > 0) || [],
+)
+function load() {
+  if (dates.value?.length !== 2) {
+    store.invalidate()
+    return
+  }
+  if (dates.value?.length === 2)
+    store.loadOverview(
+      {
+        scope: scope.value,
+        from: `${dates.value[0]}T00:00:00+08:00`,
+        to: `${dates.value[1]}T00:00:00+08:00`,
+      },
+      page.value,
+    )
+}
+function filter() {
+  page.value = 1
+  load()
+}
+function target(item: Handoff) {
+  return {
+    path: `/compliance/${item.target}`,
+    query: item.subjectRef
+      ? {
+          sourceId: String(item.subjectRef.entityId),
+          entityType: item.subjectRef.entityType,
+          versionId: item.subjectRef.versionId || undefined,
+        }
+      : {},
+  }
+}
+function auditTarget(item: AuditSummary) {
+  return {
+    path: `/compliance/${{ lineage_audit: 'lineage', full_chain_audit: 'full-chain', training_monitor: 'training-monitor', reasoning_audit: 'reasoning-audit', neuron_audit: 'neuron-audit' }[item.capabilityCode]}`,
+    query: {
+      sourceId: String(item.subjectRef.entityId),
+      sourceKind: item.subjectRef.entityType,
+      entityType: item.subjectRef.entityType,
+      versionId: item.subjectRef.versionId || undefined,
+    },
+  }
+}
+onMounted(load)
+</script>
+<template>
+  <div class="compliance-filter">
+    <label
+      >核验范围<el-select v-model="scope" aria-label="核验范围" @change="filter"
+        ><el-option label="全部业务模块" value="all" /><el-option
+          label="训练交接"
+          value="training" /><el-option label="推理交接" value="inference" /></el-select></label
+    ><label
+      >时间范围（结束日期不含）<el-date-picker
+        v-model="dates"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        @change="filter" /></label
+    ><span class="compliance-muted">快照时间 {{ formatTime(store.overview?.asOf) }}</span
+    ><el-button type="primary" :loading="store.loading" @click="load">刷新核验</el-button>
+  </div>
+  <template v-if="store.overview"
+    ><div class="compliance-kpis">
+      <PanelCard title="跨阶段关系缺口" icon="Share"
+        ><button class="compliance-metric" @click="gapsOnly = !gapsOnly">
+          <strong>{{ formatCount(store.overview.missingCount) }}</strong
+          ><span>/ {{ formatCount(store.overview.expectedCount) }} 条应交接关系</span
+          ><el-tag type="warning">{{ gapsOnly ? '显示全部' : '定位缺口' }}</el-tag>
+        </button></PanelCard
+      ><PanelCard title="审计结论待复核" icon="Shield"
+        ><div class="compliance-metric">
+          <strong>{{ formatCount(store.overview.pendingReviewsCount) }}</strong
+          ><span>/ {{ formatCount(store.overview.completedAuditsCount) }} 份已完成审计</span>
+        </div></PanelCard
+      ><PanelCard title="当前核验范围" icon="Tickets"
+        ><p>{{ store.overview.scopeDescription }}</p>
+        <small>分母依据后端策略和登记事实；不是当前分页数量。</small></PanelCard
+      >
+    </div>
+    <PanelCard title="跨阶段证据交接" icon="Share"
+      ><template #extra><el-checkbox v-model="gapsOnly">仅查看缺口</el-checkbox></template
+      ><el-table :data="rows" stripe
+        ><el-table-column prop="label" label="交接关系" min-width="220" /><el-table-column
+          label="应有关系"
+          min-width="95"
+          ><template #default="{ row }">{{
+            formatCount(row.expectedCount)
+          }}</template></el-table-column
+        ><el-table-column label="已验证" min-width="90"
+          ><template #default="{ row }">{{
+            formatCount(row.verifiedCount)
+          }}</template></el-table-column
+        ><el-table-column label="缺口" min-width="80"
+          ><template #default="{ row }"
+            ><el-tag :type="row.missingCount === 0 ? 'success' : 'warning'">{{
+              formatCount(row.missingCount)
+            }}</el-tag></template
+          ></el-table-column
+        ><el-table-column label="不可用" min-width="80"
+          ><template #default="{ row }">{{
+            formatCount(row.unavailableCount)
+          }}</template></el-table-column
+        ><el-table-column
+          prop="missingReason"
+          label="主要缺失证据"
+          min-width="160"
+        /><el-table-column label="处理入口" min-width="140"
+          ><template #default="{ row }"
+            ><router-link :to="target(row)">查看关联证据 →</router-link></template
+          ></el-table-column
+        ></el-table
+      >
+      <p v-if="store.overview.expectedCount === 0" class="compliance-note">
+        暂无可核验对象
+      </p></PanelCard
+    ></template
+  >
+  <PanelCard title="待复核审计" icon="Tickets"
+    ><el-table :data="store.audits?.items || []" stripe
+      ><el-table-column prop="displayId" label="审计任务" /><el-table-column label="对象"
+        ><template #default="{ row }"
+          >{{ row.subjectRef.displayId }} / {{ row.subjectRef.versionId || '未记录版本' }}</template
+        ></el-table-column
+      ><el-table-column prop="reviewReason" label="复核原因" min-width="220" /><el-table-column
+        label="状态"
+        ><template #default="{ row }"
+          ><StateBadge :state="row.reviewStatus" /></template></el-table-column
+      ><el-table-column label="操作"
+        ><template #default="{ row }"
+          ><router-link :to="auditTarget(row)">打开审计 →</router-link></template
+        ></el-table-column
+      ></el-table
+    ><el-pagination
+      v-if="store.audits"
+      v-model:current-page="page"
+      :total="store.audits.total"
+      :page-size="5"
+      layout="total, prev, pager, next"
+      @current-change="load"
+  /></PanelCard>
+</template>

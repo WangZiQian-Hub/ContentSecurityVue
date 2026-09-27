@@ -9,7 +9,9 @@ export function getValueKpis(): Kpi[] {
   const valid = samples.filter((item) => item.score !== null)
   const values = [
     Number((valid.reduce((sum, item) => sum + item.score!, 0) / valid.length).toFixed(1)),
-    Number(((valid.filter((item) => item.tier === 'high').length / valid.length) * 100).toFixed(1)),
+    Number(
+      ((valid.filter((item) => item.tier === 'high').length / samples.length) * 100).toFixed(1),
+    ),
     valid.length,
     new Set(samples.map((item) => item.language)).size,
   ]

@@ -5,11 +5,11 @@ import AppIcon from '../../components/AppIcon.vue'
 import { navigation } from '../../router/navigation'
 import { PROCESS_KIND } from '../../types/data-governance'
 import { useRoute } from 'vue-router'
-import { VALUE_KIND } from '../../types/data-value'
 import { ref } from 'vue'
 import AnomalyOverview from './components/AnomalyOverview.vue'
 import RiskOverview from './components/RiskOverview.vue'
 import ProcessOverview from './components/ProcessOverview.vue'
+import ValueOverview from './components/ValueOverview.vue'
 const riskRevision = ref(0)
 const anomalyRevision = ref(0)
 const route = useRoute()
@@ -21,11 +21,8 @@ const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
     <AnomalyOverview v-if="route.name === 'governance-anomaly'" :key="anomalyRevision" />
     <RiskOverview v-else-if="route.name === 'governance-risk'" :key="riskRevision" />
     <ProcessOverview v-else-if="route.name === 'governance-process'" />
-    <KpiStrip
-      v-else
-      :kind="route.name === 'governance-value' ? VALUE_KIND : PROCESS_KIND"
-      comparison-label="暂无可比数据"
-    />
+    <ValueOverview v-else-if="route.name === 'governance-value'" />
+    <KpiStrip v-else :kind="PROCESS_KIND" comparison-label="暂无可比数据" />
     <nav class="governance-tabs" aria-label="数据治理子页面">
       <template v-for="(tab, index) in tabs" :key="tab.path">
         <router-link

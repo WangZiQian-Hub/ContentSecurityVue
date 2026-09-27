@@ -1,0 +1,534 @@
+﻿[
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\App.vue",
+        "Hash":  "06C057359AFF2DFA496015F6096A7F4FEB1409262DFC48DE889A0C35E0652846"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\main.ts",
+        "Hash":  "355CD14AC64D63E1CDF6E79A375C81D09EAFA59D246CF8867BF05C6EE707912A"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\capability.ts",
+        "Hash":  "F6ADF080A75B9003B10D49BBCB97C07B4911846BBF782FBCE7D7A4FA4420E419"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-anomaly.test.ts",
+        "Hash":  "BFE0A9689312E28F37151CE0447FA99043997A19E2CEA3A40E669F614DB3C825"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-anomaly.ts",
+        "Hash":  "8F10EC61CCB0BFC89D688A4315D45226A8F2BC3746D1F5D7DDA4F90CB3118511"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-governance.test.ts",
+        "Hash":  "878BF066E9A06DBACD165E89FFE31D62A553533FAC567CDCFD8CC9AF3D08303A"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-governance.ts",
+        "Hash":  "BD2DD2259C95D71B28B635B22852E44A0901E187E9B9FDCEA985BD1C62D414EE"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-resource.test.ts",
+        "Hash":  "896B255BCBF5C8E6658F61A64F3B72FE97AC601E13FE7C83FDD2396F7F5D8C62"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-resource.ts",
+        "Hash":  "9EF479DA13E51D04B520521008AE0D72CE7264D42BB663F2EEE0E01A5589A11E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-risk.test.ts",
+        "Hash":  "6905EB772AA7A2ED395B02B6934E577710D1C8ED832A7DD25BCA9EF80F4E8F2F"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-risk.ts",
+        "Hash":  "34D2B294C9962049FB13EE5FDA27E6D4E23C87E9BCBCEA5F1AB622F498F9F047"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-value.test.ts",
+        "Hash":  "6ACEE5773BCA0B886E0924F97CB8F5D445CC839FE75084839FC9661EFD250B51"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\data-value.ts",
+        "Hash":  "C218488336B25F1BFB67DADD929D68BD00F741DC8D0364141E04D85A6456BD62"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\dataset.ts",
+        "Hash":  "729FEB92D33CC8B654BF22B877714E016F9841811B6BC8D77FA156EEA9D9A905"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\governance-resources.test.ts",
+        "Hash":  "490FD2950A8F8F476BB0768B2508F9FAB251DB587698EBD5EA4F46875459E284"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\governance-resources.ts",
+        "Hash":  "728A43C1C8FD0F1DC90AB25CEB83082F355958C84A8787550F34F40922AB0946"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\kpi.ts",
+        "Hash":  "56C087844C3373FD4F095CD1B2177A79092D09C5566B0203BDDDD995C4B63F7D"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\metric.ts",
+        "Hash":  "4B530F357D260FCFAD4CC5BA9F65BA61CF73DA2B64F4DD82D9BEE667B2F9C276"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\model-workbench.ts",
+        "Hash":  "CC409D33CE0ADB5F6125BA9144A7BE9154A2793FC432A2DBA7A9C9E67EB4ED76"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\model.ts",
+        "Hash":  "3D649B83DDEC2047C97EA9A7EA574CC57757152A06214ABADBB26426F658EAAC"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\request.ts",
+        "Hash":  "E27BCAD4834DA329A15F620A1EAABD6409BD8A23E0568BD0D731A4785C639267"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\resource-comparison.test.ts",
+        "Hash":  "B145C63DA3E65FEB33D33681A9C6259F90E318CE99509AE2FBA252AC9527FEC8"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\resource-statistics.test.ts",
+        "Hash":  "F1CF62B073BBEFA38DE0F60FCD22C3E7911FADB6D32FEC7F11C2576063163E40"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\resource.ts",
+        "Hash":  "5A904B6073FAADB8DFD8AED072E35891EF3BB08295F643CE1AA3DE159ADE8AC6"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\api\\task.ts",
+        "Hash":  "05E10E799FFD3A19C86769F38669FAFDBEC612EF55EDECCF2733AD868CE24BA9"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\assets\\sidebar-city.webp",
+        "Hash":  "B97F9FC20FD4DF9C929B47BBCF29A2B9A256A6A21130FF2D7F8C74BC225FD647"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\AppIcon.vue",
+        "Hash":  "1D3D0ABBBDBA82D515EBD480075CD0BDBD8557E113F90B31AF6B7F034C3AC5C9"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\CapabilityDock.vue",
+        "Hash":  "6B03BF32D33B332EBC52D3ED365EF588E372D6CCDE28EEA2F982299CF476BCF8"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\CapabilityForm.vue",
+        "Hash":  "249AE7FF3330C39598C0CFD93D804CB5B425473A1E2D6C10D2C97B3C1001005F"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\DataChart.vue",
+        "Hash":  "A342C3964AD745686CCF53EB9E06B408FF31F9F8AE61D577DF0A40B170A49628"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\KpiStrip.vue",
+        "Hash":  "BC5F3BBE384BBA8F0CBEE6F99FE48A0CBFD79DCDE8670AC85DE03B569BE22773"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\PanelCard.vue",
+        "Hash":  "ECA0F70D37F3D3B362ADF3733CEECE87932E33A56285C8DBA7C6A39E34717364"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\ResourceTable.vue",
+        "Hash":  "EC7DC71275648B2F97CC6AC75B1C5D8DC610F8AE7CE11EFA6BFD548C82472847"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\components\\TaskTable.vue",
+        "Hash":  "F5DAB4344C99CA150C12C80FA216269C7934C4447D772FC5BEFAB9DD98B71095"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data-anomaly.ts",
+        "Hash":  "B7BF7EA602C240EA2521CC80B0F6E6F0F2D38D34C7BDB0DF8B86E5C6A1638EFD"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data-governance.ts",
+        "Hash":  "167391CA61ABABA3ADBBF629DEBCEFE2660F2E573BA80437C6D5676DE542E28B"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data-resource.ts",
+        "Hash":  "A2790AD8F2946D8A9A4C247A0BAA5D4BA738337C64B5D5D67FF3E4B1C5FE0075"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data-risk.ts",
+        "Hash":  "701F8524DAEDC30B14F8FB896559779F5801643380DB74466905DE817EDE1248"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data-value.ts",
+        "Hash":  "6007016CFF284407BA69ADA0224AD33A314042DD2FA645AF042BF2900BFE1104"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\data.ts",
+        "Hash":  "8369F06BCC863380A3BE13AA0CBC0845C6764BDB68C9D1A0190B3756B243E34E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\governance-resources.ts",
+        "Hash":  "0E33E66FECD92B6B1868EE10F0B2085705750B6627B4F2B281CCB396F6778CA4"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\kpis.ts",
+        "Hash":  "10CB45346EB10F6A162851535732FEA1EA0965C4AF845380BD230A90A1A1E573"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\model-workbench.ts",
+        "Hash":  "96B68DDDC88F763BD0EB62727C6A630A59B0A19775A8B8444B59A777AC66EBAB"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-catalog.ts",
+        "Hash":  "B9A22FDBA09C2FD94FE1E07D24F964667A844FB47644A1BE7B038A52096E4BB9"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-ingest.ts",
+        "Hash":  "D0B5AC8D8807FFA10E28EC085E3B5E1151C683FF65FC517F77DF8033F01F3C48"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-kpi-history.ts",
+        "Hash":  "0AA208EDB1968390414BF57B61A14650ACB5EF5C87696E694D537A392BDE6CC7"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-kpis.ts",
+        "Hash":  "61FA286EF81ED1CEA4FF8836A6033F0171968F77DCAB5ACCEAB4C0F556A7B069"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-samples.ts",
+        "Hash":  "7FCF41117DFB8B33780AA2EF753CC7EC2716288CAEA6C03D858BABD6A49D7C2B"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\mock\\resource-statistics.ts",
+        "Hash":  "DF74E6E66E3A0B31D8B846CA8BC969C7F0641F5DB91B56B2213B58A66DEBD1EE"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\router\\data-governance.test.ts",
+        "Hash":  "2FA9918FBEE81A0EC58CD3512B6F7F2D34AB286057DC864A118093667589FDE0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\router\\data-resource.test.ts",
+        "Hash":  "46666FDA5B1627AF802781020350C3583F0B199D8F026CFB8CA31622704111F1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\router\\index.ts",
+        "Hash":  "2891F0DBCC91691F202D6B7EB944D9433749617A1B181A66C727625A142BD075"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\router\\model-train.test.ts",
+        "Hash":  "71C8C8E56041EE63AD9C0DBBD17BF2A579B26F37117D66CB0416785B8C732AD3"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\router\\navigation.ts",
+        "Hash":  "0AD590E2CA2CB67FB09705148C99FCE99061EBFD83808BA533FD94F788E6C3B2"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\data-governance.test.ts",
+        "Hash":  "B4749C8DCD7C219323C5A0C40DC9E3A375A3BA7E386D7D4903E840B5EBE73BB6"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\data-governance.ts",
+        "Hash":  "BC89167305FDA0BCADB79B35326BF9044DC145D5D136DDCAC30E2F17A06CA2A5"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\data-resource.test.ts",
+        "Hash":  "6E33FD360784A2FDF907F78561AAAAFA842FFC2A4AF9CB4977BB34D5751E270E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\data-resource.ts",
+        "Hash":  "06080274FF5C43F02A9682B87AC0AF2ADE43F6241572C559880D06203DF6DC78"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\model-workbench.test.ts",
+        "Hash":  "87A79B26343A557E8760F12E94E7A5D414BE2FEF1667DF051F91BED55BDF4FC0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\model-workbench.ts",
+        "Hash":  "40A9F35CC1F911E3763FFE0D49AEA8B7352519303C6096AB1D8B917A7621A7D0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\stores\\platform.ts",
+        "Hash":  "C7C78470553E973A8C74E36A846F98FA58B348E03837AA089A6BE80BC9B28F1C"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\app-shell.css",
+        "Hash":  "61A6C7A51502C7D805AFB171682F5DC9FBE6F92E87BD2EDD696E83F9B7882B49"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\base.css",
+        "Hash":  "54E1037E619142DCD06642D610D68B3D75BFBAB9009A9921816207CCF6A456BC"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\compliance-evaluation.css",
+        "Hash":  "86485AF90D10F1A459C95F844FBEE86AC0B00098C982D3F4EFF5DD07AC6D1DEF"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\dashboard.css",
+        "Hash":  "1276D6040A55C38A0F43DEB94D7BF7BD67FBEDAD1858EECDCEA588BA823FD72D"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\data-governance.css",
+        "Hash":  "D269378CAC236FD03BA9E62A8FDFFD5CA7750F445B8EF0D467872F95C6C1D4B1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\data-resource.css",
+        "Hash":  "8E936E051B53D269CAE3D2F6F654688FF117EE2266C2691A37E61153BB5213D0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\forms-results.css",
+        "Hash":  "206482BFCCF9E5A1E87B423093F2D556473091F91C916365991B07731B55A809"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\main.css",
+        "Hash":  "8C9D04AD83D592EFD74ED92A930E08E4AE1576971BEAE996EDF1181372146D7D"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\model-train.css",
+        "Hash":  "14DE97B63292596781C42464879C672E6D4C5727133D7CE233C7D8BCB6E45692"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\responsive.css",
+        "Hash":  "12FD0F2F1AC5CD0B4A1EAE45B4E43500265BDF59FCCB683766CE1B80535CC663"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\scenes-notifications.css",
+        "Hash":  "68C5CB9EF4E54B52C99080912FD98187E448EA826B50123FC94577DDDC14052A"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\shared-components.css",
+        "Hash":  "BF4CEA12557362589D430BDE8AEE77E64520947521A8F9B78D13F7E8C004ED6E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\styles\\tables-footer.css",
+        "Hash":  "51BAB6A59D19A4E055627D26C0DC6F1C01A8A6CF27A308D699BFD3B69183E4D7"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\data-anomaly.ts",
+        "Hash":  "C90D11922B3F2738A89C86B7607757890704638973895717E489A1F4A72BFAC3"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\data-governance.ts",
+        "Hash":  "89106F6E73E7005E94D6C7C5126FC147C2FBF16D6BF6A19ED9B9B2AD960EFE6E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\data-resource.ts",
+        "Hash":  "9E7C083ED86708A3A38C28D045EDE8F33B87F56FBA8B372F143CEF4A444F852A"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\data-risk.ts",
+        "Hash":  "EC79CB6306B448B61C17DB95BFAC853A2CD09326DFB1286DDE43DAFC69762679"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\data-value.ts",
+        "Hash":  "82167596DAF09EA6FA4B8F6F371E3ABB68E1A40200C98CFA1B40C76C4EC730A5"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\governance-resources.ts",
+        "Hash":  "CE88D6BA3421ADEFA75CFA2EFBFC749249FA06D3D6832177827A0EFA9685E91C"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\index.ts",
+        "Hash":  "C48E65B2B92C26AA0CB804DA2F45D02E6ED5D3BB0DEEDAEFB78EB97A24C8021E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\types\\model-workbench.ts",
+        "Hash":  "7D924CFE9661129A5E7427B0D7A840570755085A4BBD69EDDFE2CE4C1ECB1EC1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\case.test.ts",
+        "Hash":  "BE5C807DE9515037F6A29AE5495845CB18B526CC9CD1F87A49CB20E93201CC6C"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\case.ts",
+        "Hash":  "6C5BCE775F77540FA446907574F954B7C2CFC36940DCBB5A633D27F34DEECB16"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\enums.ts",
+        "Hash":  "ABB154A9A6F15F5F6763B28BE3730CA9DAC41433E844197AC8D078C06A8236C2"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\governance-language.ts",
+        "Hash":  "2D8B4998B8389F66190F1BDF5E8CB0C1A7B7A3173747DB1691243BE8A731BCDC"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\governance-scope.ts",
+        "Hash":  "1804BE4940CB04327B7A830C90B3A6DB970CAED60522F7FED72E90BA7DB9D75D"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\process-kpis.test.ts",
+        "Hash":  "89E009BB97D420E40AA8B12D76FE26786BAA76EC0892A7A91294294847905C6B"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\process-kpis.ts",
+        "Hash":  "87FC3E1397D1D1EBB8FDF6EC8961CAEA548CE5E9C0AB67D6AD6F6B54637FF0A0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\process-output-version.ts",
+        "Hash":  "5DBEB8C77347FD4C8FD048C39630941B424E6AA078DCDCF459694195CC91592F"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\utils\\resource-comparison.ts",
+        "Hash":  "C39C6C496355C8B154A8975F0AF3E510ABFE27AC32001D88ED06AD756496C16B"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\dashboard\\DashboardPage.vue",
+        "Hash":  "1FACB88B08AA39454676CAB9C95D1A8E6FE28DF562CC773F7CFDAD03709BFAB6"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataAnomalyPage.test.ts",
+        "Hash":  "86B8999CA94619CDFF53DE1CDDCCDC57D5BE65575A72D9A8ACAE902E87439EC8"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataAnomalyPage.vue",
+        "Hash":  "86C4E04CEEF405F0F586A15831BEB2D95E2A84305DA77C36E49DAFE159BDD238"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataGovernancePage.vue",
+        "Hash":  "7BE774DF6A8576BFD174E2C4476EEC481B63CFC4F3AE4DAFCD8C939E243C2859"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataProcessPage.test.ts",
+        "Hash":  "A132C6BAF2181357393B8355DA63AB3BE4775B7E6F65B23312D3FD19E56A100F"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataProcessPage.vue",
+        "Hash":  "78F593612E2A7B6747C31025DA3B9C4F304AE788462D4D2EDCD771F0E062EA43"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataRiskPage.test.ts",
+        "Hash":  "90E9974050C2A534F08E1CBF0AE7D005A929AA4785682BC91C2E67AB0A440FB1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataRiskPage.vue",
+        "Hash":  "488F6A56534CC8EC058A08A2D74B6E5CBB87E75182896D37A5DDA6A316F42E4F"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataValuePage.test.ts",
+        "Hash":  "690E3AD1F77B1B00D131396E351DCD11D68C65E0D560E1FCAD912C9566B8AA83"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\DataValuePage.vue",
+        "Hash":  "AAF3CA7625BAC31E1E01383D647845D506FAFC9A7D049BC255E060E7008EC88B"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\AnomalyOverview.vue",
+        "Hash":  "430E145F96448876AAC215C0B076205FB30458726E6A7190D6FEE23046000351"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ProcessComparisonTable.vue",
+        "Hash":  "D513E0EBB15DC8306FFC9D938C9313A80FDB601B187116468886446E48BDA601"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ProcessOverview.vue",
+        "Hash":  "1BA85C4FF818CB83F1A762AECC460AEA27C5C392C52E94960D032B38F5477818"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ProcessTaskHistory.vue",
+        "Hash":  "F90F47E4AD1746268C8EA43729408A6F7E6BF14A08F8FD9EFF024495A5A3E5B1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ProcessTaskPanel.vue",
+        "Hash":  "801DDFC91D707EA02FD3E7629A7B399A80D59709E595D9059D9058E889B21981"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\RiskChart.vue",
+        "Hash":  "D09F0077BCA3AB84E0B777D5A6B77FA4D5D4876871AC2E4DEF11516C29498CC1"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\RiskOverview.vue",
+        "Hash":  "6F36645C892B222B5FB42E621C462D7F1BA92D68032AEC234FD1F3805D8CF3EC"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ValueChart.vue",
+        "Hash":  "C2A060D772DDA845936723C2825EB55572EFCBC04E4E722DF62F3A0164DA3F07"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ValueMetrics.vue",
+        "Hash":  "54A2DEB71A8F3EFE0077A89F325D7E4755B07A926573B8DC0EF12461961FA45E"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-governance\\components\\ValueOverview.vue",
+        "Hash":  "BFDC2D61A6E8F5EC2A94C3B427F2F397F74B292E1BACDA2BF07557BAB99733F6"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\DataIngestPage.vue",
+        "Hash":  "84FD00FF98C88E00360C88DB8CC9E26AB0BF2C557AEC2D34F0B672202ACE4D07"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\DataResourcePage.test.ts",
+        "Hash":  "D7D23FCDAC8461F2972930913A8F6034FBE8DD9FAFBD512ECA5A9D7F88BE3CAD"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\DataResourcePage.vue",
+        "Hash":  "6068F564DF2D440A1D4712C18ED44C7294A85CD4EF6A9FECF4ACCFF1B77810E6"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\DatasetManagePage.vue",
+        "Hash":  "18BAB971FBD9AC89AB26436EF9633D0ABBD1858EF7CCDE0D799F6A361430A0CD"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\ResourceOverviewPage.vue",
+        "Hash":  "94E98778DC18B9DDB5E83238A0A57601CFBD3D3A944752396264F7C30B66A0C0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\ResourceStatisticsPage.vue",
+        "Hash":  "3AECFBBAFAB67D68DC9502ED21D8C3B92835A3E763327451B83A9D56ABABED06"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\components\\DatasetDetailContent.vue",
+        "Hash":  "7780DCEE20E006FD1F2A0B3BD9CEEB2584AAB6F916DC6BE2E1A667E97E8140A5"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\components\\DistributionBars.vue",
+        "Hash":  "BE95FB73294F42589F84B60F125687D13DF5E12D46B0AE03A2C759C9486ED938"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\components\\IngestTaskTable.vue",
+        "Hash":  "C2DF07D24569E021E7215354678884C27C5DC16312CD5DAF1A83A56FEC3BA689"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\data-resource\\components\\ResourceChart.vue",
+        "Hash":  "2265D4ADA0B5316139B389910C8117D2F3A704526D44EC445CB45C6692AA0CC3"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\evaluation\\EvaluationPage.vue",
+        "Hash":  "CC2B1F084BF7F735B71F2652A39033DBF0EEB9BEA4B8EE3937C7ADF415F9935C"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\DeployPage.vue",
+        "Hash":  "D23001F2B0E97A5D267DCEE0A0D4CC517CB3F6B6F31B217979A724BEB10740E0"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\EvaluationPage.vue",
+        "Hash":  "174276835D97149A2A526924EE287968F81D7E031831F2CAFE731444B2F02751"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\InvokePage.vue",
+        "Hash":  "2846890CFAE091BB337802EDA25A1958BBC9C6CAE2341573100848488C458764"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\ManagementPage.vue",
+        "Hash":  "ECF373F91DF4DCAF06E4B5FB12D1AFFD11AE3F873EB1CA3E05CEEC93A1EF6418"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\ModelPage.vue",
+        "Hash":  "1EE45BE5B791BA52887866B734495FCDE9B01E6444155EDEA5C6A18CCBEC7CEB"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\TrainingPage.vue",
+        "Hash":  "E1A0A2306E0D4FC21D46BAA82B4380A573E65EE1A306800A6FF9BCD58D64F877"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\workbench.css",
+        "Hash":  "71125EA202E2D3811A5966F93296E5ED6D09EF55F3BF2912F3D0B16575660C03"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\WorkbenchChart.vue",
+        "Hash":  "36FF6855A5686CD1A8530795D109174C9968C7337148C7BC5ECAB6A814422C3A"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\model-train\\WorkbenchKpis.vue",
+        "Hash":  "BAAE67CBB763481ABC8677A30A8B7D3AD824D3B7F665DEB144B00D4E99E18261"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\scenario\\ScenarioPage.vue",
+        "Hash":  "632BDD5B53235F8E4B721B8BD9FEEF674F4B6BC6DCF2CB33AFA2C4B9A8D501EA"
+    },
+    {
+        "Path":  "D:\\内容安全治理原型平台\\content-safety-platform\\src\\views\\system\\SystemPage.vue",
+        "Hash":  "8C2E155F2252A1A20330C74ED7E6DDE0514A8961761BED559B0F2B04B2B5EB7C"
+    }
+]

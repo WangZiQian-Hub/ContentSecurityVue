@@ -14,12 +14,13 @@ function option(): EChartsOption {
       color: ['#087bff'],
       tooltip: {},
       radar: {
+        center: ['50%', '55%'],
         radius: '62%',
         indicator: props.result.dimensions.map((item) => ({
           name: `${item.name}\n${item.score}`,
           max: 100,
         })),
-        axisName: { color: '#244c94', fontSize: 13 },
+        axisName: { color: '#244c94', fontSize: 13, lineHeight: 16  },
         splitArea: { areaStyle: { color: ['#f5faff', '#e7f2ff'] } },
       },
       series: [

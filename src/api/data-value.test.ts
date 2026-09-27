@@ -9,7 +9,7 @@ import {
   listValueTasks,
 } from './data-value'
 import { getResourceSamples } from './data-resource'
-import { getValueKpis } from '../mock/data-value'
+import { demoSamples, getValueKpis, valueOptions } from '../mock/data-value'
 import { getProcessTask } from './data-governance'
 const scope = { datasetId: 3, versionId: 'dsv_000003', language: 'all', schemeId: 'general-v1' }
 const query = { page: 1, pageSize: 200, tier: 'all' as const, keyword: '', bin: '' }
@@ -17,6 +17,27 @@ describe('数据价值分析口径与接口', () => {
   beforeEach(() => {
     backend.isMock = true
     backend.request.mockReset()
+  })
+  it('顶部指标按所有数据集的样本汇总', () => {
+    const samples = valueOptions.datasets.flatMap((dataset) =>
+      demoSamples({
+        datasetId: dataset.id,
+        versionId: dataset.versions[0]!.id,
+        language: 'all',
+        schemeId: 'general-v1',
+      }),
+    )
+    const scored = samples.filter((sample) => sample.score !== null)
+    const kpis = getValueKpis()
+    expect(kpis[0]!.value).toBeCloseTo(
+      scored.reduce((sum, sample) => sum + sample.score!, 0) / scored.length,
+      1,
+    )
+    expect(kpis[1]!.value).toBeCloseTo(
+      (samples.filter((sample) => sample.tier === 'high').length / samples.length) * 100,
+      1,
+    )
+    expect(kpis[2]!.value).toBe(scored.length)
   })
   it('汇总、分布、分档与样本评分来自同一结果', async () => {
     const result = (await getLatestValueResult(scope))!

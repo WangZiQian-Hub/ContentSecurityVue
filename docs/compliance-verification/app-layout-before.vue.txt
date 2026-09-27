@@ -1,4 +1,4 @@
-/** 网站公共外壳
+﻿/** 网站公共外壳
 它负责：
 - 顶部品牌名称。
 - 全局搜索。
@@ -141,7 +141,7 @@ function openUserManagement() {
         </div>
       </div>
       <!-- 数据资源在父页面中维护自己的总览与子页面导航。 -->
-      <nav v-if="current.tabs.length && !['/data-resource', '/data-governance', '/model-train', '/compliance'].includes(current.path)" class="page-tabs" aria-label="页面子导航">
+      <nav v-if="current.tabs.length && !['/data-resource', '/data-governance', '/model-train'].includes(current.path)" class="page-tabs" aria-label="页面子导航">
         <!-- 遍历当前模块配置的所有二级页签 -->
         <router-link
           v-for="(tab, index) in current.tabs"
@@ -153,7 +153,7 @@ function openUserManagement() {
           {{ tab.title }}
         </router-link>
       </nav>
-      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train', '/compliance'].includes(current.path)" />
+      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train'].includes(current.path)" />
       <footer class="page-footer">
         内容安全治理原型平台 <span>统一数据 · 智能治理 · 全程可溯</span>
       </footer>

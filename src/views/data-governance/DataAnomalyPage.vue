@@ -2,7 +2,6 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
-import { isMock } from '../../api/request'
 import { languageName } from '../../utils/governance-language'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
@@ -31,6 +30,7 @@ const total = ref(0),
   error = ref(''),
   drawer = ref(''),
   ruleSearch = ref('')
+const statusSortOrder = ref<'ascending' | 'descending' | null>(null)
 const task = ref<Task>()
 const history = ref<Result[]>([])
 const changeSet = ref<ChangeSet>()
@@ -91,7 +91,31 @@ async function loadRows() {
   selected.value = undefined
   if (!id) return
   try {
-    const page = await api.listAnomalySamples(id, { ...query })
+    let page
+    if (statusSortOrder.value) {
+      const pageSize = 100
+      const first = await api.listAnomalySamples(id, { ...query, page: 1, pageSize })
+      const remaining = await Promise.all(
+        Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) =>
+          api.listAnomalySamples(id, { ...query, page: index + 2, pageSize }),
+        ),
+      )
+      const statusOrder: Record<string, number> = { 待处理: 0, 待复核: 1, 已处理: 2 }
+      const direction = statusSortOrder.value === 'ascending' ? 1 : -1
+      const items = [first, ...remaining]
+        .flatMap((item) => item.items)
+        .sort(
+          (a, b) =>
+            direction *
+            ((statusOrder[a.status] ?? Number.MAX_SAFE_INTEGER) -
+              (statusOrder[b.status] ?? Number.MAX_SAFE_INTEGER) ||
+              a.id.localeCompare(b.id, 'zh-CN')),
+        )
+      const start = (query.page - 1) * query.pageSize
+      page = { ...first, items: items.slice(start, start + query.pageSize), page: query.page }
+    } else {
+      page = await api.listAnomalySamples(id, { ...query })
+    }
     if (ticket !== listGeneration || id !== result.value?.id) return
     rows.value = page.items
     total.value = page.total
@@ -99,6 +123,18 @@ async function loadRows() {
   } catch (e) {
     if (ticket === listGeneration) error.value = String(e)
   }
+}
+function changeStatusSort({
+  prop,
+  order,
+}: {
+  prop: string
+  order: 'ascending' | 'descending' | null
+}) {
+  if (prop !== 'status') return
+  statusSortOrder.value = order
+  query.page = 1
+  void loadRows()
 }
 async function loadScope() {
   const ticket = ++generation
@@ -334,12 +370,6 @@ watch(
 </script>
 <template>
   <div v-loading="loading" class="anomaly-page">
-    <el-alert
-      v-if="isMock"
-      title="演示数据 · 使用完整资源样本集合和预置证据；操作仅保存在本次会话，未调用 LLM。"
-      type="info"
-      :closable="false"
-    />
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <PanelCard title="当前数据集检测">
       <div class="anomaly-controls">
@@ -439,7 +469,7 @@ watch(
     <div v-if="result" class="anomaly-columns">
       <PanelCard title="异常类型分布"
         ><template #extra
-          ><el-button link type="primary" @click="drawer = '类型明细'"
+          ><el-button class="panel-more" link type="primary" @click="drawer = '类型明细'"
             >类型明细 ›</el-button
           ></template
         ><button
@@ -463,7 +493,12 @@ watch(
       >
       <PanelCard title="选中样本：异常依据与来源"
         ><template #extra
-          ><el-button link type="primary" :disabled="!selected" @click="drawer = '完整详情'"
+          ><el-button
+            class="panel-more"
+            link
+            type="primary"
+            :disabled="!selected"
+            @click="drawer = '完整详情'"
             >完整详情 ›</el-button
           ></template
         ><template v-if="selected"
@@ -473,7 +508,7 @@ watch(
             ><el-tag type="warning">{{ selected.status }}</el-tag>
           </div>
           <p class="anomaly-excerpt">{{ selected.text }}</p>
-          <p v-for="f in selected.findings" :key="f.ruleId">
+          <p v-for="f in selected.findings" :key="f.ruleId" class="anomaly-finding">
             <b>发现问题：</b>{{ f.reason }}<br /><b>证据：</b>“{{ f.quote }}”
           </p>
           <div class="anomaly-source">
@@ -490,7 +525,7 @@ watch(
     </div>
     <PanelCard v-if="result" title="异常样本明细"
       ><template #extra
-        ><el-button type="primary" plain @click="exportOpen = true"
+        ><el-button class="anomaly-export-button" type="primary" plain @click="exportOpen = true"
           >导出当前列表</el-button
         ></template
       >
@@ -524,16 +559,18 @@ watch(
         highlight-current-row
         row-key="id"
         :current-row-key="selected?.id"
+        @sort-change="changeStatusSort"
         @row-click="choose"
         ><el-table-column prop="id" label="样本 ID" width="190" /><el-table-column
           prop="text"
           label="内容摘要"
           min-width="250"
           show-overflow-tooltip
-        /><el-table-column prop="primaryType" label="主要异常" width="120" /><el-table-column
+        /><el-table-column prop="primaryType" label="主要异常" width="130" /><el-table-column
           prop="status"
           label="处理状态"
-          width="110"
+          width="120"
+          sortable="custom"
         /><el-table-column label="操作" width="115"
           ><template #default="{ row }"
             ><el-button
@@ -860,10 +897,14 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 700;
 }
 .anomaly-controls .el-select {
   width: 155px;
+}
+.anomaly-controls .el-button {
+  font-size: 16px;
 }
 .anomaly-controls label:first-child .el-select {
   width: 230px;
@@ -898,13 +939,18 @@ watch(
 }
 .anomaly-metrics span {
   display: block;
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 700;
 }
 .anomaly-metrics strong {
   display: block;
   font-size: 25px;
   margin-top: 8px;
   color: #05296a;
+}
+.anomaly-finding {
+  font-size: 15px;
+  line-height: 1.6;
 }
 .anomaly-columns {
   display: grid;
@@ -925,6 +971,10 @@ watch(
 .anomaly-bar > span {
   width: 70px;
   text-align: left;
+  font-size: 16px;
+}
+.anomaly-bar > b {
+  font-size: 16px;
 }
 .anomaly-bar > div {
   flex: 1;
@@ -944,6 +994,9 @@ watch(
   width: 32px;
   text-align: left;
 }
+.anomaly-export-button {
+  font-size: 16px;
+}
 .anomaly-note {
   font-size: 12px;
   color: #70819a;
@@ -954,14 +1007,18 @@ watch(
   display: flex;
   gap: 8px;
 }
+.anomaly-tags :deep(.el-tag__content) {
+  font-size: 14px;
+}
 .anomaly-excerpt {
+  font-size: 16px;
   font-weight: 600;
-  line-height: 1.7;
+  line-height: 1.9;
 }
 .anomaly-source {
   border-top: 1px solid #e0e9f3;
   padding-top: 10px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
 }
 .anomaly-table-tools {
@@ -973,6 +1030,21 @@ watch(
 }
 .anomaly-table-tools .el-input {
   width: 210px;
+}
+.anomaly-table-tools .el-button {
+  font-size: 16px;
+  font-weight: 700;
+}
+.anomaly-table-tools :deep(.el-select__selected-item),
+.anomaly-table-tools :deep(.el-select__placeholder) {
+  font-size: 16px;
+}
+.anomaly-table-tools :deep(.el-input__inner) {
+  font-size: 16px;
+}
+.anomaly-page :deep(.el-table__header-wrapper th.el-table__cell .cell) {
+  font-size: 16px;
+  font-weight: 700;
 }
 .anomaly-pagination {
   display: flex;

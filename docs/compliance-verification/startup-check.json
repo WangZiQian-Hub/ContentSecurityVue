@@ -1,0 +1,175 @@
+{
+  "root": "http://127.0.0.1:5174",
+  "checked": [
+    {
+      "path": "/dashboard",
+      "actualPath": "/dashboard"
+    },
+    {
+      "path": "/data-resource",
+      "actualPath": "/data-resource"
+    },
+    {
+      "path": "/data-resource/ingest",
+      "actualPath": "/data-resource/ingest"
+    },
+    {
+      "path": "/data-resource/datasets",
+      "actualPath": "/data-resource/datasets"
+    },
+    {
+      "path": "/data-resource/statistics",
+      "actualPath": "/data-resource/statistics"
+    },
+    {
+      "path": "/data-governance",
+      "actualPath": "/data-governance"
+    },
+    {
+      "path": "/data-governance/process",
+      "actualPath": "/data-governance/process"
+    },
+    {
+      "path": "/data-governance/value-analysis",
+      "actualPath": "/data-governance/value-analysis"
+    },
+    {
+      "path": "/data-governance/anomaly",
+      "actualPath": "/data-governance/anomaly"
+    },
+    {
+      "path": "/data-governance/risk-classification",
+      "actualPath": "/data-governance/risk-classification"
+    },
+    {
+      "path": "/data-governance/quality",
+      "actualPath": "/data-governance"
+    },
+    {
+      "path": "/model-train",
+      "actualPath": "/model-train"
+    },
+    {
+      "path": "/model-train/training",
+      "actualPath": "/model-train/training"
+    },
+    {
+      "path": "/model-train/management",
+      "actualPath": "/model-train/management"
+    },
+    {
+      "path": "/model-train/evaluation",
+      "actualPath": "/model-train/evaluation"
+    },
+    {
+      "path": "/model-train/deploy",
+      "actualPath": "/model-train/deploy"
+    },
+    {
+      "path": "/model-train/invoke",
+      "actualPath": "/model-train/invoke"
+    },
+    {
+      "path": "/compliance",
+      "actualPath": "/compliance"
+    },
+    {
+      "path": "/compliance/lineage",
+      "actualPath": "/compliance/lineage"
+    },
+    {
+      "path": "/compliance/training-monitor",
+      "actualPath": "/compliance/training-monitor"
+    },
+    {
+      "path": "/compliance/reasoning-audit",
+      "actualPath": "/compliance/reasoning-audit"
+    },
+    {
+      "path": "/compliance/neuron-audit",
+      "actualPath": "/compliance/neuron-audit"
+    },
+    {
+      "path": "/compliance/risk-alert",
+      "actualPath": "/compliance/risk-alert"
+    },
+    {
+      "path": "/compliance/full-chain",
+      "actualPath": "/compliance/full-chain"
+    },
+    {
+      "path": "/evaluation",
+      "actualPath": "/evaluation"
+    },
+    {
+      "path": "/evaluation/metrics",
+      "actualPath": "/evaluation/metrics"
+    },
+    {
+      "path": "/evaluation/tasks",
+      "actualPath": "/evaluation/tasks"
+    },
+    {
+      "path": "/evaluation/execution",
+      "actualPath": "/evaluation/execution"
+    },
+    {
+      "path": "/evaluation/results",
+      "actualPath": "/evaluation/results"
+    },
+    {
+      "path": "/evaluation/records",
+      "actualPath": "/evaluation/records"
+    },
+    {
+      "path": "/scenario",
+      "actualPath": "/scenario"
+    },
+    {
+      "path": "/scenario/public-opinion",
+      "actualPath": "/scenario/public-opinion"
+    },
+    {
+      "path": "/scenario/hot-events",
+      "actualPath": "/scenario/hot-events"
+    },
+    {
+      "path": "/scenario/cross-cultural",
+      "actualPath": "/scenario/cross-cultural"
+    },
+    {
+      "path": "/scenario/ethnic-governance",
+      "actualPath": "/scenario/ethnic-governance"
+    },
+    {
+      "path": "/scenario/smart-government",
+      "actualPath": "/scenario/smart-government"
+    },
+    {
+      "path": "/scenario/cyber-security",
+      "actualPath": "/scenario/cyber-security"
+    },
+    {
+      "path": "/system",
+      "actualPath": "/system"
+    },
+    {
+      "path": "/system/users",
+      "actualPath": "/system/users"
+    },
+    {
+      "path": "/system/roles",
+      "actualPath": "/system/roles"
+    },
+    {
+      "path": "/system/model-config",
+      "actualPath": "/system/model-config"
+    },
+    {
+      "path": "/system/logs",
+      "actualPath": "/system/logs"
+    }
+  ],
+  "errors": [],
+  "defaultDemo": true
+}
