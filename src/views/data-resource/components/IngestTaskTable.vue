@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useDataResourceStore } from '../../../stores/data-resource'
 import type { IngestTask } from '../../../types/data-resource'
 import { TASK_STATUS } from '../../../utils/enums'
@@ -10,6 +10,9 @@ const query = reactive({ page: 1, pageSize: props.compact ? 5 : 10, keyword: '',
 const loading = ref(false)
 const error = ref(false)
 const detail = ref<IngestTask>()
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+let polling = false
+const terminalStatuses = new Set(['succeeded', 'failed', 'cancelled'])
 async function load() {
   loading.value = true
   error.value = false
@@ -21,6 +24,29 @@ async function load() {
     loading.value = false
   }
 }
+function stopPolling() {
+  polling = false
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = undefined
+  }
+}
+async function pollRunningTasks() {
+  if (!polling) return
+  await load()
+  if (!polling) return
+  const hasRunningTask = store.tasks.some((task) => !terminalStatuses.has(task.status))
+  if (hasRunningTask) {
+    pollTimer = setTimeout(() => void pollRunningTasks(), 2000)
+  } else {
+    stopPolling()
+  }
+}
+function startPolling() {
+  stopPolling()
+  polling = true
+  void pollRunningTasks()
+}
 function search() {
   query.page = 1
   void load()
@@ -29,7 +55,11 @@ function select(task: IngestTask) {
   detail.value = task
   emit('select', task)
 }
-onMounted(load)
+onMounted(async () => {
+  await load()
+  if (store.tasks.some((task) => !terminalStatuses.has(task.status))) startPolling()
+})
+onUnmounted(stopPolling)
 </script>
 <template>
   <div v-if="!compact" class="resource-toolbar">
