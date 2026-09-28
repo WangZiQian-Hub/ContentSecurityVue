@@ -73,8 +73,27 @@ const segments = computed(() => {
   fill: #123f82;
 }
 .caption {
-  font-size: 9px;
+  font-size: 10px;
   fill: #7185a5;
+}
+/* 高风险、中风险、低风险、提示 */
+button span {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 0条、1条 */
+button b {
+  font-size: 16px;
+  margin-left: auto;
+}
+
+/* 0.0%、50.0% */
+button small {
+  font-size: 16px;
+  width: 46px;
+  color: #8192b1;
+  text-align: right;
 }
 button {
   display: flex;

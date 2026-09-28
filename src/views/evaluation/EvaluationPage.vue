@@ -1,43 +1,102 @@
-<script setup lang="ts">
-import KpiStrip from '../../components/KpiStrip.vue'
-import PanelCard from '../../components/PanelCard.vue'
-import ResourceTable from '../../components/ResourceTable.vue'
-import TaskTable from '../../components/TaskTable.vue'
-import DataChart from '../../components/DataChart.vue'
-import CapabilityForm from '../../components/CapabilityForm.vue'
+﻿<script setup lang="ts">
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useEvaluationStore } from '../../stores/evaluation'
+import { isEvaluationDemo } from '../../api/evaluation'
+import MetricManagementPage from './MetricManagementPage.vue'
+import MetricDetail from './MetricDetail.vue'
+import EvaluationTaskPage from './EvaluationTaskPage.vue'
+import EvaluationTaskCreate from './EvaluationTaskCreate.vue'
+import EvaluationExecutionPage from './EvaluationExecutionPage.vue'
+import EvaluationResultPage from './EvaluationResultPage.vue'
+import EvaluationRecordPage from './EvaluationRecordPage.vue'
+import EvaluationEvidenceDetail from './EvaluationEvidenceDetail.vue'
+import './evaluation.css'
 const route = useRoute()
+const store = useEvaluationStore()
+const accessToken = ref('')
+async function authorize() {
+  if (await store.authorize(accessToken.value)) accessToken.value = ''
+}
+const pages = {
+  metrics: MetricManagementPage,
+  tasks: EvaluationTaskPage,
+  execution: EvaluationExecutionPage,
+  results: EvaluationResultPage,
+  records: EvaluationRecordPage,
+}
+const component = computed(() => {
+  if (route.query.evidenceId) return EvaluationEvidenceDetail
+  if (route.query.metricId || route.query.metricCode) return MetricDetail
+  if (route.params.tab === 'tasks' && route.query.view === 'new') return EvaluationTaskCreate
+  return pages[(route.params.tab || 'metrics') as keyof typeof pages]
+})
+watch(
+  () => route.fullPath,
+  () => {
+    store.clear()
+    void store.loadSession()
+  },
+  { immediate: true, flush: 'sync' },
+)
+onBeforeUnmount(store.clear)
 </script>
 <template>
-  <KpiStrip kind="evaluation" />
-  <div class="grid three">
-    <PanelCard :title="route.params.tab === 'tasks' ? '测试任务' : '指标管理'" icon="Coin"
-      ><TaskTable v-if="route.params.tab === 'tasks'" /><ResourceTable
-        v-else
-        resource="metrics" /></PanelCard
-    ><PanelCard title="测试执行" icon="Setting"
-      ><div class="test-progress">
-        <h3>多模态内容安全评估测试 <el-tag size="small">执行中</el-tag></h3>
-        <p>当前运行任务 · 演示进度</p>
-        <el-progress :percentage="67" :stroke-width="12" />
-        <div class="progress-stats">
-          <div><b>1,280</b>测试用例总数</div>
-          <div><b>980</b>已完成</div>
-          <div><b>921</b>通过</div>
-          <div><b>59</b>失败</div>
-        </div>
+  <div class="evaluation-workspace" :aria-busy="store.loading">
+    <nav class="evaluation-tabs" aria-label="测试评估子页面">
+      <router-link
+        v-for="tab in [
+          { path: '/evaluation', title: '指标管理' },
+          { path: '/evaluation/tasks', title: '测试任务' },
+          { path: '/evaluation/execution', title: '测试执行' },
+          { path: '/evaluation/results', title: '测试结果' },
+          { path: '/evaluation/records', title: '测试记录' },
+        ]"
+        :key="tab.path"
+        :to="tab.path"
+        :class="{ selected: tab.path === '/evaluation' ? route.path === '/evaluation' : route.path.startsWith(tab.path) }"
+      >{{ tab.title }}</router-link>
+    </nav>
+    <div v-if="isEvaluationDemo" class="ev-note" role="status">
+      <b>示例演示模式</b> · 数据与操作仅用于演示，刷新后重置；不写入后端，不生成正式报告。
+    </div>
+    <div v-if="store.error" class="ev-error" role="alert">
+      <strong>{{ store.error }}</strong>
+      <ul v-if="store.issues.length">
+        <li v-for="(issue, index) in store.issues" :key="index">{{ issue.message }}</li>
+      </ul>
+      <el-button size="small" @click="store.loadSession()">重新检查授权</el-button>
+    </div>
+    <section v-if="!isEvaluationDemo && !store.session" class="ev-panel">
+      <h2>测试评估身份验证</h2>
+      <p>使用已获授权的访问凭证进入测试评估工作区。</p>
+      <form class="ev-toolbar" @submit.prevent="authorize">
+        <el-input
+          v-model="accessToken"
+          type="password"
+          show-password
+          autocomplete="off"
+          placeholder="访问凭证"
+          aria-label="访问凭证"
+        />
+        <el-button
+          native-type="submit"
+          type="primary"
+          :disabled="!accessToken.trim()"
+          :loading="store.loading"
+          >验证并进入</el-button
+        >
+      </form>
+    </section>
+    <template v-else-if="component">
+      <div v-if="!isEvaluationDemo && store.session" class="ev-actions">
+        <el-tag type="success" effect="plain">评估工作区 · 实时数据</el-tag
+        ><span class="ev-muted">{{ store.session.role === 'reader' ? '只读权限' : '已授权' }}</span>
       </div>
-      <CapabilityForm capability="evaluation" title="新建测试任务" /></PanelCard
-    ><PanelCard title="测试结果概览" icon="CircleCheckFilled"
-      ><DataChart kind="donut" :height="200" />
-      <div class="score">
-        综合评估得分 <strong>92.3 <small>分</small></strong
-        ><el-tag type="success">优秀</el-tag>
-      </div>
-      <DataChart kind="bar" :height="185"
-    /></PanelCard>
+      <component :is="component" :key="route.fullPath" />
+    </template>
+    <el-empty v-else description="此测试评估页面不存在"
+      ><router-link to="/evaluation">返回指标管理</router-link></el-empty
+    >
   </div>
-  <PanelCard title="测试结果与记录" icon="Document" link="/evaluation/records"
-    ><ResourceTable resource="test-records" searchable
-  /></PanelCard>
 </template>

@@ -2,7 +2,6 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import RiskChart from './components/RiskChart.vue'
-import { isMock } from '../../api/request'
 import { languageName } from '../../utils/governance-language'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
@@ -12,6 +11,7 @@ import type {
   Query,
   Result,
   ReviewInput,
+  RiskSortField,
   Rule,
   Sample,
   Scope,
@@ -148,6 +148,23 @@ function filter(level = '', status = '') {
 }
 function search() {
   query.page = 1
+  void loadRows()
+}
+function sortRows({
+  prop,
+  order,
+}: {
+  prop: string
+  order: 'ascending' | 'descending' | null
+}) {
+  query.page = 1
+  if (order && (prop === 'maximumSuggestedLevel' || prop === 'status')) {
+    query.sortBy = prop as RiskSortField
+    query.sortOrder = order === 'ascending' ? 'asc' : 'desc'
+  } else {
+    delete query.sortBy
+    delete query.sortOrder
+  }
   void loadRows()
 }
 async function start() {
@@ -347,18 +364,8 @@ onBeforeUnmount(() => {
 <template>
   <div v-loading="loading" class="risk-page">
     <div class="risk-heading">
-      <div>
-        <h2>风险识别与分级</h2>
-        <p>识别内容语义风险，留存证据与规则依据，支持独立人工复核。</p>
-      </div>
-      <el-tag v-if="isMock" effect="light">演示数据</el-tag>
+      <div></div>
     </div>
-    <el-alert
-      v-if="isMock"
-      title="演示数据 · 使用完整资源样本集合及预置规则证据，未调用 LLM；复核操作仅保存在本次会话。"
-      type="info"
-      :closable="false"
-    />
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <PanelCard title="检测范围与结果" icon="Filter">
       <div class="risk-controls">
@@ -467,7 +474,7 @@ onBeforeUnmount(() => {
     <div v-if="result" class="risk-columns">
       <PanelCard title="风险等级分布" icon="PieChart"
         ><template #extra
-          ><el-button link type="primary" @click="drawer = '分级标准'"
+          ><el-button class="panel-more" link type="primary" @click="drawer = '分级标准'"
             >分级标准 ›</el-button
           ></template
         >
@@ -475,11 +482,12 @@ onBeforeUnmount(() => {
         <p class="risk-note">
           每条样本按最高建议等级计数。点击分段或图例筛选列表，清空其他筛选；百分比四舍五入，以条数为准。
         </p>
-        <el-button link type="primary" @click="filter()">查看全部风险候选</el-button>
+        <el-button class="risk-all-link" link type="primary" @click="filter()">查看全部风险候选</el-button>
       </PanelCard>
       <PanelCard title="风险样本明细" icon="List"
         ><template #extra
           ><el-button
+            class="panel-more"
             link
             type="primary"
             :disabled="busy || !result.actions.includes('export')"
@@ -512,9 +520,10 @@ onBeforeUnmount(() => {
           :current-row-key="selected?.id"
           empty-text="当前条件无匹配风险候选"
           @row-click="choose"
+          @sort-change="sortRows"
         >
-          <el-table-column prop="id" label="样本 ID" min-width="165" />
-          <el-table-column prop="text" label="内容摘要" min-width="170" show-overflow-tooltip />
+          <el-table-column prop="id" label="样本 ID" min-width="150" />
+          <el-table-column prop="text" label="内容摘要" min-width="180" show-overflow-tooltip />
           <el-table-column label="主要类别" min-width="122"
             ><template #default="{ row }"
               >{{ row.primaryCategory
@@ -523,14 +532,18 @@ onBeforeUnmount(() => {
               ></template
             ></el-table-column
           >
-          <el-table-column label="建议等级" width="92"
+          <el-table-column
+            prop="maximumSuggestedLevel"
+            label="建议等级"
+            width="110"
+            sortable="custom"
             ><template #default="{ row }"
               ><span class="risk-level" :style="{ color: color(row.maximumSuggestedLevel) }"
                 >● {{ label(row.maximumSuggestedLevel) }}</span
               ></template
             ></el-table-column
           >
-          <el-table-column prop="status" label="复核状态" width="92" />
+          <el-table-column prop="status" label="复核状态" width="110" sortable="custom" />
           <el-table-column label="操作" width="86"
             ><template #default="{ row }"
               ><el-button
@@ -561,7 +574,12 @@ onBeforeUnmount(() => {
       </PanelCard>
       <PanelCard title="判定依据" icon="Shield"
         ><template #extra
-          ><el-button link type="primary" :disabled="!selected" @click="drawer = '完整依据'"
+          ><el-button
+            class="panel-more"
+            link
+            type="primary"
+            :disabled="!selected"
+            @click="drawer = '完整依据'"
             >完整依据 ›</el-button
           ></template
         >
@@ -615,7 +633,12 @@ onBeforeUnmount(() => {
     </div>
     <PanelCard v-if="result" title="关联风险知识" icon="Collection"
       ><template #extra
-        ><el-button link type="primary" :disabled="!selected" @click="openKnowledge"
+        ><el-button
+          class="panel-more"
+          link
+          type="primary"
+          :disabled="!selected"
+          @click="openKnowledge"
           >检索知识库 ›</el-button
         ></template
       >
@@ -638,9 +661,6 @@ onBeforeUnmount(() => {
       </div>
       <el-empty v-else description="选择风险样本后展示命中知识" :image-size="45" />
     </PanelCard>
-    <p class="risk-note">
-      标签错误在异常数据治理页处理。人工复核不自动改写或删除原内容；脱敏或内容修改需进入单独治理任务并生成新版本。
-    </p>
     <el-drawer :model-value="!!drawer" :title="drawer" size="min(700px, 94vw)" @close="drawer = ''">
       <template v-if="drawer === '分级标准'"
         ><h3>{{ scheme?.name }}</h3>
@@ -850,7 +870,7 @@ onBeforeUnmount(() => {
   color: #214573;
 }
 .risk-heading {
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: center;
 }
@@ -867,6 +887,7 @@ onBeforeUnmount(() => {
 .risk-controls {
   display: flex;
   gap: 12px;
+  font-size: 16px;
   flex-wrap: wrap;
   align-items: end;
 }
@@ -874,8 +895,17 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: 16px;
+  font-weight: 700;
   color: #6682a5;
+}
+/* 右侧风险等级标签文字 */
+.risk-selected :deep(.el-tag__content) {
+  font-size: 16px !important;
+}
+.risk-all-link {
+  font-size: 16px; /* 文字大小 */
+  margin-top: 5px; /* 与上方内容的距离 */
 }
 .risk-controls .el-select {
   width: 155px;
@@ -891,9 +921,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 16px;
   gap: 12px;
   flex-wrap: wrap;
+}
+.risk-identity .el-button {
+  font-size: 16px;
 }
 .risk-metrics {
   display: grid;
@@ -918,7 +951,8 @@ onBeforeUnmount(() => {
   background: #eef6ff;
 }
 .risk-metrics span {
-  font-size: 12px;
+  font-size: 16px;
+  font-weight: 700;
 }
 .risk-metrics strong {
   display: block;
@@ -927,8 +961,8 @@ onBeforeUnmount(() => {
   margin-top: 5px;
 }
 .risk-metrics small {
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 700;
   margin-left: 7px;
 }
 .risk-metrics .danger {
@@ -944,7 +978,8 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .risk-note {
-  font-size: 12px;
+  font-size: 16px;
+  font-weight: 700;
   color: #8191a9;
   line-height: 1.8;
   margin: 10px 0 0;
@@ -960,12 +995,32 @@ onBeforeUnmount(() => {
 .risk-table-tools .el-input {
   flex: 1;
 }
+/* 表格表头文字 */
+.risk-columns :deep(.el-table__header-wrapper th.el-table__cell .cell) {
+  font-size: 15px;
+  font-weight: 700;
+}
+/* 搜索输入框文字和占位文字 */
+.risk-table-tools :deep(.el-input__inner) {
+  font-size: 16px;
+}
+
+/* “搜索”按钮 */
+.risk-table-tools .el-button {
+  font-size: 16px;
+}
+
+/* “复核状态”下拉框 */
+.risk-table-tools :deep(.el-select__placeholder),
+.risk-table-tools :deep(.el-select__selected-item) {
+  font-size: 16px;
+}
 .risk-filter {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin: 12px 0;
-  font-size: 12px;
+  font-size: 14px;
   color: #6d86a8;
 }
 .risk-pagination {
@@ -975,7 +1030,8 @@ onBeforeUnmount(() => {
   overflow-x: auto;
 }
 .risk-level {
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 700;
   white-space: nowrap;
 }
 .risk-selected {
@@ -986,7 +1042,7 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 .risk-selected b {
-  font-size: 14px;
+  font-size: 16px;
   overflow-wrap: anywhere;
 }
 blockquote {
@@ -995,12 +1051,12 @@ blockquote {
   background: #fff7eb;
   border-left: 3px solid #f3b96b;
   line-height: 1.8;
-  font-size: 13px;
+  font-size: 16px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .risk-reason {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.8;
 }
 .risk-reason p {
@@ -1010,7 +1066,8 @@ blockquote {
   margin: 14px 0;
   padding-top: 13px;
   border-top: 1px solid #e8eff9;
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1.8;
 }
 .risk-conclusion p {
   color: #7b8da7;
@@ -1022,6 +1079,8 @@ blockquote {
 }
 .risk-evidence-actions .el-button + .el-button {
   margin-left: 0;
+  font-size: 16px;
+  font-weight: 700;
 }
 .risk-knowledge {
   margin-top: 13px;
@@ -1048,12 +1107,16 @@ blockquote {
 }
 .risk-knowledge h3 {
   margin: 0 0 7px;
-  font-size: 14px;
+  font-size: 16px;
+}
+.risk-knowledge-actions .el-button {
+  margin: 0;
+  font-size: 16px;
 }
 .risk-knowledge p {
   margin: 5px 0;
   color: #7a8faa;
-  font-size: 12px;
+  font-size: 16px;
 }
 .risk-knowledge-actions {
   display: flex;

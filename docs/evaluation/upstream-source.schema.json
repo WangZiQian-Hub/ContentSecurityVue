@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "Fact": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "evidence_ref": {
+          "title": "Evidence Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "count",
+        "evidence_ref"
+      ],
+      "title": "Fact",
+      "type": "object"
+    },
+    "Sample": {
+      "additionalProperties": false,
+      "properties": {
+        "sample_id": {
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected"
+        },
+        "predicted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicted"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sample_id"
+      ],
+      "title": "Sample",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "entity_type": {
+      "title": "Entity Type",
+      "type": "string"
+    },
+    "entity_id": {
+      "title": "Entity Id",
+      "type": "string"
+    },
+    "version_id": {
+      "title": "Version Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "source_module": {
+      "title": "Source Module",
+      "type": "string"
+    },
+    "source_task_id": {
+      "title": "Source Task Id",
+      "type": "string"
+    },
+    "source_trace_id": {
+      "title": "Source Trace Id",
+      "type": "string"
+    },
+    "task_trace_id": {
+      "title": "Task Trace Id",
+      "type": "string"
+    },
+    "capability_code": {
+      "title": "Capability Code",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "succeeded",
+        "running",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "algorithm_mode": {
+      "enum": [
+        "real",
+        "llm",
+        "mock"
+      ],
+      "title": "Algorithm Mode",
+      "type": "string"
+    },
+    "dataset_id": {
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "model_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Id"
+    },
+    "dataset_version": {
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "label_version": {
+      "title": "Label Version",
+      "type": "string"
+    },
+    "model_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Version"
+    },
+    "result_dataset_version": {
+      "title": "Result Dataset Version",
+      "type": "string"
+    },
+    "result_label_version": {
+      "title": "Result Label Version",
+      "type": "string"
+    },
+    "result_model_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Result Model Version"
+    },
+    "evaluator_version": {
+      "title": "Evaluator Version",
+      "type": "string"
+    },
+    "positive_class": {
+      "default": "",
+      "title": "Positive Class",
+      "type": "string"
+    },
+    "baseline_evaluator_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Baseline Evaluator Version"
+    },
+    "coverage_unit": {
+      "default": "sample",
+      "enum": [
+        "sample",
+        "scenario",
+        "case"
+      ],
+      "title": "Coverage Unit",
+      "type": "string"
+    },
+    "sample_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sample Ids",
+      "type": "array"
+    },
+    "samples": {
+      "items": {
+        "$ref": "#/$defs/Sample"
+      },
+      "title": "Samples",
+      "type": "array"
+    },
+    "facts": {
+      "items": {
+        "$ref": "#/$defs/Fact"
+      },
+      "title": "Facts",
+      "type": "array"
+    },
+    "captured_at": {
+      "title": "Captured At",
+      "type": "string"
+    },
+    "interface": {
+      "title": "Interface",
+      "type": "string"
+    },
+    "content_hash": {
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "record_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Record Ids",
+      "type": "array"
+    },
+    "can_rerun": {
+      "default": false,
+      "title": "Can Rerun",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "version_id",
+    "name",
+    "source_module",
+    "source_task_id",
+    "source_trace_id",
+    "task_trace_id",
+    "capability_code",
+    "status",
+    "algorithm_mode",
+    "dataset_id",
+    "dataset_version",
+    "label_version",
+    "result_dataset_version",
+    "result_label_version",
+    "evaluator_version",
+    "sample_ids",
+    "samples",
+    "captured_at",
+    "interface",
+    "content_hash"
+  ],
+  "title": "SourceContext",
+  "type": "object"
+}

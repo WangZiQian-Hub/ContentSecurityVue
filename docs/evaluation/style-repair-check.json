@@ -1,0 +1,12 @@
+﻿{
+    "checked":  235,
+    "changed":  [
+                    "src/layouts/AppLayout.vue",
+                    "src/styles/data-resource.css"
+                ],
+    "authorized_style_repair":  "src/styles/data-resource.css: remove global 19px select option override",
+    "unexpected_changes":  [
+
+                           ],
+    "browser_visual_check":  "not performed"
+}

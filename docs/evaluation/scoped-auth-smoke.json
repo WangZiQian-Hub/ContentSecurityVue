@@ -1,0 +1,30 @@
+[
+  {
+    "path": "/api/v1/evaluation/session",
+    "status": 200,
+    "total": null,
+    "resolution": null,
+    "role": "administrator"
+  },
+  {
+    "path": "/api/v1/evaluation/metrics?page_size=100",
+    "status": 200,
+    "total": 26,
+    "resolution": null,
+    "role": null
+  },
+  {
+    "path": "/api/v1/evaluation/tasks",
+    "status": 200,
+    "total": 0,
+    "resolution": null,
+    "role": null
+  },
+  {
+    "path": "/api/v1/evaluation/contexts?kind=task_result",
+    "status": 200,
+    "total": null,
+    "resolution": "unavailable",
+    "role": null
+  }
+]

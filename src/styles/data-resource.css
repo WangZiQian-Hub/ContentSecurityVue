@@ -195,9 +195,6 @@
 .resource-ingest-form .el-select .el-tag__content {
   font-size: 15px;
 }
-.el-select-dropdown__item {
-  font-size: 19px;
-}
 .resource-ingest-form .el-form-item__label {
   margin-bottom: 5px;
   font-size: 16px !important;

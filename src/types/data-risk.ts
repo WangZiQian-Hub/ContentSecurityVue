@@ -1,5 +1,7 @@
 import type { ResourceSample } from './data-resource'
 export type Level = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOTICE'
+export type RiskSortField = 'maximumSuggestedLevel' | 'status'
+export type SortOrder = 'asc' | 'desc'
 export interface Scope {
   datasetId: number
   versionId: string
@@ -12,6 +14,8 @@ export interface Query {
   keyword: string
   level: string
   status: string
+  sortBy?: RiskSortField
+  sortOrder?: SortOrder
 }
 export interface Rule {
   id: string

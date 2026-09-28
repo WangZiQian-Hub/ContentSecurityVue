@@ -1,0 +1,634 @@
+﻿[
+    {
+        "path":  "src\\views\\system\\SystemPage.vue",
+        "sha256":  "8C2E155F2252A1A20330C74ED7E6DDE0514A8961761BED559B0F2B04B2B5EB7C"
+    },
+    {
+        "path":  "src\\views\\scenario\\ScenarioPage.vue",
+        "sha256":  "632BDD5B53235F8E4B721B8BD9FEEF674F4B6BC6DCF2CB33AFA2C4B9A8D501EA"
+    },
+    {
+        "path":  "src\\views\\model-train\\WorkbenchKpis.vue",
+        "sha256":  "BAAE67CBB763481ABC8677A30A8B7D3AD824D3B7F665DEB144B00D4E99E18261"
+    },
+    {
+        "path":  "src\\views\\model-train\\WorkbenchChart.vue",
+        "sha256":  "36FF6855A5686CD1A8530795D109174C9968C7337148C7BC5ECAB6A814422C3A"
+    },
+    {
+        "path":  "src\\views\\model-train\\workbench.css",
+        "sha256":  "71125EA202E2D3811A5966F93296E5ED6D09EF55F3BF2912F3D0B16575660C03"
+    },
+    {
+        "path":  "src\\views\\model-train\\TrainingPage.vue",
+        "sha256":  "E1A0A2306E0D4FC21D46BAA82B4380A573E65EE1A306800A6FF9BCD58D64F877"
+    },
+    {
+        "path":  "src\\views\\model-train\\ModelPage.vue",
+        "sha256":  "1EE45BE5B791BA52887866B734495FCDE9B01E6444155EDEA5C6A18CCBEC7CEB"
+    },
+    {
+        "path":  "src\\views\\model-train\\ManagementPage.vue",
+        "sha256":  "ECF373F91DF4DCAF06E4B5FB12D1AFFD11AE3F873EB1CA3E05CEEC93A1EF6418"
+    },
+    {
+        "path":  "src\\views\\model-train\\InvokePage.vue",
+        "sha256":  "2846890CFAE091BB337802EDA25A1958BBC9C6CAE2341573100848488C458764"
+    },
+    {
+        "path":  "src\\views\\model-train\\DeployPage.vue",
+        "sha256":  "D23001F2B0E97A5D267DCEE0A0D4CC517CB3F6B6F31B217979A724BEB10740E0"
+    },
+    {
+        "path":  "src\\main.ts",
+        "sha256":  "355CD14AC64D63E1CDF6E79A375C81D09EAFA59D246CF8867BF05C6EE707912A"
+    },
+    {
+        "path":  "src\\api\\task.ts",
+        "sha256":  "05E10E799FFD3A19C86769F38669FAFDBEC612EF55EDECCF2733AD868CE24BA9"
+    },
+    {
+        "path":  "src\\api\\resource.ts",
+        "sha256":  "5A904B6073FAADB8DFD8AED072E35891EF3BB08295F643CE1AA3DE159ADE8AC6"
+    },
+    {
+        "path":  "src\\api\\resource-statistics.test.ts",
+        "sha256":  "F1CF62B073BBEFA38DE0F60FCD22C3E7911FADB6D32FEC7F11C2576063163E40"
+    },
+    {
+        "path":  "src\\api\\resource-comparison.test.ts",
+        "sha256":  "B145C63DA3E65FEB33D33681A9C6259F90E318CE99509AE2FBA252AC9527FEC8"
+    },
+    {
+        "path":  "src\\api\\request.ts",
+        "sha256":  "E27BCAD4834DA329A15F620A1EAABD6409BD8A23E0568BD0D731A4785C639267"
+    },
+    {
+        "path":  "src\\api\\model.ts",
+        "sha256":  "3D649B83DDEC2047C97EA9A7EA574CC57757152A06214ABADBB26426F658EAAC"
+    },
+    {
+        "path":  "src\\api\\model-workbench.ts",
+        "sha256":  "CC409D33CE0ADB5F6125BA9144A7BE9154A2793FC432A2DBA7A9C9E67EB4ED76"
+    },
+    {
+        "path":  "src\\api\\metric.ts",
+        "sha256":  "4B530F357D260FCFAD4CC5BA9F65BA61CF73DA2B64F4DD82D9BEE667B2F9C276"
+    },
+    {
+        "path":  "src\\api\\kpi.ts",
+        "sha256":  "56C087844C3373FD4F095CD1B2177A79092D09C5566B0203BDDDD995C4B63F7D"
+    },
+    {
+        "path":  "src\\api\\governance-resources.ts",
+        "sha256":  "728A43C1C8FD0F1DC90AB25CEB83082F355958C84A8787550F34F40922AB0946"
+    },
+    {
+        "path":  "src\\api\\governance-resources.test.ts",
+        "sha256":  "490FD2950A8F8F476BB0768B2508F9FAB251DB587698EBD5EA4F46875459E284"
+    },
+    {
+        "path":  "src\\api\\dataset.ts",
+        "sha256":  "729FEB92D33CC8B654BF22B877714E016F9841811B6BC8D77FA156EEA9D9A905"
+    },
+    {
+        "path":  "src\\api\\data-value.ts",
+        "sha256":  "C218488336B25F1BFB67DADD929D68BD00F741DC8D0364141E04D85A6456BD62"
+    },
+    {
+        "path":  "src\\api\\data-value.test.ts",
+        "sha256":  "6ACEE5773BCA0B886E0924F97CB8F5D445CC839FE75084839FC9661EFD250B51"
+    },
+    {
+        "path":  "src\\api\\data-risk.ts",
+        "sha256":  "34D2B294C9962049FB13EE5FDA27E6D4E23C87E9BCBCEA5F1AB622F498F9F047"
+    },
+    {
+        "path":  "src\\api\\data-risk.test.ts",
+        "sha256":  "6905EB772AA7A2ED395B02B6934E577710D1C8ED832A7DD25BCA9EF80F4E8F2F"
+    },
+    {
+        "path":  "src\\api\\data-resource.ts",
+        "sha256":  "9EF479DA13E51D04B520521008AE0D72CE7264D42BB663F2EEE0E01A5589A11E"
+    },
+    {
+        "path":  "src\\api\\data-resource.test.ts",
+        "sha256":  "896B255BCBF5C8E6658F61A64F3B72FE97AC601E13FE7C83FDD2396F7F5D8C62"
+    },
+    {
+        "path":  "src\\api\\data-governance.ts",
+        "sha256":  "BD2DD2259C95D71B28B635B22852E44A0901E187E9B9FDCEA985BD1C62D414EE"
+    },
+    {
+        "path":  "src\\api\\data-governance.test.ts",
+        "sha256":  "878BF066E9A06DBACD165E89FFE31D62A553533FAC567CDCFD8CC9AF3D08303A"
+    },
+    {
+        "path":  "src\\api\\data-anomaly.ts",
+        "sha256":  "8F10EC61CCB0BFC89D688A4315D45226A8F2BC3746D1F5D7DDA4F90CB3118511"
+    },
+    {
+        "path":  "src\\api\\data-anomaly.test.ts",
+        "sha256":  "BFE0A9689312E28F37151CE0447FA99043997A19E2CEA3A40E669F614DB3C825"
+    },
+    {
+        "path":  "src\\api\\compliance.ts",
+        "sha256":  "20F101D4A6216A1C65667A689892111F221899622D0FB1E35D0468746A823452"
+    },
+    {
+        "path":  "src\\api\\compliance.test.ts",
+        "sha256":  "6B6FCD1F6D37FCA6378CB2633628BE284CB4F7E256D4CDAB319A71B31FBC4961"
+    },
+    {
+        "path":  "src\\api\\capability.ts",
+        "sha256":  "F6ADF080A75B9003B10D49BBCB97C07B4911846BBF782FBCE7D7A4FA4420E419"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataValuePage.vue",
+        "sha256":  "AAF3CA7625BAC31E1E01383D647845D506FAFC9A7D049BC255E060E7008EC88B"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataValuePage.test.ts",
+        "sha256":  "690E3AD1F77B1B00D131396E351DCD11D68C65E0D560E1FCAD912C9566B8AA83"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataRiskPage.vue",
+        "sha256":  "BE747972631367A1D708404F3B308720E0916D0B7417E17EF375DC854146FC7D"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataRiskPage.test.ts",
+        "sha256":  "90E9974050C2A534F08E1CBF0AE7D005A929AA4785682BC91C2E67AB0A440FB1"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataProcessPage.vue",
+        "sha256":  "78F593612E2A7B6747C31025DA3B9C4F304AE788462D4D2EDCD771F0E062EA43"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataProcessPage.test.ts",
+        "sha256":  "A132C6BAF2181357393B8355DA63AB3BE4775B7E6F65B23312D3FD19E56A100F"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataGovernancePage.vue",
+        "sha256":  "7BE774DF6A8576BFD174E2C4476EEC481B63CFC4F3AE4DAFCD8C939E243C2859"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataAnomalyPage.vue",
+        "sha256":  "524F968958E555D44CAAD59EA75CB6AEDE75821EB336F5F142FC0118E1787628"
+    },
+    {
+        "path":  "src\\views\\data-governance\\DataAnomalyPage.test.ts",
+        "sha256":  "86B8999CA94619CDFF53DE1CDDCCDC57D5BE65575A72D9A8ACAE902E87439EC8"
+    },
+    {
+        "path":  "src\\views\\dashboard\\DashboardPage.vue",
+        "sha256":  "1FACB88B08AA39454676CAB9C95D1A8E6FE28DF562CC773F7CFDAD03709BFAB6"
+    },
+    {
+        "path":  "src\\router\\navigation.ts",
+        "sha256":  "0AD590E2CA2CB67FB09705148C99FCE99061EBFD83808BA533FD94F788E6C3B2"
+    },
+    {
+        "path":  "src\\router\\model-train.test.ts",
+        "sha256":  "71C8C8E56041EE63AD9C0DBBD17BF2A579B26F37117D66CB0416785B8C732AD3"
+    },
+    {
+        "path":  "src\\router\\index.ts",
+        "sha256":  "2891F0DBCC91691F202D6B7EB944D9433749617A1B181A66C727625A142BD075"
+    },
+    {
+        "path":  "src\\router\\data-resource.test.ts",
+        "sha256":  "46666FDA5B1627AF802781020350C3583F0B199D8F026CFB8CA31622704111F1"
+    },
+    {
+        "path":  "src\\router\\data-governance.test.ts",
+        "sha256":  "2FA9918FBEE81A0EC58CD3512B6F7F2D34AB286057DC864A118093667589FDE0"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ValueOverview.vue",
+        "sha256":  "BFDC2D61A6E8F5EC2A94C3B427F2F397F74B292E1BACDA2BF07557BAB99733F6"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ValueMetrics.vue",
+        "sha256":  "54A2DEB71A8F3EFE0077A89F325D7E4755B07A926573B8DC0EF12461961FA45E"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ValueChart.vue",
+        "sha256":  "C2A060D772DDA845936723C2825EB55572EFCBC04E4E722DF62F3A0164DA3F07"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\RiskOverview.vue",
+        "sha256":  "6F36645C892B222B5FB42E621C462D7F1BA92D68032AEC234FD1F3805D8CF3EC"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\RiskChart.vue",
+        "sha256":  "D5C1197DA87C0024C81F5E26D63CFFE0A15053AB595B0A895B8534667AA48F21"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ProcessTaskPanel.vue",
+        "sha256":  "801DDFC91D707EA02FD3E7629A7B399A80D59709E595D9059D9058E889B21981"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ProcessTaskHistory.vue",
+        "sha256":  "F90F47E4AD1746268C8EA43729408A6F7E6BF14A08F8FD9EFF024495A5A3E5B1"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ProcessOverview.vue",
+        "sha256":  "1BA85C4FF818CB83F1A762AECC460AEA27C5C392C52E94960D032B38F5477818"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\ProcessComparisonTable.vue",
+        "sha256":  "D513E0EBB15DC8306FFC9D938C9313A80FDB601B187116468886446E48BDA601"
+    },
+    {
+        "path":  "src\\views\\data-governance\\components\\AnomalyOverview.vue",
+        "sha256":  "430E145F96448876AAC215C0B076205FB30458726E6A7190D6FEE23046000351"
+    },
+    {
+        "path":  "src\\App.vue",
+        "sha256":  "06C057359AFF2DFA496015F6096A7F4FEB1409262DFC48DE889A0C35E0652846"
+    },
+    {
+        "path":  "src\\views\\compliance\\TrainingMonitorPage.vue",
+        "sha256":  "AA5EC6DBD504D9A5D6986AC7EC92B1E331DD97D0F1566230EB8AF8F59A8B2B24"
+    },
+    {
+        "path":  "src\\views\\compliance\\RiskAlertPage.vue",
+        "sha256":  "690E7CAB3BE835400EE4DB32F6C659A8ECCD5F2C9F0970BF49D61715AF9978F7"
+    },
+    {
+        "path":  "src\\views\\compliance\\ReasoningAuditPage.vue",
+        "sha256":  "41D4DCCA4B37E357951D4A366FCF2B5011CC0C52A1B4803ED514BDCA564C3E4B"
+    },
+    {
+        "path":  "src\\views\\compliance\\presentation.ts",
+        "sha256":  "7612093BAE8DF0F9E259984E4DB3BFEEABD479096BD5AE47A12E56E4D8441356"
+    },
+    {
+        "path":  "src\\views\\compliance\\OverviewPage.vue",
+        "sha256":  "A6149BA92B3093ED94D264E5C9B69C1ADABA63C797F66A9DDA6D1F95C04D4086"
+    },
+    {
+        "path":  "src\\views\\compliance\\NeuronAuditPage.vue",
+        "sha256":  "1146D10CAD09EA8946D40F32DAA3BC603E103AE08C688CAD425058B2CB18A7E7"
+    },
+    {
+        "path":  "src\\views\\compliance\\LineagePage.vue",
+        "sha256":  "C388C96D7E6283C2DB1F27739CB9ACA13CC72CA4A73D286B92700A006666A41B"
+    },
+    {
+        "path":  "src\\views\\compliance\\FullChainPage.vue",
+        "sha256":  "2D3AB332CF9650DE778B710BAFD186286D1AD26F5C17D0A2009143205ED100C9"
+    },
+    {
+        "path":  "src\\views\\data-resource\\ResourceStatisticsPage.vue",
+        "sha256":  "3AECFBBAFAB67D68DC9502ED21D8C3B92835A3E763327451B83A9D56ABABED06"
+    },
+    {
+        "path":  "src\\views\\data-resource\\ResourceOverviewPage.vue",
+        "sha256":  "94E98778DC18B9DDB5E83238A0A57601CFBD3D3A944752396264F7C30B66A0C0"
+    },
+    {
+        "path":  "src\\views\\data-resource\\DatasetManagePage.vue",
+        "sha256":  "18BAB971FBD9AC89AB26436EF9633D0ABBD1858EF7CCDE0D799F6A361430A0CD"
+    },
+    {
+        "path":  "src\\views\\data-resource\\DataResourcePage.vue",
+        "sha256":  "6068F564DF2D440A1D4712C18ED44C7294A85CD4EF6A9FECF4ACCFF1B77810E6"
+    },
+    {
+        "path":  "src\\views\\data-resource\\DataResourcePage.test.ts",
+        "sha256":  "D7D23FCDAC8461F2972930913A8F6034FBE8DD9FAFBD512ECA5A9D7F88BE3CAD"
+    },
+    {
+        "path":  "src\\views\\data-resource\\DataIngestPage.vue",
+        "sha256":  "84FD00FF98C88E00360C88DB8CC9E26AB0BF2C557AEC2D34F0B672202ACE4D07"
+    },
+    {
+        "path":  "src\\layouts\\AppLayout.vue",
+        "sha256":  "9964DD6B2FF734422DC6D0634B630D96663D69958601FBAABA843B6AD6CD5148"
+    },
+    {
+        "path":  "src\\views\\compliance\\compliance.css",
+        "sha256":  "BE4FB88954DEEAE40E64A8641C82C7B60C19BD3D7D935A17D14F5BF81EC19310"
+    },
+    {
+        "path":  "src\\views\\compliance\\compliance-isolation.test.ts",
+        "sha256":  "170E9EEFB118C96D3D3768F938D2F05F53B6C45261D906AB714221BBDABD8B84"
+    },
+    {
+        "path":  "src\\views\\compliance\\CompliancePage.vue",
+        "sha256":  "504E3B206DD03497A4DB9B01137E8B49A9EB15CF22E5363541E648950DB08C42"
+    },
+    {
+        "path":  "src\\utils\\case.ts",
+        "sha256":  "6C5BCE775F77540FA446907574F954B7C2CFC36940DCBB5A633D27F34DEECB16"
+    },
+    {
+        "path":  "src\\utils\\case.test.ts",
+        "sha256":  "BE5C807DE9515037F6A29AE5495845CB18B526CC9CD1F87A49CB20E93201CC6C"
+    },
+    {
+        "path":  "src\\utils\\enums.ts",
+        "sha256":  "ABB154A9A6F15F5F6763B28BE3730CA9DAC41433E844197AC8D078C06A8236C2"
+    },
+    {
+        "path":  "src\\utils\\resource-comparison.ts",
+        "sha256":  "C39C6C496355C8B154A8975F0AF3E510ABFE27AC32001D88ED06AD756496C16B"
+    },
+    {
+        "path":  "src\\utils\\process-output-version.ts",
+        "sha256":  "5DBEB8C77347FD4C8FD048C39630941B424E6AA078DCDCF459694195CC91592F"
+    },
+    {
+        "path":  "src\\utils\\process-kpis.ts",
+        "sha256":  "87FC3E1397D1D1EBB8FDF6EC8961CAEA548CE5E9C0AB67D6AD6F6B54637FF0A0"
+    },
+    {
+        "path":  "src\\utils\\process-kpis.test.ts",
+        "sha256":  "89E009BB97D420E40AA8B12D76FE26786BAA76EC0892A7A91294294847905C6B"
+    },
+    {
+        "path":  "src\\utils\\governance-scope.ts",
+        "sha256":  "1804BE4940CB04327B7A830C90B3A6DB970CAED60522F7FED72E90BA7DB9D75D"
+    },
+    {
+        "path":  "src\\utils\\governance-language.ts",
+        "sha256":  "2D8B4998B8389F66190F1BDF5E8CB0C1A7B7A3173747DB1691243BE8A731BCDC"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\StateBadge.vue",
+        "sha256":  "B3269F23B7E1C6E57310FA508D4EAD1620281277D351258093142D5E93FFA1ED"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\SourceEvidenceDrawer.vue",
+        "sha256":  "2DE959F9DB9A18AF2D3BCDF467D44A9A82D18C997437F5F3358AE33B9F24B661"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\NeuronIcon.vue",
+        "sha256":  "F32C373BACC32F59DA91909CA24A892AFE9EEE72BACC47560B67B42316BE7178"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\EvidenceLinks.vue",
+        "sha256":  "592BDD2334B7CC59D3FCC307520C1B5837539580CB5386D34C64A93AF55BA200"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\ContextSelector.vue",
+        "sha256":  "7D6FD199E630E9876E6C28C7E96085064FA5846E4F0BEBA5D671C81FA78210C9"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\AuditReviewDialog.vue",
+        "sha256":  "43D171BD6FB5BA25362E0CB5FE8F7C86C9212F9F3512815188BBE00D32DE17ED"
+    },
+    {
+        "path":  "src\\views\\compliance\\components\\AlertActionDialog.vue",
+        "sha256":  "0F3014DF3465F721E441B2EDE0532D3C7F1E7EC3BAAC11DA359F5ACE5743A727"
+    },
+    {
+        "path":  "src\\views\\data-resource\\components\\ResourceChart.vue",
+        "sha256":  "2265D4ADA0B5316139B389910C8117D2F3A704526D44EC445CB45C6692AA0CC3"
+    },
+    {
+        "path":  "src\\views\\data-resource\\components\\IngestTaskTable.vue",
+        "sha256":  "C2DF07D24569E021E7215354678884C27C5DC16312CD5DAF1A83A56FEC3BA689"
+    },
+    {
+        "path":  "src\\views\\data-resource\\components\\DistributionBars.vue",
+        "sha256":  "BE95FB73294F42589F84B60F125687D13DF5E12D46B0AE03A2C759C9486ED938"
+    },
+    {
+        "path":  "src\\views\\data-resource\\components\\DatasetDetailContent.vue",
+        "sha256":  "7780DCEE20E006FD1F2A0B3BD9CEEB2584AAB6F916DC6BE2E1A667E97E8140A5"
+    },
+    {
+        "path":  "src\\mock\\resource-statistics.ts",
+        "sha256":  "DF74E6E66E3A0B31D8B846CA8BC969C7F0641F5DB91B56B2213B58A66DEBD1EE"
+    },
+    {
+        "path":  "src\\mock\\resource-samples.ts",
+        "sha256":  "7FCF41117DFB8B33780AA2EF753CC7EC2716288CAEA6C03D858BABD6A49D7C2B"
+    },
+    {
+        "path":  "src\\mock\\resource-kpis.ts",
+        "sha256":  "61FA286EF81ED1CEA4FF8836A6033F0171968F77DCAB5ACCEAB4C0F556A7B069"
+    },
+    {
+        "path":  "src\\mock\\resource-kpi-history.ts",
+        "sha256":  "0AA208EDB1968390414BF57B61A14650ACB5EF5C87696E694D537A392BDE6CC7"
+    },
+    {
+        "path":  "src\\mock\\resource-ingest.ts",
+        "sha256":  "D0B5AC8D8807FFA10E28EC085E3B5E1151C683FF65FC517F77DF8033F01F3C48"
+    },
+    {
+        "path":  "src\\mock\\resource-catalog.ts",
+        "sha256":  "B9A22FDBA09C2FD94FE1E07D24F964667A844FB47644A1BE7B038A52096E4BB9"
+    },
+    {
+        "path":  "src\\mock\\model-workbench.ts",
+        "sha256":  "96B68DDDC88F763BD0EB62727C6A630A59B0A19775A8B8444B59A777AC66EBAB"
+    },
+    {
+        "path":  "src\\mock\\kpis.ts",
+        "sha256":  "10CB45346EB10F6A162851535732FEA1EA0965C4AF845380BD230A90A1A1E573"
+    },
+    {
+        "path":  "src\\mock\\governance-resources.ts",
+        "sha256":  "0E33E66FECD92B6B1868EE10F0B2085705750B6627B4F2B281CCB396F6778CA4"
+    },
+    {
+        "path":  "src\\mock\\data.ts",
+        "sha256":  "8369F06BCC863380A3BE13AA0CBC0845C6764BDB68C9D1A0190B3756B243E34E"
+    },
+    {
+        "path":  "src\\mock\\data-value.ts",
+        "sha256":  "6007016CFF284407BA69ADA0224AD33A314042DD2FA645AF042BF2900BFE1104"
+    },
+    {
+        "path":  "src\\mock\\data-risk.ts",
+        "sha256":  "6F761044A6474BEC259878221222084C0E14ED80581BCF55D0845759B0C26478"
+    },
+    {
+        "path":  "src\\mock\\data-resource.ts",
+        "sha256":  "A2790AD8F2946D8A9A4C247A0BAA5D4BA738337C64B5D5D67FF3E4B1C5FE0075"
+    },
+    {
+        "path":  "src\\mock\\data-governance.ts",
+        "sha256":  "167391CA61ABABA3ADBBF629DEBCEFE2660F2E573BA80437C6D5676DE542E28B"
+    },
+    {
+        "path":  "src\\mock\\data-anomaly.ts",
+        "sha256":  "B7BF7EA602C240EA2521CC80B0F6E6F0F2D38D34C7BDB0DF8B86E5C6A1638EFD"
+    },
+    {
+        "path":  "src\\mock\\compliance.ts",
+        "sha256":  "5CA29B0CF7E4DC03037A315976ACC52D4B6A27CEFF4304E358F56C52EA66A79C"
+    },
+    {
+        "path":  "src\\stores\\platform.ts",
+        "sha256":  "C7C78470553E973A8C74E36A846F98FA58B348E03837AA089A6BE80BC9B28F1C"
+    },
+    {
+        "path":  "src\\stores\\model-workbench.ts",
+        "sha256":  "40A9F35CC1F911E3763FFE0D49AEA8B7352519303C6096AB1D8B917A7621A7D0"
+    },
+    {
+        "path":  "src\\stores\\model-workbench.test.ts",
+        "sha256":  "87A79B26343A557E8760F12E94E7A5D414BE2FEF1667DF051F91BED55BDF4FC0"
+    },
+    {
+        "path":  "src\\stores\\data-resource.ts",
+        "sha256":  "06080274FF5C43F02A9682B87AC0AF2ADE43F6241572C559880D06203DF6DC78"
+    },
+    {
+        "path":  "src\\stores\\data-resource.test.ts",
+        "sha256":  "6E33FD360784A2FDF907F78561AAAAFA842FFC2A4AF9CB4977BB34D5751E270E"
+    },
+    {
+        "path":  "src\\stores\\data-governance.ts",
+        "sha256":  "BC89167305FDA0BCADB79B35326BF9044DC145D5D136DDCAC30E2F17A06CA2A5"
+    },
+    {
+        "path":  "src\\stores\\data-governance.test.ts",
+        "sha256":  "B4749C8DCD7C219323C5A0C40DC9E3A375A3BA7E386D7D4903E840B5EBE73BB6"
+    },
+    {
+        "path":  "src\\stores\\compliance.ts",
+        "sha256":  "141F7F98E77B902DBAD7421F8C0C8BADFF4FF264A5EBC94AD61BE49E97A379A7"
+    },
+    {
+        "path":  "src\\stores\\compliance.test.ts",
+        "sha256":  "22ACA3E67CF10D456CD1170BD5E9E6554D04EAC116B06A1B9E1804FA2F2A3360"
+    },
+    {
+        "path":  "src\\assets\\sidebar-city.webp",
+        "sha256":  "B97F9FC20FD4DF9C929B47BBCF29A2B9A256A6A21130FF2D7F8C74BC225FD647"
+    },
+    {
+        "path":  "src\\styles\\tables-footer.css",
+        "sha256":  "51BAB6A59D19A4E055627D26C0DC6F1C01A8A6CF27A308D699BFD3B69183E4D7"
+    },
+    {
+        "path":  "src\\styles\\shared-components.css",
+        "sha256":  "BF4CEA12557362589D430BDE8AEE77E64520947521A8F9B78D13F7E8C004ED6E"
+    },
+    {
+        "path":  "src\\styles\\scenes-notifications.css",
+        "sha256":  "68C5CB9EF4E54B52C99080912FD98187E448EA826B50123FC94577DDDC14052A"
+    },
+    {
+        "path":  "src\\styles\\responsive.css",
+        "sha256":  "12FD0F2F1AC5CD0B4A1EAE45B4E43500265BDF59FCCB683766CE1B80535CC663"
+    },
+    {
+        "path":  "src\\styles\\model-train.css",
+        "sha256":  "14DE97B63292596781C42464879C672E6D4C5727133D7CE233C7D8BCB6E45692"
+    },
+    {
+        "path":  "src\\styles\\main.css",
+        "sha256":  "8C9D04AD83D592EFD74ED92A930E08E4AE1576971BEAE996EDF1181372146D7D"
+    },
+    {
+        "path":  "src\\styles\\forms-results.css",
+        "sha256":  "206482BFCCF9E5A1E87B423093F2D556473091F91C916365991B07731B55A809"
+    },
+    {
+        "path":  "src\\styles\\data-resource.css",
+        "sha256":  "DE18A892E661D0C9EA589BA5FC690DD8E3D191D1D89F3775B7B4EDC7F48E51FA"
+    },
+    {
+        "path":  "src\\styles\\data-governance.css",
+        "sha256":  "101C80B07A3DD1CF489F32C47945B69A300AA5848F131F91BA9301AC7EB839D8"
+    },
+    {
+        "path":  "src\\styles\\dashboard.css",
+        "sha256":  "1276D6040A55C38A0F43DEB94D7BF7BD67FBEDAD1858EECDCEA588BA823FD72D"
+    },
+    {
+        "path":  "src\\styles\\app-shell.css",
+        "sha256":  "61A6C7A51502C7D805AFB171682F5DC9FBE6F92E87BD2EDD696E83F9B7882B49"
+    },
+    {
+        "path":  "src\\styles\\base.css",
+        "sha256":  "54E1037E619142DCD06642D610D68B3D75BFBAB9009A9921816207CCF6A456BC"
+    },
+    {
+        "path":  "src\\types\\model-workbench.ts",
+        "sha256":  "7D924CFE9661129A5E7427B0D7A840570755085A4BBD69EDDFE2CE4C1ECB1EC1"
+    },
+    {
+        "path":  "src\\types\\index.ts",
+        "sha256":  "C48E65B2B92C26AA0CB804DA2F45D02E6ED5D3BB0DEEDAEFB78EB97A24C8021E"
+    },
+    {
+        "path":  "src\\types\\governance-resources.ts",
+        "sha256":  "CE88D6BA3421ADEFA75CFA2EFBFC749249FA06D3D6832177827A0EFA9685E91C"
+    },
+    {
+        "path":  "src\\types\\data-value.ts",
+        "sha256":  "82167596DAF09EA6FA4B8F6F371E3ABB68E1A40200C98CFA1B40C76C4EC730A5"
+    },
+    {
+        "path":  "src\\types\\data-risk.ts",
+        "sha256":  "D1E4652A91204B20DF7D8C7E5AE09C051CE79F9F2ECFF80E24430254D0E059B9"
+    },
+    {
+        "path":  "src\\types\\data-resource.ts",
+        "sha256":  "9E7C083ED86708A3A38C28D045EDE8F33B87F56FBA8B372F143CEF4A444F852A"
+    },
+    {
+        "path":  "src\\types\\data-governance.ts",
+        "sha256":  "89106F6E73E7005E94D6C7C5126FC147C2FBF16D6BF6A19ED9B9B2AD960EFE6E"
+    },
+    {
+        "path":  "src\\types\\data-anomaly.ts",
+        "sha256":  "C90D11922B3F2738A89C86B7607757890704638973895717E489A1F4A72BFAC3"
+    },
+    {
+        "path":  "src\\types\\compliance.ts",
+        "sha256":  "948DDE0202D5D84742D1B3BB29122C8153C9ED62B53495BE0FDF717859AD71FC"
+    },
+    {
+        "path":  "src\\components\\TaskTable.vue",
+        "sha256":  "F5DAB4344C99CA150C12C80FA216269C7934C4447D772FC5BEFAB9DD98B71095"
+    },
+    {
+        "path":  "src\\components\\ResourceTable.vue",
+        "sha256":  "EC7DC71275648B2F97CC6AC75B1C5D8DC610F8AE7CE11EFA6BFD548C82472847"
+    },
+    {
+        "path":  "src\\components\\PanelCard.vue",
+        "sha256":  "ECA0F70D37F3D3B362ADF3733CEECE87932E33A56285C8DBA7C6A39E34717364"
+    },
+    {
+        "path":  "src\\components\\KpiStrip.vue",
+        "sha256":  "BC5F3BBE384BBA8F0CBEE6F99FE48A0CBFD79DCDE8670AC85DE03B569BE22773"
+    },
+    {
+        "path":  "src\\components\\DataChart.vue",
+        "sha256":  "A342C3964AD745686CCF53EB9E06B408FF31F9F8AE61D577DF0A40B170A49628"
+    },
+    {
+        "path":  "src\\components\\CapabilityForm.vue",
+        "sha256":  "249AE7FF3330C39598C0CFD93D804CB5B425473A1E2D6C10D2C97B3C1001005F"
+    },
+    {
+        "path":  "src\\components\\CapabilityDock.vue",
+        "sha256":  "6B03BF32D33B332EBC52D3ED365EF588E372D6CCDE28EEA2F982299CF476BCF8"
+    },
+    {
+        "path":  "src\\components\\AppIcon.vue",
+        "sha256":  "1D3D0ABBBDBA82D515EBD480075CD0BDBD8557E113F90B31AF6B7F034C3AC5C9"
+    },
+    {
+        "path":  "package.json",
+        "sha256":  "EF279311DECB97BB69E8ABE815215BF697468B1ED859779E25DC7DDDE752237D"
+    },
+    {
+        "path":  "package-lock.json",
+        "sha256":  "F548F8003C22551B2B51BD40D241B1D545BFCEE157BCB2C1FB699447FEEC3237"
+    },
+    {
+        "path":  "vite.config.ts",
+        "sha256":  "F4464003C5CAB60E150F87FB83CF4B9E1D2A6317DF07EC3F74F5A405E394112E"
+    }
+]

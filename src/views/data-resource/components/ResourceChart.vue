@@ -31,7 +31,7 @@ function option(): EChartsOption {
         top: props.donutLayout === 'spacious' ? '40%' : '40%',  // 越大越向下
         padding: props.donutLayout === 'spacious' ? 0 : 5,
         textAlign: 'center',
-        textStyle: { color: '#0a2c6b', fontSize: 26 },  // “12.56 TB”大小
+        textStyle: { color: '#0a2c6b', fontSize: 22 },  // “12.56 TB”大小
         subtextStyle: { color: '#7c8799',
                         fontSize: 16,     // “总数据量”大小
                         lineHeight: 20,   // 与上方数值的距离
@@ -49,13 +49,30 @@ function option(): EChartsOption {
                     lineHeight: 25,
                   },
         formatter: (name: string) =>
-          `${name}     ${props.data?.find((item) => item.name === name)?.value ?? 0}%`,
+          `${name}  ${props.data?.find((item) => item.name === name)?.value ?? 0}%`,
       },
+      // Override the spacious statistics layout with a fixed right-hand
+      // legend column. This keeps long labels inside the card.
+      ...(props.donutLayout === 'spacious'
+        ? { legend: {
+            orient: 'vertical' as const,
+            left: '53%',
+            right: '2%',
+            top: 'center',
+            itemGap: 14,
+            itemWidth: 30,
+            itemHeight: 20,
+            textStyle: { color: '#333', fontSize: 16, lineHeight: 22 },
+            formatter: (name: string) =>
+              `${name}  ${props.data?.find((item) => item.name === name)?.value ?? 0}%`,
+          } }
+        : {}),
       series: [
         {
           type: 'pie',
           center: [props.donutLayout === 'spacious' ? '25%' : '30%', '50%'],  // 圆环位置：水平、垂直
           radius: props.donutLayout === 'spacious' ? ['55%', '82%'] : ['60%', '90%'],  // 内半径、外半径
+          ...(props.donutLayout === 'spacious' ? { radius: ['52%', '76%'] } : {}),
           label: { show: false },
           data: props.data,
         },

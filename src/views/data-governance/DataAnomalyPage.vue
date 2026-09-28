@@ -665,7 +665,7 @@ watch(
     </div>
     <PanelCard title="待发布修改集"
       ><template v-if="changeSet"
-        ><p>
+        ><p class="change-set-title">
           {{ dataset?.name }} · 基础版本 <el-tag>{{ changeSet.versionLabel }}</el-tag>
         </p>
         <div class="anomaly-footer">
@@ -917,7 +917,15 @@ watch(
   padding: 10px 14px;
   margin: 16px 0;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 16px;
+}
+.anomaly-result .el-button {
+  font-size: 16px;
+}
+/* “查看修改集”和“生成新版本” */
+.set-metrics ~ .el-button {
+  font-size: 16px;
+  font-weight: 700;
 }
 .anomaly-metrics {
   display: grid;
@@ -944,7 +952,7 @@ watch(
 }
 .anomaly-metrics strong {
   display: block;
-  font-size: 25px;
+  font-size: 20px;
   margin-top: 8px;
   color: #05296a;
 }
@@ -993,6 +1001,16 @@ watch(
 .anomaly-bar b {
   width: 32px;
   text-align: left;
+}
+/* “跨文化交流多语种数据集 · 基础版本” */
+.change-set-title {
+  font-size: 18px;
+  margin-top: 0;
+  margin-bottom: 10px; /* 控制与下方卡片的距离 */
+}
+/* dsv_000003 标签文字 */
+.change-set-title :deep(.el-tag__content) {
+  font-size: 16px;
 }
 .anomaly-export-button {
   font-size: 16px;
@@ -1053,6 +1071,25 @@ watch(
   margin-top: 14px;
   font-size: 12px;
 }
+/* “原始字段 / 建议修改 / 校验结果” */
+.anomaly-repair {
+  font-size: 16px;
+}
+
+/* 三个小标题 */
+.anomaly-repair b {
+  font-size: 18px;
+}
+
+/* 字段内容和校验结果 */
+.anomaly-repair p {
+  font-size: 16px;
+}
+
+/* 下方说明文字 */
+.anomaly-note {
+  font-size: 16px; /* 当前是 12px */
+}
 .anomaly-repair {
   display: grid;
   grid-template-columns: 1fr 1fr 1.1fr;
@@ -1083,7 +1120,7 @@ watch(
 }
 .set-metrics b {
   display: block;
-  font-size: 13px;
+  font-size: 20px;
   margin-top: 10px;
 }
 .anomaly-review {

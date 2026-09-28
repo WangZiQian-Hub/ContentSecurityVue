@@ -223,7 +223,7 @@ function detail(resultId: string, sampleId: string) {
   return s
 }
 function matching(resultId: string, q: Query) {
-  return record(resultId).samples.filter(
+  const matches = record(resultId).samples.filter(
     (s) =>
       (!q.level || s.maximumSuggestedLevel === q.level) &&
       (!q.status || s.status === q.status) &&
@@ -231,6 +231,18 @@ function matching(resultId: string, q: Query) {
         .toLowerCase()
         .includes(q.keyword.trim().toLowerCase()),
   )
+  if (!q.sortBy || !q.sortOrder) return matches
+  const levelOrder = { HIGH: 0, MEDIUM: 1, LOW: 2, NOTICE: 3 }
+  const statusOrder: Record<string, number> = { 待复核: 0, 已复核: 1, 未发起: 2 }
+  const direction = q.sortOrder === 'asc' ? 1 : -1
+  return matches.sort((a, b) => {
+    const comparison =
+      q.sortBy === 'maximumSuggestedLevel'
+        ? levelOrder[a.maximumSuggestedLevel] - levelOrder[b.maximumSuggestedLevel]
+        : (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
+          a.status.localeCompare(b.status, 'zh-CN')
+    return comparison ? comparison * direction : a.id.localeCompare(b.id)
+  })
 }
 export const riskMock = {
   options: () => copy(riskOptions),

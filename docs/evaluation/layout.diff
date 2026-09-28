@@ -1,0 +1,13 @@
+﻿diff --git a/src/layouts/AppLayout.vue b/src/layouts/AppLayout.vue
+index dc225d0..755733c 100644
+--- a/src/layouts/AppLayout.vue
++++ b/src/layouts/AppLayout.vue
+@@ -153,7 +153,7 @@ function openUserManagement() {
+           {{ tab.title }}
+         </router-link>
+       </nav>
+-      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train', '/compliance'].includes(current.path)" />
++      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train', '/compliance', '/evaluation'].includes(current.path)" />
+       <footer class="page-footer">
+         内容安全治理原型平台 <span>统一数据 · 智能治理 · 全程可溯</span>
+       </footer>

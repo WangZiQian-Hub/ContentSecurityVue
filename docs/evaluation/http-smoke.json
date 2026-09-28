@@ -1,0 +1,61 @@
+[
+  {
+    "check": "unauthenticated",
+    "status": 401,
+    "expected": 401
+  },
+  {
+    "path": "/api/v1/evaluation/metrics?page_size=100",
+    "status": 200,
+    "code": 0,
+    "resolution": null,
+    "total": 26
+  },
+  {
+    "path": "/api/v1/evaluation/tasks",
+    "status": 200,
+    "code": 0,
+    "resolution": null,
+    "total": 0
+  },
+  {
+    "path": "/api/v1/evaluation/runs",
+    "status": 200,
+    "code": 0,
+    "resolution": null,
+    "total": 0
+  },
+  {
+    "path": "/api/v1/evaluation/records",
+    "status": 200,
+    "code": 0,
+    "resolution": null,
+    "total": 0
+  },
+  {
+    "path": "/api/v1/evaluation/contexts?kind=task_result",
+    "status": 200,
+    "code": 0,
+    "resolution": "unavailable",
+    "total": null
+  },
+  {
+    "path": "/api/v1/evaluation/record-resolutions?record_id=DEMO-T-003",
+    "status": 200,
+    "code": 0,
+    "resolution": "demo_only",
+    "total": null
+  },
+  {
+    "path": "/openapi.json",
+    "status": 200,
+    "code": null,
+    "resolution": null,
+    "total": null
+  },
+  {
+    "check": "vite_proxy_real_http",
+    "status": 200,
+    "total": 0
+  }
+]
