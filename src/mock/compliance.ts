@@ -1,5 +1,6 @@
 import type * as C from '../types/compliance'
 import type { ComplianceApi } from '../api/compliance'
+import { processTasks } from './data-governance'
 import { governanceResources } from './governance-resources'
 import { createModelDemo } from './model-workbench'
 
@@ -87,6 +88,131 @@ function datasetLineage(): C.LineageNode[] {
       versionId: version.id,
     })),
   )
+}
+
+function datasetVersionNode(datasetId: number | string, versionId: string) {
+  return datasetLineage().find(
+    (node) =>
+      String(node.entityId) === String(datasetId) && node.versionId === versionId,
+  )
+}
+
+function lineageGraph(): C.Lineage {
+  const nodes = datasetLineage()
+  const edges: C.LineageEdge[] = []
+  const modelDemo = createModelDemo()
+  const addNode = (node: C.LineageNode) => {
+    if (!nodes.some((item) => item.id === node.id)) nodes.push(node)
+  }
+  const edge = (
+    id: string,
+    fromId: string,
+    toId: string,
+    relation: string,
+    evidenceId: string,
+    verificationState: C.VerificationState = 'verified',
+    missingReason: string | null = null,
+    trainingTaskId: string | null = null,
+  ): void => {
+    edges.push({
+      id,
+      fromId,
+      toId,
+      relation,
+      verificationState,
+      evidenceRefs: [evidenceId],
+      missingReason,
+      trainingTaskId,
+    })
+  }
+
+  for (const task of processTasks) {
+    if (!task.outputVersion) continue
+    const taskNodeId = `task:${task.taskId}`
+    addNode({
+      id: taskNodeId,
+      type: 'task',
+      entityType: 'task',
+      entityId: task.taskId,
+      displayId: task.taskId,
+      label: '数据清洗任务',
+      versionId: null,
+    })
+    const input = datasetVersionNode(task.input.datasetId, task.input.datasetVersionId)
+    if (input)
+      edge(
+        `lineage:process:${task.taskId}:input`,
+        input.id,
+        taskNodeId,
+        '输入数据引用',
+        `lineage_evidence_process_${task.taskId}_input`,
+      )
+    const output = governanceResources()
+      .flatMap((dataset) => dataset.versions.map((version) => ({ dataset, version })))
+      .find(({ version }) => version.id === task.outputVersion)
+    if (output) {
+      const outputNode = datasetVersionNode(output.dataset.id, output.version.id)
+      if (outputNode)
+        edge(
+          `lineage:process:${task.taskId}:output`,
+          taskNodeId,
+          outputNode.id,
+          '输出版本登记',
+          `lineage_evidence_process_${task.taskId}_output`,
+        )
+    }
+  }
+
+  const trainingNodes = new Map<string, string>()
+  for (const task of modelDemo.training) {
+    const taskNodeId = `training:${task.id}`
+    trainingNodes.set(task.id, taskNodeId)
+    addNode({
+      id: taskNodeId,
+      type: 'training_task',
+      entityType: 'training_task',
+      entityId: task.id,
+      displayId: task.id,
+      label: task.name,
+      versionId: null,
+    })
+    const input = datasetVersionNode(task.datasetId, task.datasetVersion)
+    edge(
+      `lineage:training:${task.id}:input`,
+      input?.id || `dataset:${task.datasetId}:${task.datasetVersion}`,
+      taskNodeId,
+      '训练数据绑定',
+      `lineage_evidence_training_${task.id}_input`,
+      input ? 'verified' : 'missing',
+      input ? null : '缺少训练数据快照引用',
+      task.id,
+    )
+  }
+
+  for (const modelAsset of modelDemo.models) {
+    for (const modelVersion of modelAsset.versions) {
+      const modelNodeId = `model:${modelAsset.id}:${modelVersion.version}`
+      addNode({
+        id: modelNodeId,
+        type: 'model',
+        entityType: 'model',
+        entityId: modelAsset.id,
+        displayId: modelAsset.id,
+        label: modelAsset.name,
+        versionId: modelVersion.version,
+      })
+      if (modelVersion.taskId && trainingNodes.has(modelVersion.taskId))
+        edge(
+          `lineage:training:${modelVersion.taskId}:output:${modelVersion.version}`,
+          trainingNodes.get(modelVersion.taskId)!,
+          modelNodeId,
+          '训练产物登记',
+          `lineage_evidence_training_${modelVersion.taskId}_output_${modelVersion.version}`,
+        )
+    }
+  }
+
+  return { nodes, edges, gaps: [] }
 }
 export const demoOverview: C.Overview = {
   asOf: time,
@@ -423,31 +549,53 @@ export function createComplianceDemo(): ComplianceApi {
       return clone(demoOverview)
     },
     async lineage(query) {
-      if (query.entityType === 'dataset') {
-        const root = datasetLineage().find(
-          (node) =>
-            String(node.entityId) === String(query.entityId) &&
-            (!query.versionId || query.versionId === node.versionId),
-        )
-        if (root) return clone({ nodes: [root], edges: [], gaps: [] })
-      }
-      if (
-        !subjects.some(
-          (s) =>
-            String(s.entityId) === String(query.entityId) &&
-            s.entityType === query.entityType &&
-            (!query.versionId || query.versionId === s.versionId),
-        )
+      const graph = lineageGraph()
+      const root = graph.nodes.find(
+        (node) =>
+          String(node.entityId) === String(query.entityId) &&
+          node.entityType === query.entityType &&
+          (!query.versionId || query.versionId === node.versionId),
       )
-        return missing()
-      const root = demoLineage.nodes.find(
-        (n) => String(n.entityId) === String(query.entityId) && n.entityType === query.entityType,
-      )!
+      if (!root) {
+        if (
+          !subjects.some(
+            (s) =>
+              String(s.entityId) === String(query.entityId) &&
+              s.entityType === query.entityType &&
+              (!query.versionId || query.versionId === s.versionId),
+          )
+        )
+          return missing()
+        const fallbackRoot = demoLineage.nodes.find(
+          (n) => String(n.entityId) === String(query.entityId) && n.entityType === query.entityType,
+        )!
+        const ids = new Set([fallbackRoot.id])
+        let changed = true
+        while (changed) {
+          changed = false
+          for (const edge of demoLineage.edges) {
+            if (
+              (query.direction !== 'downstream' && ids.has(edge.toId) && !ids.has(edge.fromId)) ||
+              (query.direction !== 'upstream' && ids.has(edge.fromId) && !ids.has(edge.toId))
+            ) {
+              ids.add(edge.fromId)
+              ids.add(edge.toId)
+              changed = true
+            }
+          }
+        }
+        const fallbackEdges = demoLineage.edges.filter((e) => ids.has(e.fromId) && ids.has(e.toId))
+        return clone({
+          nodes: demoLineage.nodes.filter((n) => ids.has(n.id)),
+          edges: fallbackEdges,
+          gaps: fallbackEdges.some((e) => e.verificationState === 'missing') ? [gap] : [],
+        })
+      }
       const ids = new Set([root.id])
       let changed = true
       while (changed) {
         changed = false
-        for (const edge of demoLineage.edges) {
+        for (const edge of graph.edges) {
           if (
             (query.direction !== 'downstream' && ids.has(edge.toId) && !ids.has(edge.fromId)) ||
             (query.direction !== 'upstream' && ids.has(edge.fromId) && !ids.has(edge.toId))
@@ -458,11 +606,17 @@ export function createComplianceDemo(): ComplianceApi {
           }
         }
       }
-      const edges = demoLineage.edges.filter((e) => ids.has(e.fromId) && ids.has(e.toId))
+      const edges = graph.edges.filter((e) => ids.has(e.fromId) && ids.has(e.toId))
       return clone({
-        nodes: demoLineage.nodes.filter((n) => ids.has(n.id)),
+        nodes: graph.nodes.filter((n) => ids.has(n.id)),
         edges,
-        gaps: edges.some((e) => e.verificationState === 'missing') ? [gap] : [],
+        gaps: edges
+          .filter((e) => e.verificationState === 'missing')
+          .map((e) => ({
+            reason: e.missingReason || '谱系关系缺少核验依据',
+            evidenceRefs: e.evidenceRefs,
+            alertId: null,
+          })),
       })
     },
     async contexts(query) {
@@ -598,13 +752,41 @@ export function createComplianceDemo(): ComplianceApi {
       return clone(alerts.find((a) => a.id === alertId) ?? missing())
     },
     async evidence(evidenceId) {
+      const dynamicGraph = lineageGraph()
+      const dynamicEdges = dynamicGraph.edges.filter((edge) => edge.evidenceRefs.includes(evidenceId))
       const known = new Set([
         'demo_evidence_0305',
         ...evidenceIds,
         ...Array.from({ length: 6 }, (_, i) => `demo_evidence_0${409 + i}`),
         ...demoNeuron.abnormalNeurons.flatMap((n) => n.evidenceRefs),
+        ...dynamicGraph.edges.flatMap((edge) => edge.evidenceRefs),
       ])
       if (!known.has(evidenceId)) return missing()
+      const dynamicEdge = dynamicEdges[0]
+      if (dynamicEdge) {
+        const subject =
+          dynamicGraph.nodes.find((node) => node.id === dynamicEdge.fromId) ||
+          dynamicGraph.nodes.find((node) => node.id === dynamicEdge.toId)!
+        return {
+          id: evidenceId,
+          displayId: evidenceId.replace('lineage_evidence_', 'LIN-'),
+          sourceModule: 'data-governance',
+          subjectRef: clone(subject),
+          occurredAt: time,
+          sourceTraceId: null,
+          versionRef: subject.versionId,
+          redactedFields: [
+            {
+              key: 'lineage_relation',
+              label: '谱系关系',
+              value: dynamicEdge.relation,
+              state: 'verified',
+            },
+          ],
+          integrityState: 'verified',
+          allowedActions: ['copy', 'open_source'],
+        }
+      }
       const cp = evidenceId === demoRefs.checkpoint
       const historicalIndex = evidenceIds.indexOf(evidenceId)
       const historicalSubject =

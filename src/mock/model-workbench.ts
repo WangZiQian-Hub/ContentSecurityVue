@@ -27,7 +27,12 @@ export function createModelDemo(): ModelWorkbench {
     ][i]!,
     creator: '张三',
     updatedAt: date,
-    dataset: i < 2 ? '内容安全多语种训练集 v1.2.0' : null,
+    dataset:
+      i === 0
+        ? '内容安全多模态数据集 · demo_dsv_output_001'
+        : i === 1
+          ? '内容安全多语种训练集 v1.2.0'
+          : null,
     versions: [
       {
         version: versions[i]!,
@@ -60,8 +65,8 @@ export function createModelDemo(): ModelWorkbench {
       progress: 68,
       modelId: 'mdl-1',
       baseVersion: 'v2.0.0',
-      datasetId: 'ds-training',
-      datasetVersion: 'v1.2.0',
+      datasetId: '1',
+      datasetVersion: 'demo_dsv_output_001',
       epochs: 10,
       epoch: 7,
       learningRate: 0.0002,
