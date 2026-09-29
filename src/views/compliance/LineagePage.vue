@@ -16,19 +16,97 @@ const store = useComplianceStore(),
   selected = ref(''),
   zoom = ref(1)
 const edge = computed(() => store.lineage?.edges.find((e) => e.id === selected.value))
-// Layout every returned edge independently, including multiple parents and unknown endpoints.
-const positions = computed(
-  () =>
-    new Map(
-      store.lineage?.nodes.map((node, index) => [
-        node.id,
-        { x: 95 + (index % 5) * 190, y: 100 + Math.floor(index / 5) * 160 },
-      ]) || [],
-    ),
-)
-const graphHeight = computed(() =>
-  Math.max(270, Math.ceil((store.lineage?.nodes.length || 0) / 5) * 160 + 80),
-)
+const layout = computed(() => {
+  const nodes = store.lineage?.nodes || []
+  const edges = store.lineage?.edges || []
+  const root = nodes.find(
+    (node) =>
+      node.entityType === entityType.value &&
+      String(node.entityId) === entityId.value &&
+      (!version.value || node.versionId === version.value || node.entityType === 'training_task'),
+  )
+  const distances = new Map<string, number>()
+  if (root) {
+    distances.set(root.id, 0)
+    const forward = [root.id]
+    for (let index = 0; index < forward.length; index += 1) {
+      const current = forward[index]!
+      const distance = distances.get(current)!
+      for (const relation of edges.filter((item) => item.fromId === current)) {
+        if (!distances.has(relation.toId) || distances.get(relation.toId)! > distance + 1) {
+          distances.set(relation.toId, distance + 1)
+          forward.push(relation.toId)
+        }
+      }
+    }
+    const backward = [root.id]
+    const upstreamDistances = new Map<string, number>([[root.id, 0]])
+    for (let index = 0; index < backward.length; index += 1) {
+      const current = backward[index]!
+      const distance = upstreamDistances.get(current)!
+      for (const relation of edges.filter((item) => item.toId === current)) {
+        if (!upstreamDistances.has(relation.fromId)) {
+          upstreamDistances.set(relation.fromId, distance - 1)
+          backward.push(relation.fromId)
+        }
+      }
+    }
+    for (const [id, distance] of upstreamDistances) distances.set(id, distance)
+  }
+  const fallback = new Map(
+    nodes.map((node, index) => [
+      node.id,
+      { x: 110 + index * 260, y: 120 },
+    ]),
+  )
+  if (!root) return { positions: fallback, width: Math.max(520, 110 + nodes.length * 260), height: 280 }
+  const connected = nodes.filter((node) => distances.has(node.id))
+  const isolated = nodes.filter((node) => !distances.has(node.id))
+  const columns = [...new Set(connected.map((node) => distances.get(node.id)!))].sort(
+    (a, b) => a - b,
+  )
+  const columnIndex = new Map(columns.map((distance, index) => [distance, index]))
+  const byColumn = new Map<number, typeof nodes>()
+  for (const node of connected) {
+    const index = columnIndex.get(distances.get(node.id)!)!
+    if (!byColumn.has(index)) byColumn.set(index, [])
+    byColumn.get(index)!.push(node)
+  }
+  if (isolated.length) {
+    const index = columns.length
+    byColumn.set(index, isolated)
+  }
+  const positions = new Map<string, { x: number; y: number }>()
+  let maxRows = 1
+  for (const [column, columnNodes] of byColumn) {
+    maxRows = Math.max(maxRows, columnNodes.length)
+    columnNodes.forEach((node, row) => {
+      positions.set(node.id, { x: 110 + column * 260, y: 120 + row * 220 })
+    })
+  }
+  const columnCount = Math.max(1, byColumn.size)
+  return {
+    positions,
+    width: 110 + (columnCount - 1) * 260 + 160,
+    height: Math.max(280, 120 + (maxRows - 1) * 220 + 160),
+  }
+})
+const positions = computed(() => layout.value.positions)
+const graphWidth = computed(() => layout.value.width)
+const graphHeight = computed(() => layout.value.height)
+function edgePath(relation: { fromId: string; toId: string }) {
+  const from = positions.value.get(relation.fromId)
+  const to = positions.value.get(relation.toId)
+  if (!from || !to) return ''
+  const leftToRight = from.x <= to.x
+  const startX = from.x + (leftToRight ? 45 : -45)
+  const endX = to.x + (leftToRight ? -48 : 48)
+  const controlX = (startX + endX) / 2
+  return `M ${startX} ${from.y} C ${controlX} ${from.y}, ${controlX} ${to.y}, ${endX} ${to.y}`
+}
+function shortNodeLabel(label: string) {
+  return label.length > 12 ? `${label.slice(0, 12)}…` : label
+}
 const objectCandidates = computed(() => {
   const seen = new Set<string>()
   return store.candidates.filter((candidate) => {
@@ -159,9 +237,9 @@ function selectRow(row: { id: string }) {
         >
         <div class="compliance-graph-scroll">
           <svg
-            :width="1000 * zoom"
+            :width="graphWidth * zoom"
             :height="graphHeight * zoom"
-            :viewBox="`0 0 1000 ${graphHeight}`"
+            :viewBox="`0 0 ${graphWidth} ${graphHeight}`"
             role="img"
             aria-label="工程版本关系图"
           >
@@ -181,7 +259,7 @@ function selectRow(row: { id: string }) {
             <g v-for="relation in store.lineage.edges" :key="relation.id">
               <path
                 v-if="positions.has(relation.fromId) && positions.has(relation.toId)"
-                :d="`M ${positions.get(relation.fromId)!.x + 40} ${positions.get(relation.fromId)!.y} L ${positions.get(relation.toId)!.x - 45} ${positions.get(relation.toId)!.y}`"
+                :d="edgePath(relation)"
                 fill="none"
                 :stroke="
                   relation.id === selected
@@ -232,7 +310,8 @@ function selectRow(row: { id: string }) {
                   style="width: 38px; height: 38px; color: white"
               /></foreignObject>
               <text y="70" text-anchor="middle" fill="#183d73" font-size="16" font-weight="600">
-                {{ node.label }}
+                <title>{{ node.label }}</title>
+                {{ shortNodeLabel(node.label) }}
               </text>
               <text y="96" text-anchor="middle" fill="#7187a7" font-size="13">
                 {{ node.displayId }}
