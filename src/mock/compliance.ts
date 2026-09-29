@@ -466,6 +466,20 @@ export function createComplianceDemo(): ComplianceApi {
       })
     },
     async contexts(query) {
+      if (query.sourceKind === 'dataset') {
+        const datasetCandidates = datasetLineageCandidates()
+        if (query.sourceId === undefined)
+          return unresolved(
+            datasetCandidates.length ? 'ambiguous' : 'not_found',
+            datasetCandidates,
+          )
+        const datasetCandidate = datasetCandidates.find(
+          (candidate) => String(candidate.sourceId) === String(query.sourceId),
+        )
+        return datasetCandidate
+          ? unresolved('resolved', [datasetCandidate])
+          : unresolved('not_found')
+      }
       if (query.sourceId === undefined)
         return unresolved(
           'ambiguous',
@@ -499,13 +513,6 @@ export function createComplianceDemo(): ComplianceApi {
         }
       }
       // Read-only mapping of existing workspace fixture identity. No invented audit/capture links.
-      if (query.sourceKind === 'dataset') {
-        const datasetCandidates = datasetLineageCandidates()
-        return unresolved(
-          datasetCandidates.length ? 'ambiguous' : 'not_found',
-          datasetCandidates,
-        )
-      }
       const existing = createModelDemo()
       const source =
         query.sourceKind === 'model'
