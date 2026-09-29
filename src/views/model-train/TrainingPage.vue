@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import PanelCard from '../../components/PanelCard.vue'
 import { useModelWorkbench } from '../../stores/model-workbench'
-import { formatModelTime, trainingStates } from '../../types/model-workbench'
+import { formatModelTime, trainingMethods, trainingStates } from '../../types/model-workbench'
 import WorkbenchKpis from './WorkbenchKpis.vue'
 import WorkbenchChart from './WorkbenchChart.vue'
 import { isMock } from '../../api/request'
@@ -54,6 +54,7 @@ const form = reactive({
   learningRate: 0.0002,
   batchSize: 8,
   targetVersion: '',
+  method: trainingMethods[0] as string,
 })
 const baseModel = computed(() => store.data.models.find((m) => m.id === form.modelId))
 watch(
@@ -80,11 +81,13 @@ async function submit() {
   )
     return void ElMessage.warning('目标版本已存在，请使用新版本号')
   try {
-    const task = await store.addTraining({
+    const trainingInput = {
       ...form,
       name: form.name.trim(),
+      method: form.method || trainingMethods[0],
       datasetVersion: ds.version,
-    })
+    }
+    const task = await store.addTraining(trainingInput)
     selectedId.value = task.id
     dialog.value = false
     ElMessage.success('训练任务已登记，等待启动')
@@ -154,7 +157,7 @@ async function submit() {
       ><el-descriptions v-if="selected" :column="1" border
         ><el-descriptions-item label="基础模型"
           >{{ model?.name }} {{ selected.baseVersion }}</el-descriptions-item
-        ><el-descriptions-item label="训练方式">低秩适配微调</el-descriptions-item
+        ><el-descriptions-item label="训练方式">{{ selected.method || '未记录' }}</el-descriptions-item
         ><el-descriptions-item label="数据集">{{
           dataset?.name || selected.datasetId
         }}</el-descriptions-item
@@ -231,6 +234,14 @@ async function submit() {
             :key="d.id"
             :value="d.id"
             :label="`${d.name} ${d.version}`" /></el-select></el-form-item
+      ><el-form-item label="训练方式" required
+        ><el-select v-model="form.method">
+          <el-option
+            v-for="method in trainingMethods"
+            :key="method"
+            :label="method"
+            :value="method" />
+        </el-select></el-form-item
       ><el-form-item label="目标版本" required
         ><el-input v-model="form.targetVersion" placeholder="例如 v2.2.0" /></el-form-item
       ><el-form-item label="学习率"

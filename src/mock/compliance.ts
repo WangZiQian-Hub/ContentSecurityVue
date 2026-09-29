@@ -261,6 +261,29 @@ function lineageEvidence(evidenceId: string, edge: C.LineageEdge, graph: C.Linea
     value: value || `缺失：${reason}`,
     state: value ? ('verified' as const) : ('missing' as const),
   })
+  const trainingOutput = trainingTask
+    ? (() => {
+        const checkpoints = trainingTask.checkpoints.length
+          ? ` · 检查点 ${trainingTask.checkpoints.length} 个`
+          : ''
+        if (trainingTask.status === 'pending') {
+          return { value: '尚未开始训练', state: 'missing' as const }
+        }
+        if (trainingTask.status === 'running') {
+          return {
+            value: `已训练 ${trainingTask.epoch} / ${trainingTask.epochs} 轮${checkpoints}`,
+            state: 'missing' as const,
+          }
+        }
+        if (trainingTask.status === 'succeeded') {
+          return {
+            value: `已完成 ${trainingTask.epochs} 轮${checkpoints}`,
+            state: 'verified' as const,
+          }
+        }
+        return { value: '训练失败，未产出', state: 'missing' as const }
+      })()
+    : null
   const fields = processTask
     ? [
         missing('input', '输入', processTask.input.datasetVersionId, '输入数据版本'),
@@ -293,19 +316,20 @@ function lineageEvidence(evidenceId: string, edge: C.LineageEdge, graph: C.Linea
       ]
     : [
         missing('input', '输入', trainingTask!.datasetVersion, '训练数据版本'),
-        missing('time', '时间', trainingTask!.updatedAt, '训练更新时间'),
-        missing('interface', '接口', null, '训练记录未提供训练框架或算法说明'),
-        missing('version', '版本', trainingTask!.targetVersion, '目标模型版本'),
         missing(
-          'output',
-          '输出',
-          trainingTask!.epochs > 0
-            ? `${trainingTask!.epochs} 轮`
-            : trainingTask!.checkpoints.length
-              ? trainingTask!.checkpoints.map((checkpoint) => checkpoint.name).join('、')
-              : null,
-          '训练轮次或检查点',
+          'time',
+          '时间',
+          trainingTask!.status === 'pending' ? '尚未开始' : trainingTask!.updatedAt,
+          '训练更新时间',
         ),
+        missing('interface', '接口', trainingTask!.method || null, '训练方式'),
+        missing('version', '版本', trainingTask!.targetVersion, '目标模型版本'),
+        {
+          key: 'output',
+          label: '输出',
+          value: trainingOutput!.value,
+          state: trainingOutput!.state,
+        },
       ]
   const subject =
     graph.nodes.find(

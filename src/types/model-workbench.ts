@@ -38,6 +38,7 @@ export interface TrainingTask {
   loss: number[]
   validationLoss: number[]
   checkpoints: { name: string; epoch: number; loss: number }[]
+  method?: string
 }
 export interface ModelService {
   id: string
@@ -115,6 +116,7 @@ export const trainingStates = {
   failed: '失败',
   cancelled: '已取消',
 }
+export const trainingMethods = ['低秩适配微调', '全量微调', 'QLoRA 量化微调', '前缀微调'] as const
 export const serviceStates = { running: '运行中', deployed: '已部署', offline: '离线' }
 export function percent(numerator: number, denominator: number) {
   return denominator > 0 ? `${((numerator / denominator) * 100).toFixed(1)}%` : '不适用'

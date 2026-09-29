@@ -1,4 +1,4 @@
-import type { ModelWorkbench, ModelCall } from '../types/model-workbench'
+import { trainingMethods, type ModelWorkbench, type ModelCall } from '../types/model-workbench'
 
 export function createModelDemo(): ModelWorkbench {
   const date = new Date().toISOString()
@@ -81,6 +81,7 @@ export function createModelDemo(): ModelWorkbench {
         { name: 'checkpoint-05', epoch: 5, loss: 0.39 },
         { name: 'checkpoint-07', epoch: 7, loss: 0.24 },
       ],
+      method: trainingMethods[0],
     },
   ]
   training.push({
@@ -100,6 +101,7 @@ export function createModelDemo(): ModelWorkbench {
     loss: [],
     validationLoss: [],
     checkpoints: [],
+    method: trainingMethods[1],
   })
   training.push({
     ...structuredClone(training[0]!),
@@ -112,6 +114,7 @@ export function createModelDemo(): ModelWorkbench {
     datasetId: '4',
     datasetVersion: 'demo_dsv_output_002',
     targetVersion: 'v2.1.0',
+    method: trainingMethods[0],
   })
   const services: ModelWorkbench['services'] = [0, 1, 2, 4].map((i, n) => ({
     id: `SVC-00${n + 1}`,
