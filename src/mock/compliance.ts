@@ -264,7 +264,7 @@ function lineageEvidence(evidenceId: string, edge: C.LineageEdge, graph: C.Linea
     : [
         missing('input', '输入', trainingTask!.datasetVersion, '训练数据版本'),
         missing('time', '时间', trainingTask!.updatedAt, '训练更新时间'),
-        missing('interface', '接口', trainingTask!.name, '训练框架或算法说明'),
+        missing('interface', '接口', null, '训练记录未提供训练框架或算法说明'),
         missing('version', '版本', trainingTask!.targetVersion, '目标模型版本'),
         missing(
           'output',
