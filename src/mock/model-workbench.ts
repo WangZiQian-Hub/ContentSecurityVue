@@ -38,7 +38,7 @@ export function createModelDemo(): ModelWorkbench {
         version: versions[i]!,
         createdAt: date,
         description: '当前稳定版本',
-        taskId: i < 2 ? 'TR-0924-008' : null,
+        taskId: i === 0 ? 'TR-0924-008' : null,
       },
     ],
   }))
@@ -90,6 +90,8 @@ export function createModelDemo(): ModelWorkbench {
     description: '提升多语言场景下的语义理解能力',
     modelId: 'mdl-4',
     baseVersion: 'v1.3.0',
+    datasetId: '3',
+    datasetVersion: 'dsv_000003',
     targetVersion: 'v1.4.0',
     status: 'pending',
     progress: 0,
@@ -107,6 +109,8 @@ export function createModelDemo(): ModelWorkbench {
     status: 'succeeded',
     progress: 100,
     epochs: 7,
+    datasetId: '4',
+    datasetVersion: 'demo_dsv_output_002',
     targetVersion: 'v2.1.0',
   })
   const services: ModelWorkbench['services'] = [0, 1, 2, 4].map((i, n) => ({
