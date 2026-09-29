@@ -29,6 +29,27 @@ const positions = computed(
 const graphHeight = computed(() =>
   Math.max(270, Math.ceil((store.lineage?.nodes.length || 0) / 5) * 160 + 80),
 )
+const objectCandidates = computed(() => {
+  const seen = new Set<string>()
+  return store.candidates.filter((candidate) => {
+    const key = String(candidate.sourceId)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
+const versionCandidates = computed(() =>
+  store.candidates.filter(
+    (candidate) =>
+      String(candidate.sourceId) === entityId.value && Boolean(candidate.modelVersion),
+  ),
+)
+function selectedCandidate(versionId = version.value) {
+  return store.candidates.find(
+    (candidate) =>
+      String(candidate.sourceId) === entityId.value && candidate.modelVersion === versionId,
+  )
+}
 function load() {
   selected.value = ''
   if (entityId.value)
@@ -40,10 +61,13 @@ function load() {
     })
 }
 function selectObject(value: string) {
-  const candidate = store.candidates.find((c) => String(c.sourceId) === value)
-  version.value = candidate?.modelVersion || ''
+  entityId.value = value
+  version.value = ''
   store.invalidate()
-  load()
+}
+function selectVersion(value: string) {
+  if (!selectedCandidate(value)) version.value = ''
+  store.invalidate()
 }
 function inbound() {
   if (
@@ -84,19 +108,29 @@ function selectRow(row: { id: string }) {
           label="数据版本"
           value="dataset" /><el-option label="训练任务" value="training_task" /></el-select></label
     ><label
-      >对象完整 ID<el-select
+      >对象名称<el-select
         v-model="entityId"
         filterable
         allow-create
         placeholder="选择对象或输入 ID"
-        aria-label="对象完整 ID"
+        aria-label="对象名称"
         @change="selectObject"
         ><el-option
-          v-for="item in store.candidates"
+          v-for="item in objectCandidates"
           :key="String(item.sourceId)"
-          :label="item.label"
+          :label="item.subjectRef.label"
           :value="String(item.sourceId)" /></el-select></label
-    ><label>版本<el-input v-model="version" aria-label="版本" @input="store.invalidate()" /></label
+    ><label
+      >版本<el-select
+        v-model="version"
+        :disabled="!entityId || !versionCandidates.length"
+        aria-label="版本"
+        @change="selectVersion"
+        ><el-option
+          v-for="item in versionCandidates"
+          :key="`${String(item.sourceId)}:${item.modelVersion}`"
+          :label="item.modelVersion || ''"
+          :value="item.modelVersion || ''" /></el-select></label
     ><label
       >追溯方向<el-select v-model="direction" aria-label="追溯方向" @change="load"
         ><el-option label="上游来源" value="upstream" /><el-option
