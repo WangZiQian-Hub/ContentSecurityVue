@@ -56,7 +56,9 @@ const form = reactive({
 })
 async function submit() {
   if (!form.name.trim() || !/^v?\d+\.\d+\.\d+$/.test(form.version))
-    return void ElMessage.warning('请填写名称和语义版本，如 v1.0.0')
+    return void ElMessage.warning(
+      '版本号只能是三个数字，前面可以加一个 v，例如 v1.0.0。不能包含字母或中文。',
+    )
   if (store.data.models.some((m) => m.name === form.name.trim()))
     return void ElMessage.warning('同名模型已存在，请查看现有模型档案')
   try {
@@ -195,7 +197,9 @@ async function submit() {
             :value="key"
             :label="label" /></el-select></el-form-item
       ><el-form-item label="版本号" required
-        ><el-input v-model="form.version" placeholder="例如 v1.0.0" /></el-form-item
+        ><el-input
+          v-model="form.version"
+          placeholder="三个数字，如 v1.0.0（可有可无 v，不能有其他字母）" /></el-form-item
       ><el-form-item label="模型说明"
         ><el-input
           v-model="form.description"
