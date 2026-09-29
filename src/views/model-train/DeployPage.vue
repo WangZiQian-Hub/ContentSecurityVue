@@ -81,6 +81,8 @@ watch(
 function open(id?: string) {
   form.modelId = id || store.data.models[0]?.id || ''
   form.name = ''
+  form.version = store.data.models.find((item) => item.id === form.modelId)?.version || ''
+  form.type = 'local'
   form.endpoint = ''
   dialog.value = true
 }
@@ -101,6 +103,13 @@ async function submit() {
     return void ElMessage.warning('服务地址须为 HTTP 或 HTTPS，且不能包含密钥、查询参数或片段')
   if (!form.name.trim() || !model.value?.versions.some((v) => v.version === form.version))
     return void ElMessage.warning('请填写服务名称并选择模型版本')
+  if (
+    store.data.services.some(
+      (service) =>
+        service.name === form.name.trim() || service.endpoint.toLowerCase() === url.toString().toLowerCase(),
+    )
+  )
+    return void ElMessage.warning('服务名称或服务地址已登记')
   try {
     const service = await store.addService({ ...form, name: form.name.trim() })
     selectedId.value = service.id

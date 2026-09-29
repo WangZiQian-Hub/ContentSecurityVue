@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useModelWorkbench } from '../../stores/model-workbench'
 import AppIcon from '../../components/AppIcon.vue'
@@ -14,8 +14,41 @@ const tabs = [
   { path: 'deploy', title: '模型部署', icon: 'Box' },
   { path: 'invoke', title: '模型调用', icon: 'Link' },
 ]
+const hasRunningTraining = computed(
+  () => !isMock && store.data.training.some((task) => task.status === 'running'),
+)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+let polling = false
+let disposed = false
+
+function stopPolling() {
+  clearTimeout(pollTimer)
+  pollTimer = undefined
+}
+
+function schedulePolling() {
+  stopPolling()
+  if (disposed || !hasRunningTraining.value) return
+  pollTimer = setTimeout(async () => {
+    if (disposed || polling) return
+    polling = true
+    try {
+      await store.load()
+    } finally {
+      polling = false
+      schedulePolling()
+    }
+  }, 5000)
+}
+
+watch(hasRunningTraining, schedulePolling, { immediate: true })
 onMounted(() => {
+  disposed = false
   if (!store.loaded) void store.load()
+})
+onUnmounted(() => {
+  disposed = true
+  stopPolling()
 })
 </script>
 <template>

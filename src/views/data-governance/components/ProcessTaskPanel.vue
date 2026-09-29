@@ -1,10 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import PanelCard from '../../../components/PanelCard.vue'
 import AppIcon from '../../../components/AppIcon.vue'
 import ProcessComparisonTable from './ProcessComparisonTable.vue'
 import { TASK_STATUS } from '../../../utils/enums'
 import type { ProcessTask } from '../../../types/data-governance'
-defineProps<{ task?: ProcessTask }>()
+import type { TaskStatus } from '../../../types'
+const props = defineProps<{ task?: ProcessTask }>()
+
+const standardStageNames = ['读取数据', '规范化', '去重', '字段校验', '生成版本']
+const displaySteps = computed(() => {
+  const task = props.task
+  if (!task || task.steps.length !== 3) return task?.steps ?? []
+
+  // 兼容已保存的旧演示任务：它们只有三个按规则命名的步骤。
+  // 页面统一展示为与新任务一致的五阶段处理流程。
+  const finalStatus = task.steps[2]?.status ?? 'pending'
+  const statuses: TaskStatus[] =
+    finalStatus === 'succeeded'
+      ? standardStageNames.map(() => 'succeeded')
+      : ['succeeded', 'succeeded', 'succeeded', finalStatus, 'pending']
+  return standardStageNames.map((name, index) => ({ name, status: statuses[index]! }))
+})
 </script>
 <template>
   <PanelCard title="当前处理任务" icon="Document" class="process-current">
@@ -28,7 +45,7 @@ defineProps<{ task?: ProcessTask }>()
         }}。任务输入不随新任务表单变化。
       </p>
       <ol class="process-steps" aria-label="数据处理阶段">
-        <li v-for="(step, index) in task.steps" :key="`${index}-${step.name}`" :class="step.status">
+        <li v-for="(step, index) in displaySteps" :key="`${index}-${step.name}`" :class="step.status">
           <span class="process-step-dot"
             ><AppIcon v-if="step.status === 'succeeded'" name="Check" /><AppIcon
               v-else-if="step.status === 'failed'"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, VideoPlay } from '@element-plus/icons-vue'
@@ -12,6 +12,10 @@ import { percent } from '../../types/model-workbench'
 import { isMock } from '../../api/request'
 const store = useModelWorkbench(),
   route = useRoute()
+onMounted(() => {
+  // 从模型训练页切换进来时，确保读取后端最新的评估聚合结果。
+  if (!isMock) void store.load()
+})
 const modelId = ref(
   String(route.query.modelId || store.data.assessment?.modelId || store.data.models[0]?.id || ''),
 )
@@ -43,6 +47,9 @@ const result = computed(() => {
     ? r
     : null
 })
+const latestEditTask = computed(() =>
+  store.editTasks.find((task) => task.modelId === modelId.value),
+)
 const kpis = computed(() => {
   const r = result.value
   return [
@@ -131,17 +138,15 @@ async function assess() {
     ElMessage.error(e instanceof Error ? e.message : '评估失败')
   }
 }
-async function submitEdit() {
+function submitEdit() {
   if (!knowledge.value.trim() || !model.value)
     return void ElMessage.warning('请填写目标知识并选择模型')
-  try {
-    ElMessage.success(
-      await store.editKnowledge(modelId.value, knowledge.value.trim(), baseline.value),
-    )
-    dialog.value = false
-  } catch (e) {
+  // 关闭弹窗并让结果区立即进入空态；任务完成后由 store 在五秒后自动刷新。
+  dialog.value = false
+  ElMessage.success('已提交')
+  void store.editKnowledge(modelId.value, knowledge.value.trim(), baseline.value).catch((e) => {
     ElMessage.error(e instanceof Error ? e.message : '编辑失败')
-  }
+  })
 }
 </script>
 <template>
@@ -184,15 +189,21 @@ async function submitEdit() {
     <PanelCard title="风险知识编辑" icon="Setting"
       ><el-descriptions :column="1" border
         ><el-descriptions-item label="任务编号">{{
-          result?.taskId || '暂无关联任务'
+          latestEditTask?.id || result?.taskId || '暂无关联任务'
         }}</el-descriptions-item
         ><el-descriptions-item label="目标知识">{{
-          result?.knowledge || '尚未编辑'
+          latestEditTask?.knowledge || result?.knowledge || '尚未编辑'
         }}</el-descriptions-item
         ><el-descriptions-item label="编辑方式">定向抑制</el-descriptions-item
         ><el-descriptions-item label="状态"
-          ><el-tag :type="result ? 'success' : 'info'">{{
-            result ? (isMock ? '已完成（模拟）' : '已有评估结果') : '待评估'
+          ><el-tag :type="latestEditTask ? 'warning' : result ? 'success' : 'info'">{{
+            latestEditTask
+              ? latestEditTask.status
+              : result
+                ? isMock
+                  ? '已完成（模拟）'
+                  : '已有评估结果'
+                : '待评估'
           }}</el-tag></el-descriptions-item
         ></el-descriptions
       >
@@ -216,6 +227,9 @@ async function submitEdit() {
     >
     <PanelCard title="编辑前后效果" icon="Histogram"
       ><template v-if="result"
+        ><div v-if="store.assessmentStale" class="mw-info-strip">
+          当前展示的是上一次评估结果。编辑任务完成后，请点击“发起评估”生成本次编辑的新结果。
+        </div
         ><WorkbenchChart :option="chart" label="编辑前后风险输出、目标编辑与泛化成功样本数对比" />
         <div class="mw-info-strip">
           同一安全测试子集 {{ result.riskTotal }} 条<br />风险率
@@ -233,6 +247,9 @@ async function submitEdit() {
     /></PanelCard>
     <PanelCard title="非目标能力保持" icon="Shield"
       ><template v-if="result"
+        ><div v-if="store.assessmentStale" class="mw-info-strip">
+          上次评估数据待更新；本次编辑的能力保持率以重新发起评估后的结果为准。
+        </div
         ><div class="mw-retention">
           <span>非目标能力保持率</span
           ><strong>{{ percent(result.retentionAfter, result.retentionBefore) }}</strong>
@@ -279,7 +296,7 @@ async function submitEdit() {
       ><el-form-item label="编辑方式">定向抑制</el-form-item></el-form
     ><template #footer
       ><el-button @click="dialog = false">取消</el-button
-      ><el-button type="primary" :loading="store.busy" @click="submitEdit"
+      ><el-button type="primary" @click="submitEdit"
         >提交编辑任务</el-button
       ></template
     ></el-dialog

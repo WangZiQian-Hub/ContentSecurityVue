@@ -49,7 +49,7 @@ export const useEvaluationStore = defineStore('evaluation', () => {
     if (axios.isAxiosError(cause)) {
       const status = cause.response?.status
       const body = cause.response?.data as
-        { message?: string; data?: { issues?: Issue[] } } | undefined
+        { message?: string; detail?: string; data?: { issues?: Issue[] } } | undefined
       issues.value = body?.data?.issues || []
       error.value =
         status === 401
@@ -58,7 +58,7 @@ export const useEvaluationStore = defineStore('evaluation', () => {
             ? '当前账户没有执行此操作的权限。'
             : status === 404
               ? '指定记录不存在，请重新选择。'
-              : body?.message || '暂时无法连接评估服务，请检查连接后重试。'
+              : body?.message || body?.detail || '暂时无法连接评估服务，请检查连接后重试。'
     } else error.value = cause instanceof Error ? cause.message : '请求失败，请重试。'
   }
   function clear() {

@@ -29,11 +29,24 @@ const resolutionLabels = {
   demo_only: '这是演示记录，不能作为真实测试归档。',
   resolved: '来源记录已解析。',
 }
+function queryParams() {
+  return {
+    keyword: filters.keyword.trim(),
+    judgmentStatus: filters.judgmentStatus,
+    integrityState: filters.integrityState,
+    from: filters.from,
+    to: filters.to,
+    page: filters.page,
+    pageSize: filters.pageSize,
+  }
+}
 function loadList(page = 1) {
   filters.page = page
   return store.fetchData(
     'records',
-    (signal) => api.records(filters, signal),
+    // Do not pass Vue's reactive proxy to Axios.  Send a plain snapshot so
+    // the keyword entered immediately before clicking 查询 is always serialized.
+    (signal) => api.records(queryParams(), signal),
     (data) => {
       store.runs = data
     },
@@ -91,7 +104,7 @@ onMounted(load)
       <el-input
         v-model="filters.keyword"
         clearable
-        placeholder="搜索测试编号或名称"
+        placeholder="搜索测试名称"
         @keyup.enter="loadList()"
       /><el-select
         v-model="filters.judgmentStatus"
@@ -124,10 +137,9 @@ onMounted(load)
       /><el-button @click="loadList()">查询</el-button>
     </div>
     <el-table v-loading="store.loading" :data="store.runs?.items || []" empty-text="暂无已归档运行"
-      ><el-table-column label="测试编号与名称" min-width="230"
+      ><el-table-column label="测试名称" min-width="230"
         ><template #default="{ row }"
-          ><b>{{ row.name }}</b>
-          <p class="ev-muted">{{ row.testNo }}</p></template
+          ><b>{{ row.name }}</b></template
         ></el-table-column
       ><el-table-column label="数据 / 模型版本" min-width="170"
         ><template #default="{ row }"

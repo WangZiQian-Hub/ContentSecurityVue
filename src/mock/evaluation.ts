@@ -71,7 +71,7 @@ const metrics: Metric[] = seeds.map((seed, index) => {
 })
 const source: SourceContext = {
   entityType: 'task_result', entityId: 'demo-source', versionId: 'demo-source-v1',
-  name: '多模态内容安全检测结果（示例）', sourceModule: 'risk-classification',
+  name: '多模态内容安全检测结果', sourceModule: 'risk-classification',
   sourceTaskId: 'demo-source-task', sourceTraceId: 'demo-trace', taskTraceId: 'demo-trace',
   capabilityCode: 'semantic_risk', status: 'succeeded', algorithmMode: 'mock',
   datasetId: 'demo-dataset', modelId: null, datasetVersion: '示例数据集 v2.1', labelVersion: '示例标签 v1.2',
@@ -118,7 +118,7 @@ function makeTask(name: string, config: EvaluationConfig, status: EvaluationTask
     finishedAt: terminal ? date : undefined, stage: terminal ? 'archived' : status === 'pending' ? 'frozen' : 'calculating',
     traceId: `demo-trace-${taskId}`, processedCount: status === 'succeeded' ? 1000 : status === 'running' ? 640 : 0,
     totalCount: 1000, error: status === 'failed' ? '示例异常：来源服务暂不可用，可演示重试。' : undefined }
-  const run: EvaluationRun = { runId, taskId, recordId: uid('record'), testNo: `DEMO-${runs.length + 1}`,
+  const run: EvaluationRun = { runId, taskId, recordId: uid('record'), testNo: '',
     name, attemptNo: 1, retryOf: null, taskStatus: status, judgmentStatus: 'not_evaluated', algorithmMode: 'mock',
     startedAt: task.startedAt || null, finishedAt: task.finishedAt || null, createdAt: date,
     snapshot: { resolvedRefs: [copy(source)], metricRevisions: copy(revisions.filter(r => config.metricRevisionRefs.includes(r.revisionId))),
@@ -135,11 +135,11 @@ function makeTask(name: string, config: EvaluationConfig, status: EvaluationTask
   tasks.unshift(task); runs.unshift(run)
   return task
 }
-makeTask('多模态风险检测验收（示例）', baseConfig, 'succeeded')
-makeTask('内容分类能力复测（示例）', baseConfig, 'succeeded', true)
-makeTask('数据治理来源连通测试（示例）', baseConfig, 'failed')
-makeTask('风险识别完成期验收（示例）', baseConfig, 'pending')
-const running = makeTask('多模态内容安全评估（示例）', baseConfig, 'running')
+makeTask('多模态风险检测验收', baseConfig, 'succeeded')
+makeTask('内容分类能力复测', baseConfig, 'succeeded', true)
+makeTask('数据治理来源连通测试', baseConfig, 'failed')
+makeTask('风险识别完成期验收', baseConfig, 'pending')
+const running = makeTask('多模态内容安全评估', baseConfig, 'running')
 export const demoExecutionTaskId = running.taskId
 const getTask = (id: string) => required(tasks.find(t => t.taskId === id))
 const getRun = (id: string) => required(runs.find(r => r.runId === id))

@@ -78,7 +78,6 @@ describe('模型训推工作流与接口约束', () => {
   it('评估拒绝不匹配的版本，零分母不计算百分比', async () => {
     const store = useModelWorkbench()
     await store.load()
-    const original = store.data.assessment!.id
     await expect(
       store.assess({
         modelId: 'mdl-1',
@@ -94,7 +93,8 @@ describe('模型训推工作流与接口约束', () => {
     expect(percent(245, 250)).toBe('98.0%')
     await store.editKnowledge('mdl-2', '个人信息披露')
     expect(store.editTasks).toHaveLength(1)
-    expect(store.data.assessment!.id).toBe(original)
+    expect(store.data.assessment).toBeNull()
+    expect(store.assessmentStale).toBe(false)
   })
   it('真实调用使用统一能力入口，失败不回退演示结果', async () => {
     const store = useModelWorkbench()

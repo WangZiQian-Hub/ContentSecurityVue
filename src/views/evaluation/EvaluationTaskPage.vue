@@ -55,7 +55,7 @@ onMounted(() => load())
       ><el-button
         type="primary"
         :disabled="!canWrite"
-        @click="router.push('/evaluation/tasks?view=new')"
+        @click="router.push({ path: '/evaluation/tasks', query: { view: 'new' } })"
         >＋ 新建测试任务</el-button
       ></template
     >

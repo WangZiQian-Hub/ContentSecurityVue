@@ -75,7 +75,7 @@ export async function startRisk(scope: Scope): Promise<Task> {
   if (isMock) return (await mock()).start(scope)
   return normalizeTask(
     await request<TaskResponse>({
-      url: '/tasks',
+      url: '/data-governance/risk-tasks',
       method: 'POST',
       data: { kind, name: '内容风险识别与分级', input: scope },
     }),
@@ -90,7 +90,10 @@ function normalizeTask(task: TaskResponse): Task {
 export async function getRiskTask(id: string): Promise<Task> {
   if (isMock) return (await mock()).task(id)
   return normalizeTask(
-    await request<TaskResponse>({ url: `/tasks/${encodeURIComponent(id)}`, params: { kind } }),
+    await request<TaskResponse>({
+      url: `/data-governance/risk-tasks/${encodeURIComponent(id)}`,
+      params: { kind },
+    }),
   )
 }
 export async function reviewRisk(

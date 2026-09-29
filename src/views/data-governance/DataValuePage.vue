@@ -245,6 +245,13 @@ async function analyze() {
     ElMessage.success('分析任务已提交')
     if (key !== scopeKey()) return
     tasks.value = [task]
+    // 价值分析后端 may complete synchronously (and returns resultId). Load
+    // that immutable snapshot immediately so the current page reflects the
+    // analysis instead of leaving the user in the empty initial state.
+    if (task.status === 'succeeded' && task.resultId) {
+      await loadResult(task.resultId)
+      return
+    }
     historyOpen.value = true
   } catch {
     /* 请求层统一展示错误。 */

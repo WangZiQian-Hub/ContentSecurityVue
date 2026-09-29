@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { evaluationApi as api } from '../../api/evaluation'
 import { useEvaluationStore } from '../../stores/evaluation'
-import type { EvaluationConfig } from '../../types/evaluation'
+import type { Contexts, EvaluationConfig } from '../../types/evaluation'
 import { label, threshold, time } from './presentation'
 import EvaluationPanel from './components/EvaluationPanel.vue'
 const store = useEvaluationStore()
@@ -55,13 +55,19 @@ watch(selectedSource, () => {
 async function loadSources() {
   selectedSource.value = ''
   store.contexts = null
-  await store.fetchData(
+  let candidates: Contexts['candidates'] = []
+  const loaded = await store.fetchData(
     'contexts',
     (signal) => api.contexts(kind.value, keyword.value, signal),
     (data) => {
       store.contexts = data
+      candidates = data.candidates
     },
   )
+  if (loaded && candidates.length === 1) {
+    const candidate = candidates[0]
+    selectedSource.value = `${candidate.entityId}:${candidate.versionId}`
+  }
 }
 async function load() {
   await store.fetchData(
@@ -89,11 +95,21 @@ async function check() {
   if (result) {
     store.preflight = result
     config.preflightToken = result.token
+    return result.canCreate && Boolean(result.token)
   }
+  return false
 }
 async function create() {
+  if (!name.value.trim()) {
+    store.error = '请填写测试任务名称。'
+    return
+  }
+  if (!store.preflight?.canCreate || !config.preflightToken) {
+    const passed = await check()
+    if (!passed) return
+  }
   const task = await store.write('create-task', { name: name.value, config }, (key) =>
-    api.createTask(name.value, config, key),
+    api.createTask(name.value.trim(), config, key),
   )
   if (task) await router.push({ path: '/evaluation/execution', query: { taskId: task.taskId } })
 }
@@ -258,9 +274,9 @@ onMounted(load)
         ><el-button
           type="primary"
           :loading="store.writing"
-          :disabled="!canWrite || !store.preflight?.canCreate || !config.preflightToken"
+          :disabled="!canWrite || !source || !config.metricRevisionRefs.length || !name"
           @click="create"
-          >创建并冻结</el-button
+          >创建测试任务</el-button
         >
       </div>
     </EvaluationPanel>

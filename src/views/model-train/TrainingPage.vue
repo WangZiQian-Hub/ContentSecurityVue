@@ -27,6 +27,10 @@ const kpis = computed(() => [
 ])
 const dataset = computed(() => store.data.datasets.find((d) => d.id === selected.value?.datasetId))
 const model = computed(() => store.data.models.find((m) => m.id === selected.value?.modelId))
+const trainingDatasets = computed(() => {
+  const marked = store.data.datasets.filter((d) => d.purpose === 'training')
+  return marked.length ? marked : store.data.datasets
+})
 const chart = computed<EChartsOption>(() => ({
   color: ['#087bff', '#9555ff'],
   tooltip: { trigger: 'axis' },
@@ -45,7 +49,7 @@ const form = reactive({
   name: '',
   modelId: store.data.models[0]?.id || '',
   baseVersion: '',
-  datasetId: store.data.datasets.find((d) => d.purpose === 'training')?.id || '',
+  datasetId: trainingDatasets.value[0]?.id || '',
   epochs: 10,
   learningRate: 0.0002,
   batchSize: 8,
@@ -223,7 +227,7 @@ async function submit() {
       ><el-form-item label="训练数据" required
         ><el-select v-model="form.datasetId"
           ><el-option
-            v-for="d in store.data.datasets.filter((d) => d.purpose === 'training')"
+            v-for="d in trainingDatasets"
             :key="d.id"
             :value="d.id"
             :label="`${d.name} ${d.version}`" /></el-select></el-form-item

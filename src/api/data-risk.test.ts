@@ -140,7 +140,7 @@ describe('风险识别：资源一致性与保存结果契约', () => {
     })
     expect((await api.startRisk(scope)).id).toBe('server-task')
     expect(backend.request).toHaveBeenLastCalledWith({
-      url: '/tasks',
+      url: '/data-governance/risk-tasks',
       method: 'POST',
       data: { kind: 'governance-risk', name: '内容风险识别与分级', input: scope },
     })

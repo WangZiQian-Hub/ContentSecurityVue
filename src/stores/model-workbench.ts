@@ -26,6 +26,17 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
   const error = ref('')
   const loaded = ref(false)
   const editTasks = ref<{ id: string; modelId: string; knowledge: string; status: string }[]>([])
+  // 知识编辑不会自动生成新的评估分数。保留上一次已追溯的结果，
+  // 由页面明确标记为待更新，避免编辑任务等待期间右侧结果区变成空白。
+  const assessmentStale = ref(false)
+  let assessmentRefreshTimer: ReturnType<typeof setTimeout> | undefined
+  function refreshAssessmentInFiveSeconds() {
+    if (assessmentRefreshTimer) clearTimeout(assessmentRefreshTimer)
+    assessmentRefreshTimer = setTimeout(() => {
+      assessmentRefreshTimer = undefined
+      void load()
+    }, 5000)
+  }
   async function load() {
     loading.value = true
     error.value = ''
@@ -221,6 +232,10 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
   }
   async function editKnowledge(modelId: string, targetKnowledge: string, modelVersion?: string) {
     return run(async () => {
+      // 新任务提交后先进入空结果态；后台完成轻量编辑后，五秒自动读取新快照。
+      data.value.assessment = null
+      assessmentStale.value = false
+      refreshAssessmentInFiveSeconds()
       if (isMock) {
         const id = `KE-${crypto.randomUUID().slice(0, 8)}`
         editTasks.value.unshift({
@@ -246,7 +261,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         status:
           task.status === 'succeeded' ? '已完成' : task.status === 'failed' ? '失败' : '执行中',
       })
-      return `编辑任务已提交：${task.taskId}`
+      return `编辑任务已提交：${task.taskId}，评估结果将在 5 秒后自动刷新`
     })
   }
   async function assess(input: {
@@ -270,11 +285,15 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
             '此组合尚无演示测试样本，请选择安全对话模型 v1.5.0 与 v1.5.1，或接入真实评估服务',
           )
         data.value.assessment = { ...example, id: `T-${crypto.randomUUID().slice(0, 8)}` }
+        assessmentStale.value = false
         return '示例评估已完成'
       }
       // 指标编码由公共指标库返回，避免前端自行定义正式指标。
       const task = await api.executeComparison(input)
-      if (task.status === 'succeeded') await load()
+      if (task.status === 'succeeded') {
+        await load()
+        assessmentStale.value = false
+      }
       return `评估任务已提交：${task.taskId}`
     })
   }
@@ -285,6 +304,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
     error,
     loaded,
     editTasks,
+    assessmentStale,
     load,
     addModel,
     addTraining,

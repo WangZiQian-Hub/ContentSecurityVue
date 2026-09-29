@@ -25,6 +25,11 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
     if (envelope.code !== 0) throw new Error(envelope.message || '请求失败')
     return envelope.data
   } catch (error) {
+    // AbortController cancellation is an expected lifecycle event (for example,
+    // when a page changes while its previous request is still pending). It is
+    // still rethrown so callers can stop their loading state, but must not be
+    // shown as a user-facing request failure.
+    if (axios.isCancel(error)) throw error
     const message = axios.isAxiosError(error)
       ? error.response?.data?.message || error.message
       : error instanceof Error

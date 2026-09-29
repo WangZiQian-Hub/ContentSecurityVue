@@ -200,7 +200,7 @@ async function start() {
       }
     }
     if (t.status === 'failed') return
-    timer = setTimeout(poll, 1000)
+    void poll()
   })
 }
 async function openHistory() {

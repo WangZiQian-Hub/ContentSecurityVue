@@ -154,6 +154,9 @@ function schedulePoll() {
     if (task && !task.taskId.startsWith('demo_') && ['pending', 'running'].includes(task.status)) {
       try {
         await store.refreshCurrentTask()
+        // A transient polling error must not outlive a successful refresh;
+        // otherwise a completed task is incorrectly presented as failed.
+        actionError.value = ''
         updatedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
       } catch {
         actionError.value = '任务状态刷新失败，将自动重试。'

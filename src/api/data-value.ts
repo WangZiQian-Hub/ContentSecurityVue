@@ -53,8 +53,8 @@ export async function listValueSamples(
       const sample = resources.find((item) => item.id === row.id)
       if (
         !sample ||
-        sample.datasetId !== result.scope.datasetId ||
-        sample.versionId !== result.scope.versionId ||
+        (sample.datasetId != null && sample.datasetId !== result.scope.datasetId) ||
+        (sample.versionId != null && sample.versionId !== result.scope.versionId) ||
         sample.text !== row.text
       )
         throw new Error('评分样本与数据资源版本不一致')

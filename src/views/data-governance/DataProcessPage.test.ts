@@ -5,6 +5,7 @@ import type { ProcessInput, ProcessOptions } from '../../types/data-governance'
 const mocks = vi.hoisted(() => ({
   store: {
     options: undefined as ProcessOptions | undefined,
+    currentTask: undefined as { taskId: string; status: string } | undefined,
     initialize: vi.fn(),
     preview: vi.fn(),
     createTask: vi.fn(),
@@ -45,6 +46,7 @@ const renderer = createRenderer<Host, Host>({
 })
 interface State {
   form: ProcessInput
+  actionError: string
   runAction(action: 'preview' | 'create'): Promise<void>
 }
 async function mount() {
@@ -62,6 +64,7 @@ async function mount() {
 describe('数据处理输出版本表单链路', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    mocks.store.currentTask = undefined
     mocks.store.options = {
       datasets: [
         { id: 3, name: '数据集', versions: [{ versionId: 'dsv_existing', label: 'v1.0.0' }] },
@@ -126,6 +129,21 @@ describe('数据处理输出版本表单链路', () => {
       expect(mocks.store.createTask.mock.calls[0]![0].outputVersionName).toBe('v1.1.0')
     } finally {
       unmount()
+    }
+  })
+  it('任务状态后续刷新成功时清除此前的轮询错误提示', async () => {
+    vi.useFakeTimers()
+    mocks.store.currentTask = { taskId: 'tsk_process_001', status: 'running' }
+    mocks.store.refreshCurrentTask.mockResolvedValue(undefined)
+    const { state, unmount } = await mount()
+    try {
+      state.actionError = '任务状态刷新失败，将自动重试。'
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(mocks.store.refreshCurrentTask).toHaveBeenCalledOnce()
+      expect(state.actionError).toBe('')
+    } finally {
+      unmount()
+      vi.useRealTimers()
     }
   })
 })

@@ -83,9 +83,13 @@ export const updateCandidate = async (
         { candidateId, inputSampleRevisionId },
       )
 export const startAnomaly = async (input: Scope): Promise<Task> =>
-  isMock ? anomalyMock.start(input) : post('/tasks', { name: '异常数据检测', input })
+  isMock
+    ? anomalyMock.start(input)
+    : post('/data-governance/anomaly-tasks', { name: '异常数据检测', input })
 export const getAnomalyTask = async (id: string): Promise<Task> =>
-  isMock ? anomalyMock.task(id) : get(`/tasks/${encodeURIComponent(id)}`)
+  isMock
+    ? anomalyMock.task(id)
+    : get(`/data-governance/anomaly-tasks/${encodeURIComponent(id)}`)
 export const getAnomalyChangeSet = async (scope: Scope): Promise<ChangeSet> =>
   isMock ? anomalyMock.changeSet(scope) : get('/data-governance/change-sets/current', scope)
 export const removeAnomalyEntry = async (scope: Scope, candidateId: string): Promise<ChangeSet> =>
