@@ -63,11 +63,14 @@ async function copy() {
       <template v-if="store.evidence"
         ><el-tag>只读来源证据</el-tag>
         <h2>
-          {{ store.evidence.subjectRef.displayId }} /
-          {{ store.evidence.subjectRef.versionId || '未记录版本' }}
+          {{
+            store.evidence.subjectRef.displayId === store.evidence.subjectRef.versionId
+              ? store.evidence.subjectRef.displayId
+              : `${store.evidence.subjectRef.displayId} / ${store.evidence.subjectRef.versionId || '未记录版本'}`
+          }}
         </h2>
         <dl>
-          <dt>完整对象 ID</dt>
+          <dt>对象内部编号</dt>
           <dd>{{ store.evidence.subjectRef.entityId }}</dd>
           <dt>证据编号</dt>
           <dd>{{ store.evidence.id }}</dd>
@@ -86,7 +89,7 @@ async function copy() {
           type="warning"
           :closable="false"
         />
-        <h3>字段核验 · 仅展示已授权字段</h3>
+        <h3>留痕五要素核验</h3>
         <el-table :data="store.evidence.redactedFields"
           ><el-table-column prop="label" label="字段" /><el-table-column label="记录值"
             ><template #default="{ row }">{{ row.value ?? '缺失' }}</template></el-table-column

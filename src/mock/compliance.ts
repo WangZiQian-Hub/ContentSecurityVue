@@ -1,6 +1,6 @@
 import type * as C from '../types/compliance'
 import type { ComplianceApi } from '../api/compliance'
-import { processTasks } from './data-governance'
+import { processOptions, processTasks } from './data-governance'
 import { governanceResources } from './governance-resources'
 import { createModelDemo } from './model-workbench'
 
@@ -213,6 +213,89 @@ function lineageGraph(): C.Lineage {
   }
 
   return { nodes, edges, gaps: [] }
+}
+
+function lineageEvidence(evidenceId: string, edge: C.LineageEdge, graph: C.Lineage): C.Evidence | null {
+  const processTask = processTasks.find((task) =>
+    evidenceId.startsWith(`lineage_evidence_process_${task.taskId}_`),
+  )
+  const modelDemo = processTask ? null : createModelDemo()
+  const trainingTask = modelDemo?.training.find((task) =>
+    evidenceId.startsWith(`lineage_evidence_training_${task.id}_`),
+  )
+  if (!processTask && !trainingTask) return null
+
+  const missing = (key: string, label: string, value: string | null, reason: string) => ({
+    key,
+    label,
+    value: value || `缺失：${reason}`,
+    state: value ? ('verified' as const) : ('missing' as const),
+  })
+  const fields = processTask
+    ? [
+        missing('input', '输入', processTask.input.datasetVersionId, '输入数据版本'),
+        missing(
+          'time',
+          '时间',
+          processTask.finishedAt || processTask.createdAt,
+          '任务时间',
+        ),
+        missing(
+          'interface',
+          '接口',
+          [
+            processTask.ruleName,
+            ...processTask.input.rules.map(
+              (code) => processOptions.rules.find((rule) => rule.code === code)?.label || code,
+            ),
+          ].filter(Boolean).join(' → '),
+          '处理模板和规则',
+        ),
+        missing('version', '版本', processTask.outputVersion, '输出数据版本'),
+        missing(
+          'output',
+          '输出',
+          processTask.totalCount > 0
+            ? `${processTask.processedCount} / ${processTask.totalCount} 条`
+            : null,
+          '处理条数',
+        ),
+      ]
+    : [
+        missing('input', '输入', trainingTask!.datasetVersion, '训练数据版本'),
+        missing('time', '时间', trainingTask!.updatedAt, '训练更新时间'),
+        missing('interface', '接口', trainingTask!.name, '训练框架或算法说明'),
+        missing('version', '版本', trainingTask!.targetVersion, '目标模型版本'),
+        missing(
+          'output',
+          '输出',
+          trainingTask!.epochs > 0
+            ? `${trainingTask!.epochs} 轮`
+            : trainingTask!.checkpoints.length
+              ? trainingTask!.checkpoints.map((checkpoint) => checkpoint.name).join('、')
+              : null,
+          '训练轮次或检查点',
+        ),
+      ]
+  const subject =
+    graph.nodes.find(
+      (node) => node.id === (edge.relation === '输出版本登记' || edge.relation === '训练产物登记' ? edge.toId : edge.fromId),
+    ) || graph.nodes.find((node) => node.id === edge.toId)!
+  const occurredAt = processTask
+    ? processTask.finishedAt || processTask.createdAt
+    : trainingTask!.updatedAt
+  return {
+    id: evidenceId,
+    displayId: evidenceId.replace('lineage_evidence_', 'LIN-'),
+    sourceModule: processTask ? 'data-governance' : 'model-training',
+    subjectRef: structuredClone(subject),
+    occurredAt,
+    sourceTraceId: processTask?.traceId || null,
+    versionRef: subject.versionId,
+    redactedFields: fields,
+    integrityState: fields.some((field) => field.state === 'missing') ? 'missing' : 'verified',
+    allowedActions: ['copy', 'open_source'],
+  }
 }
 export const demoOverview: C.Overview = {
   asOf: time,
@@ -764,28 +847,8 @@ export function createComplianceDemo(): ComplianceApi {
       if (!known.has(evidenceId)) return missing()
       const dynamicEdge = dynamicEdges[0]
       if (dynamicEdge) {
-        const subject =
-          dynamicGraph.nodes.find((node) => node.id === dynamicEdge.fromId) ||
-          dynamicGraph.nodes.find((node) => node.id === dynamicEdge.toId)!
-        return {
-          id: evidenceId,
-          displayId: evidenceId.replace('lineage_evidence_', 'LIN-'),
-          sourceModule: 'data-governance',
-          subjectRef: clone(subject),
-          occurredAt: time,
-          sourceTraceId: null,
-          versionRef: subject.versionId,
-          redactedFields: [
-            {
-              key: 'lineage_relation',
-              label: '谱系关系',
-              value: dynamicEdge.relation,
-              state: 'verified',
-            },
-          ],
-          integrityState: 'verified',
-          allowedActions: ['copy', 'open_source'],
-        }
+        const evidence = lineageEvidence(evidenceId, dynamicEdge, dynamicGraph)
+        if (evidence) return evidence
       }
       const cp = evidenceId === demoRefs.checkpoint
       const historicalIndex = evidenceIds.indexOf(evidenceId)
