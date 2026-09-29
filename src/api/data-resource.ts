@@ -51,7 +51,7 @@ export async function listIngestTasks(query: {
   pageSize: number
   keyword?: string
   status?: string
-}): Promise<PageResult<IngestTask>> {
+}): Promise<PageResult<IngestTask> & { succeededTotal: number }> {
   if (!isMock)
     return request({ url: '/tasks', params: { ...query, capabilityCode: 'data_ingest' } })
   const rows = ingestTasks.filter(
@@ -65,6 +65,7 @@ export async function listIngestTasks(query: {
     page: query.page,
     pageSize: query.pageSize,
     totalPages: Math.ceil(rows.length / query.pageSize),
+    succeededTotal: rows.filter((row) => row.status === 'succeeded').length,
   }
 }
 // 写入始终走真实接口；不生成模拟成功或伪造任务留痕。

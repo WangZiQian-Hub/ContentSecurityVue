@@ -103,7 +103,7 @@ onUnmounted(stopPolling)
     <el-table-column label="状态" width="90"
       ><template #default="{ row }: { row: IngestTask }"
         ><el-tag :type="TASK_STATUS[row.status].color" round size="small">{{
-          TASK_STATUS[row.status].label
+          row.status === 'pending' ? '等待执行' : TASK_STATUS[row.status].label
         }}</el-tag></template
       ></el-table-column
     >
@@ -132,7 +132,7 @@ onUnmounted(stopPolling)
       ><el-descriptions-item label="任务 ID">{{ detail.taskId }}</el-descriptions-item
       ><el-descriptions-item label="目标数据集">{{ detail.datasetName }}</el-descriptions-item
       ><el-descriptions-item label="状态">{{
-        TASK_STATUS[detail.status].label
+        detail.status === 'pending' ? '等待执行' : TASK_STATUS[detail.status].label
       }}</el-descriptions-item
       ><el-descriptions-item label="链路 ID">{{
         detail.traceId

@@ -274,6 +274,7 @@ def ensure_training_task_columns():
         return
     columns = {column["name"] for column in inspector.get_columns("training_tasks")}
     additions = {
+        "method": "VARCHAR(100) NOT NULL DEFAULT '低秩适配微调'",
         "loss_history": "JSON NOT NULL",
         "validation_loss_history": "JSON NOT NULL",
         "checkpoints": "JSON NOT NULL",
@@ -282,35 +283,62 @@ def ensure_training_task_columns():
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE training_tasks ADD COLUMN {name} {definition}"))
-                connection.execute(text(f"UPDATE training_tasks SET {name} = JSON_ARRAY() WHERE {name} IS NULL"))
+                if name in {"loss_history", "validation_loss_history", "checkpoints"}:
+                    connection.execute(text(f"UPDATE training_tasks SET {name} = JSON_ARRAY() WHERE {name} IS NULL"))
+        if "method" in columns or "method" in additions:
+            connection.execute(text("UPDATE training_tasks SET method = '低秩适配微调' WHERE method IS NULL OR method = ''"))
 
 
 
 def ensure_dataset_source_type_column():
     """为已有数据库补充数据集来源类型列；新表由 ORM 自动创建。"""
+from sqlalchemy import inspect, text
+
+# 假设 engine 已经在当前模块中定义，例如：
+# from app.db import engine
+
+
+from sqlalchemy import inspect, text
+
+# 假设 engine 已经在当前模块中定义，例如：
+# from app.db import engine
+
+
+def ensure_dataset_source_type_column():
+    """为已有数据库补充数据集来源类型列；新表由 ORM 自动创建。"""
     inspector = inspect(engine)
+
+    # 1. 表不存在，说明 ORM 还没建表，直接返回
     if not inspector.has_table("datasets"):
         return
+
+    # 2. 获取 datasets 表现有列名
     columns = {column["name"] for column in inspector.get_columns("datasets")}
-    if "source_type" not in columns:
-        with engine.begin() as connection:
-            connection.execute(text(
-                "ALTER TABLE datasets ADD COLUMN source_type VARCHAR(30) NOT NULL DEFAULT 'business'"
-            ))
-    # 为迁移前的演示数据补充来源类型；已有人工设置的值不覆盖。
+
+    # 3. 如果已经有 source_type，说明迁移过了，直接返回
+    #    关键：不要再次执行下面的 UPDATE，否则会覆盖人工设置的值
+    if "source_type" in columns:
+        return
+
+    # 4. 事务内执行：加列 + 一次性回填
     with engine.begin() as connection:
         connection.execute(text(
-            "UPDATE datasets SET source_type = 'internet' "
-            "WHERE source_type = 'business' AND category LIKE '%互联网%'"
+            "ALTER TABLE datasets "
+            "ADD COLUMN source_type VARCHAR(30) NOT NULL DEFAULT 'business'"
         ))
-        connection.execute(text(
-            "UPDATE datasets SET source_type = 'industry' "
-            "WHERE source_type = 'business' AND category LIKE '%风险%'"
-        ))
-        connection.execute(text(
-            "UPDATE datasets SET source_type = 'synthetic' "
-            "WHERE source_type = 'business' AND category LIKE '%多模态%'"
-        ))
+
+        # 5. 只在新加列后回填一次
+        #    用 CASE WHEN 明确优先级：互联网 > 风险 > 多模态 > 默认 business
+        connection.execute(text("""
+            UPDATE datasets
+            SET source_type = CASE
+                WHEN category LIKE '%互联网%' THEN 'internet'
+                WHEN category LIKE '%风险%'   THEN 'industry'
+                WHEN category LIKE '%多模态%' THEN 'synthetic'
+                ELSE 'business'
+            END
+            WHERE source_type = 'business'
+        """))
 
 
 def migrate_legacy_resources():

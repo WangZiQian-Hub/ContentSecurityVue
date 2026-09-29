@@ -20,6 +20,7 @@ export interface Task {
   taskCategory: string  // 任务类别
   capabilityCode: string  //使用的能力编码
   status: TaskStatus  //任务状态
+  progress?: number  //任务执行进度（0-100）；旧任务响应可能不返回
   createdAt: string  //创建时间
   finishedAt?: string  //完成时间
   traceId?: string  //链路追踪编号

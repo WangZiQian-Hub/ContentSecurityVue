@@ -226,6 +226,18 @@ class Model(Base):
     )
 
 
+class DatasetRecord(Base):
+    """平台 MySQL 中保存的外部数据库原始数据行。"""
+
+    __tablename__ = "dataset_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dataset_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    task_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
 class ModelVersion(Base):
     """模型版本记录，供模型管理页读取，不再由前端写死。"""
     __tablename__ = "model_versions"
@@ -288,12 +300,75 @@ class TrainingTask(Base):
     learning_rate: Mapped[float] = mapped_column(Float, nullable=False)
     batch_size: Mapped[int] = mapped_column(Integer, nullable=False)
     target_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    # 训练方式同时用于模型工作台展示及合规留痕五要素中的“接口”。
+    method: Mapped[str] = mapped_column(String(64), default="低秩适配微调", nullable=False)
     # 每轮训练日志和检查点由训练服务写入，供页面刷新后恢复曲线和产物列表。
     loss_history: Mapped[list[float]] = mapped_column(JSON, default=list, nullable=False)
     validation_loss_history: Mapped[list[float]] = mapped_column(JSON, default=list, nullable=False)
     checkpoints: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+# 合规页面的结果不能只在后端进程或前端 demo 中保存。下列四张表以可筛选的
+# 主字段配合 JSON 正文保存复杂审计结构，既支持当前页面的完整合同，也便于后续扩展。
+class ComplianceAudit(Base):
+    __tablename__ = "compliance_audits"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    capability_code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    version_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    capture_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    review_status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)
+    review_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    task_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    execution_status: Mapped[str] = mapped_column(String(32), default="succeeded", nullable=False)
+    compliance_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+class ComplianceAlert(Base):
+    __tablename__ = "compliance_alerts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    risk_level: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    trace_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+class ComplianceEvidence(Base):
+    __tablename__ = "compliance_evidences"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    subject_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    trace_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+class ComplianceLineageEdge(Base):
+    __tablename__ = "compliance_lineage_edges"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    from_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    from_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    to_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    to_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
 
 
 class Resource(Base):
@@ -590,6 +665,23 @@ class EvaluationTask(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+class ComplianceRecord(Base):
+    """合规审计、证据、告警和链路结果的持久化载体。"""
+
+    __tablename__ = "compliance_records"
+
+    record_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    capability_code: Mapped[str | None] = mapped_column(String(60), index=True, nullable=True)
+    subject_type: Mapped[str | None] = mapped_column(String(60), index=True, nullable=True)
+    subject_id: Mapped[str | None] = mapped_column(String(100), index=True, nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
 
 

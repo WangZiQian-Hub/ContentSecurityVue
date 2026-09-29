@@ -23,8 +23,19 @@ from app.services.resource_display import (
     task_ingest_statistics,
     task_version_default,
 )
+from app.services.database_ingest import read_mysql_rows, save_dataset_rows
 
 MAX_LOCAL_FILE_STORAGE_GB = 2.0
+
+
+def _safe_ingest_input(input_data: dict) -> dict:
+    """平台任务和审计日志不能落库外部 MySQL 凭据。"""
+    safe = dict(input_data)
+    if safe.get("sourceAddress") or safe.get("source_address"):
+        safe.pop("sourceAddress", None)
+        safe.pop("source_address", None)
+        safe["sourceAddress"] = "[已隐藏：MySQL 连接凭据]"
+    return safe
 
 
 def _required_text(value: object, field_name: str) -> str:
@@ -126,6 +137,8 @@ def now_utc():
 def run_mock_task(
     request: ExecuteTaskRequest,
     trace_id: str,
+    defer_ingest: bool = False,
+    existing_ingest_task_id: str | None = None,
 ):
     """
     创建任务
@@ -172,9 +185,10 @@ def run_mock_task(
         )
         
     input_data = request.input
+    stored_input = _safe_ingest_input(input_data) if request.capability_code == "data_ingest" else input_data
 
     is_ingest = request.capability_code == "data_ingest"
-    task_id = "tsk_" + uuid4().hex[:8]
+    task_id = existing_ingest_task_id or "tsk_" + uuid4().hex[:8]
     if is_ingest:
         source_name = _required_text(
             input_data.get("source_name") or input_data.get("sourceName"),
@@ -245,7 +259,9 @@ def run_mock_task(
         "task_id": task_id,
         "name": request.name or "未命名任务",
         "capability_code": request.capability_code,
-        "status": "running",
+        # 接入连接通过后，先明确进入等待队列。连接成功只代表任务已创建，
+        # 数据处理尚未开始，因此进度保持在 0%。
+        "status": "pending" if is_ingest and defer_ingest else "running",
 
         "source_name": source_name,
         "dataset_name": dataset_name,
@@ -256,7 +272,7 @@ def run_mock_task(
         "duplicate_count": 0,
         "anomaly_count": 0,
 
-        "input": request.input,
+        "input": stored_input,
         "config": request.config,
         "result": None,
         "trace_id": trace_id,
@@ -268,32 +284,32 @@ def run_mock_task(
     # 使用同一个数据库事务保存任务和审计日志
     with SessionLocal() as db:
         try:
-            # 保存任务
-            save(task, db)
-
-            # 记录任务开始日志
-            add_log(
-                task_id=task_id,
-                event_type="task_started",
-                request_data={
-                    "capability_code": request.capability_code,
-                    "input": request.input,
-                    "config": request.config,
-                },
-                capability_code=request.capability_code,
-                endpoint="/api/v1/tasks/execute",
-                trace_id=trace_id,
-                db=db,
-            )
-
-            # 数据接入按阶段推进并分别提交，只有最终 100% 的任务才会被
-            # 接入任务列表查询到。
-            if is_ingest:
+            if existing_ingest_task_id:
+                # 保留可观察的等待窗口；连接成功后不应立刻被运行状态覆盖。
+                sleep(5)
+                update(task_id, {"status": "running", "progress": 0}, db)
                 db.commit()
-                for progress in (25, 50, 75):
-                    update(task_id, {"progress": progress}, db)
+            else:
+                # 保存任务
+                saved_task = save(task, db)
+
+                # 记录任务开始日志
+                add_log(
+                    task_id=task_id,
+                    event_type="task_started",
+                    request_data={
+                        "capability_code": request.capability_code,
+                        "input": stored_input,
+                        "config": request.config,
+                    },
+                    capability_code=request.capability_code,
+                    endpoint="/api/v1/tasks/execute",
+                    trace_id=trace_id,
+                    db=db,
+                )
+                if is_ingest and defer_ingest:
                     db.commit()
-                    sleep(0.5)
+                    return saved_task
 
             started_at = perf_counter()
 
@@ -344,7 +360,15 @@ def run_mock_task(
             )
 
             if request.capability_code == "data_ingest":
-                record_count = _ingest_record_count(input_data, source_storage_gb)
+                connector_type = input_data.get("connectorType") or input_data.get("connector_type")
+                database_rows: list[dict] = []
+                if connector_type == "database":
+                    database_rows, source_bytes, source_kind = read_mysql_rows(input_data)
+                    storage_gb = source_bytes / 1024**3
+                    record_count = len(database_rows)
+                    result["database_source"] = source_kind
+                else:
+                    record_count = _ingest_record_count(input_data, source_storage_gb)
                 # 模拟能力的固定 1,000 条不作为真实接入统计；以文件大小推导的
                 # 记录数为准，确保每次接入都能改变数据集记录总数。
                 success_count = record_count
@@ -362,6 +386,12 @@ def run_mock_task(
                         "anomaly_count": anomaly_count,
                     }
                 )
+                # 来源读取完成后才进入“正在采集”。每一阶段固定展示五秒，
+                # 前端轮询可依次呈现采集、清洗、检测；接入完成才显示 100%。
+                for progress in (25, 50, 75):
+                    update(task_id, {"progress": progress}, db)
+                    db.commit()
+                    sleep(5)
                 dataset = _sync_ingested_dataset(
                     db,
                     input_data,
@@ -370,6 +400,8 @@ def run_mock_task(
                     record_count=success_count,
                 )
                 dataset_name = dataset.name
+                if connector_type == "database":
+                    save_dataset_rows(db, dataset_id=dataset.id, task_id=task_id, rows=database_rows)
                 result["dataset_id"] = dataset.id
                 result["dataset_name"] = dataset.name
 
@@ -512,6 +544,7 @@ def run_mock_task(
                 {
                     "status": status,
                     "dataset_name": dataset_name,
+                    "storage_gb": storage_gb,
                     "result": result,
                     "finished_at": now_utc(),
 
@@ -541,7 +574,32 @@ def run_mock_task(
 
             return finished_task
 
-        except Exception:
-            # 发生异常时回滚全部数据库操作
+        except Exception as error:
+            # 新建任务仍保持原有的同步失败语义；后台接入任务则必须留下可见的
+            # 失败终态，避免前端轮询到一个永远“正在采集”的任务。
             db.rollback()
+            if existing_ingest_task_id:
+                with SessionLocal() as failed_db:
+                    failure = {"error": str(error), "error_type": type(error).__name__}
+                    update(
+                        task_id,
+                        {
+                            "status": "failed",
+                            "progress": 0,
+                            "result": failure,
+                            "finished_at": now_utc(),
+                        },
+                        failed_db,
+                    )
+                    add_log(
+                        task_id=task_id,
+                        event_type="task_failed",
+                        response_data=failure,
+                        capability_code=request.capability_code,
+                        endpoint="/api/v1/tasks/execute",
+                        trace_id=trace_id,
+                        db=failed_db,
+                    )
+                    failed_db.commit()
+                return None
             raise

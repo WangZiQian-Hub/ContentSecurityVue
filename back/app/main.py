@@ -21,6 +21,7 @@ from app.routers import (
     model_workbench,
     files,
     training_tasks,
+    compliance,
 )
 
 from app.core.seed import (
@@ -40,6 +41,7 @@ from app.core.seed import (
     seed_initial_data,
 )
 from app.repositories.evaluation_repository import ensure_demo_evaluations
+from app.services.compliance_service import seed_compliance_data
 
 from fastapi.responses import JSONResponse
 
@@ -87,6 +89,7 @@ async def lifespan(app: FastAPI):
     ensure_process_demo_tasks()
     ensure_model_evaluation_versions()
     ensure_demo_evaluations()
+    seed_compliance_data()
 
     print("MySQL 数据表初始化完成")
     yield
@@ -217,6 +220,12 @@ app.include_router(
     training_tasks.router,
     prefix="/api/v1",
     tags=["模型训练"],
+)
+
+app.include_router(
+    compliance.router,
+    prefix="/api/v1",
+    tags=["全链路合规"],
 )
 
 app.include_router(

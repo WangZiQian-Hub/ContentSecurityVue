@@ -78,6 +78,7 @@ describe('模型训推工作流与接口约束', () => {
   it('评估拒绝不匹配的版本，零分母不计算百分比', async () => {
     const store = useModelWorkbench()
     await store.load()
+    const original = store.data.assessment!.id
     await expect(
       store.assess({
         modelId: 'mdl-1',

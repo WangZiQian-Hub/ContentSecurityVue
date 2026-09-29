@@ -30,8 +30,8 @@ const sourceOptions = [
     icon: 'Coin',
     hint: '连接数据库，由后端读取指定的表或查询结果，无需上传数据库文件。',
     addressLabel: '数据库连接地址',
-    addressPlaceholder: '例如 mysql://主机:3306/数据库名',
-    addressHelp: '账号、密码和采集范围需在后端连接器中配置。',
+    addressPlaceholder: 'mysql+pymysql://用户名:密码@主机:3306/数据库名',
+    addressHelp: '只读连接外部 MySQL；密码仅用于本次接入，不保存到任务记录。',
   },
   {
     value: 'api',
@@ -80,6 +80,8 @@ const form = reactive({
   modalities: ['文本'],
   sourceName: '',
   sourceAddress: '',
+  sourceTable: '',
+  sourceQuery: '',
   owner: '',
   removeEmpty: true,
   deduplicate: true,
@@ -134,14 +136,18 @@ function selectDataset(value: number | 'new') {
   selectedDataset.value =
     typeof value === 'number' ? datasetOptions.value.find((item) => item.id === value) : undefined
 }
-const activeTask = computed(
-  () => current.value ?? store.tasks.find((task) => task.status === 'running') ?? store.tasks[0],
-)
+const activeTask = computed(() => {
+  // 左侧任务列表轮询刷新后，使用同一 taskId 的最新对象，右侧进度随之同步变化。
+  if (current.value) return store.tasks.find((task) => task.taskId === current.value?.taskId) ?? current.value
+  return store.tasks.find((task) => task.status === 'running') ?? store.tasks[0]
+})
 const stage = computed(() =>
   !activeTask.value
     ? 0
     : activeTask.value.status === 'succeeded'
       ? 5
+      : activeTask.value.status === 'pending'
+        ? 0
       : activeTask.value.progress < 30
         ? 1
         : activeTask.value.progress < 60
@@ -182,6 +188,10 @@ async function submit() {
     ElMessage.warning(`请填写${selectedSource.value.addressLabel}`)
     return
   }
+  if (source.value === 'database' && !form.sourceTable.trim() && !form.sourceQuery.trim()) {
+    ElMessage.warning('请填写要接入的数据表，或提供只读 SELECT 查询')
+    return
+  }
   if (isMock) {
     ElMessage.info('当前为示例模式。文件尚未上传，任务执行需连接真实后端。')
     return
@@ -209,6 +219,8 @@ async function submit() {
         files: fileIds,
         sourceName: form.sourceName,
         sourceAddress: form.sourceAddress || null,
+        sourceTable: form.sourceTable || null,
+        sourceQuery: form.sourceQuery || null,
         owner: form.owner,
       },
       config: {
@@ -219,8 +231,15 @@ async function submit() {
         qualityCheck: form.qualityCheck,
       },
     })
+    await store.loadTasks({ page: 1, pageSize: 10, keyword: '', status: '' })
+    current.value = store.tasks.find((task) => task.taskId === result.taskId) ?? {
+      ...current.value!,
+      taskId: result.taskId,
+      status: result.status,
+      // 数据源连接成功仅表示任务已创建；等待执行阶段从 0% 开始。
+      progress: result.status === 'pending' ? 0 : (result.progress ?? 0),
+    }
     ElMessage.success(`任务已提交：${result.taskId}`)
-    current.value = undefined
     tableKey.value++
     await store.loadSummary('ingest')
   } catch {
@@ -351,6 +370,14 @@ onMounted(async () => {
               <small class="resource-address-help">{{
                 selectedSource.addressHelp
               }}</small></el-form-item
+            ><template v-if="source === 'database'">
+              <el-form-item label="数据表">
+                <el-input v-model="form.sourceTable" placeholder="例如 orders（填写表名或模式.表名）" />
+              </el-form-item>
+              <el-form-item label="只读查询（可选，优先于数据表）">
+                <el-input v-model="form.sourceQuery" type="textarea" :rows="3" placeholder="SELECT id, content FROM orders" />
+              </el-form-item>
+            </template>
             ><el-form-item label="数据所有者"
               ><el-input v-model="form.owner" placeholder="请输入数据所有者"
             /></el-form-item>
@@ -383,7 +410,7 @@ onMounted(async () => {
       <h4>接入结果统计</h4>
       <div class="resource-result-grid">
         <div>
-          <span>成功</span><b>{{ activeTask?.successCount.toLocaleString() ?? '—' }}</b>
+          <span>成功</span><b>{{ store.succeededTaskTotal.toLocaleString() }}</b>
         </div>
         <div>
           <span>重复</span><b>{{ activeTask?.duplicateCount.toLocaleString() ?? '—' }}</b>

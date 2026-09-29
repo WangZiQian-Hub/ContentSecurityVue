@@ -41,7 +41,7 @@ export function validateAudit(
 export const useComplianceStore = defineStore('compliance', () => {
   const demo = ref(
     import.meta.env.VITE_COMPLIANCE_DEMO === 'true' ||
-      (import.meta.env.DEV && import.meta.env.VITE_COMPLIANCE_DEMO !== 'false'),
+      (import.meta.env.DEV && import.meta.env.VITE_COMPLIANCE_DEMO !== 'false' && import.meta.env.VITE_USE_MOCK !== 'false'),
   )
   let demoApi = createComplianceDemo()
   let override: ComplianceApi | undefined

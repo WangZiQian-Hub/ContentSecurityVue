@@ -207,6 +207,7 @@ def _run_process_task(task_id: str, total: int):
 def execute_task(
     request: ExecuteTaskRequest,
     http_request: Request,
+    background_tasks: BackgroundTasks,
 ):
     trace_id = (
         http_request.headers.get("X-Request-Id")
@@ -214,6 +215,35 @@ def execute_task(
     )
 
     try:
+        if request.capability_code in {
+            "lineage_audit", "training_monitor", "reasoning_audit",
+            "neuron_audit", "full_chain_audit",
+        }:
+            from app.services.compliance_service import execute_compliance_task
+
+            result = execute_compliance_task(request.capability_code, request.input, trace_id)
+            return success(data=result, message="合规审计任务执行完成", trace_id=trace_id)
+
+        if request.capability_code == "data_ingest":
+            # 连接验证完成后立即返回任务，让前端先展示“等待执行”。实际来源
+            # 读取和后续处理由后台任务完成，避免 HTTP 请求阻塞整个进度过程。
+            result = run_mock_task(
+                request=request,
+                trace_id=trace_id,
+                defer_ingest=True,
+            )
+            background_tasks.add_task(
+                run_mock_task,
+                request=request,
+                trace_id=trace_id,
+                existing_ingest_task_id=result["task_id"],
+            )
+            return success(
+                data=result,
+                message="数据源连接成功，任务等待执行",
+                trace_id=trace_id,
+            )
+
         result = run_mock_task(
             request=request,
             trace_id=trace_id,

@@ -193,6 +193,7 @@ def update(
     for field in (
         "status",
         "dataset_name",
+        "storage_gb",
         "result",
         "finished_at",
         "progress",
@@ -248,6 +249,19 @@ def list_all(
 
         total = len(all_tasks)
         tasks = all_tasks[offset:offset + page_size]
+        # “接入成功”统计的是平台数据库中已完成的数据接入任务数，
+        # 不等同于某一任务本次读取到的记录行数。
+        succeeded_total = 0
+        if capability_code == "data_ingest":
+            succeeded_total = db.scalar(
+                select(func.count())
+                .select_from(Task)
+                .where(
+                    Task.capability_code == "data_ingest",
+                    Task.status == "succeeded",
+                    Task.progress >= 100,
+                )
+            ) or 0
 
         return {
             "items": [task_to_dict(task) for task in tasks],
@@ -259,4 +273,5 @@ def list_all(
                 if total
                 else 0
             ),
+            "succeeded_total": succeeded_total,
         }

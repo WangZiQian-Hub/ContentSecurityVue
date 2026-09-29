@@ -17,6 +17,7 @@ export const useDataResourceStore = defineStore('data-resource', () => {
   const datasetTotal = ref(0)
   const tasks = ref<IngestTask[]>([])
   const taskTotal = ref(0)
+  const succeededTaskTotal = ref(0)
   const loading = ref(false)
   const error = ref('')
   const filterOptions = ref<ResourceFilterOptions>({ languages: [], sources: [], modalities: [] })
@@ -63,6 +64,7 @@ export const useDataResourceStore = defineStore('data-resource', () => {
     if (current === taskRequest) {
       tasks.value = data.items
       taskTotal.value = data.total
+      succeededTaskTotal.value = data.succeededTotal
     }
   }
   const saveDataset = (data: Partial<ResourceDataset>) => api.saveDataset(data)
@@ -78,6 +80,7 @@ export const useDataResourceStore = defineStore('data-resource', () => {
     datasetTotal,
     tasks,
     taskTotal,
+    succeededTaskTotal,
     loading,
     error,
     loadSummary,

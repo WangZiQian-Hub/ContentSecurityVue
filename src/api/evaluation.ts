@@ -1,7 +1,10 @@
 import { request as platformRequest } from './request'
 import { AxiosHeaders, type AxiosRequestConfig } from 'axios'
 import { evaluationDemoApi } from '../mock/evaluation'
-export const isEvaluationDemo = import.meta.env.VITE_EVALUATION_MODE !== 'http'
+// 正式后端模式跟随全局 VITE_USE_MOCK 配置；只有显式 demo 才使用内存示例数据。
+export const isEvaluationDemo =
+  import.meta.env.VITE_EVALUATION_MODE === 'demo' ||
+  (import.meta.env.VITE_EVALUATION_MODE !== 'http' && import.meta.env.VITE_USE_MOCK !== 'false')
 import type {
   Contexts,
   DownloadTicket,

@@ -43,7 +43,12 @@ function detail(metric: Metric) {
 }
 async function create() {
   const metric = await store.write('create-metric', form, (key) => api.createMetric(form, key))
-  if (metric) detail(metric)
+  if (metric) {
+    creating.value = false
+    Object.assign(form, { code: '', name: '', category: 'risk_detect', description: '' })
+    await load(filters.page)
+    detail(metric)
+  }
 }
 async function toggle(metric: Metric) {
   const status = metric.status === 'enabled' ? 'disabled' : 'enabled'

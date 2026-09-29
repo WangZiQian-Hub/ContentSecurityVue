@@ -99,6 +99,7 @@ class CreateTrainingTaskRequest(BaseModel):
     learning_rate: float = Field(gt=0, le=1)
     batch_size: int = Field(ge=1, le=256)
     target_version: str = Field(min_length=1, max_length=100)
+    method: str = Field(default="低秩适配微调", min_length=1, max_length=64)
 
 
 class RegisterModelServiceRequest(BaseModel):
