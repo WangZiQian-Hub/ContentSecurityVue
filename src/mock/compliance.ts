@@ -76,6 +76,36 @@ function datasetLineageCandidates(): C.ContextCandidate[] {
   )
 }
 
+function modelLineageCandidates(): C.ContextCandidate[] {
+  return createModelDemo().models.flatMap((modelAsset) =>
+    modelAsset.versions.map((modelVersion) => ({
+      sourceKind: 'model',
+      sourceId: modelAsset.id,
+      subjectRef: ref(
+        'model',
+        modelAsset.id,
+        modelAsset.id,
+        modelAsset.name,
+        modelVersion.version,
+      ),
+      modelVersion: modelVersion.version,
+      captureId: null,
+      label: `${modelAsset.name} / ${modelVersion.version} · 模型版本`,
+    })),
+  )
+}
+
+function trainingLineageCandidates(): C.ContextCandidate[] {
+  return createModelDemo().training.map((task) => ({
+    sourceKind: 'training_task',
+    sourceId: task.id,
+    subjectRef: ref('training_task', task.id, task.id, task.name, task.id),
+    modelVersion: task.id,
+    captureId: null,
+    label: `${task.name} · 训练任务`,
+  }))
+}
+
 function datasetLineage(): C.LineageNode[] {
   return governanceResources().flatMap((dataset) =>
     dataset.versions.map((version) => ({
@@ -174,7 +204,7 @@ function lineageGraph(): C.Lineage {
       entityId: task.id,
       displayId: task.id,
       label: task.name,
-      versionId: null,
+      versionId: task.id,
     })
     const input = datasetVersionNode(task.datasetId, task.datasetVersion)
     edge(
@@ -716,6 +746,29 @@ export function createComplianceDemo(): ComplianceApi {
         return datasetCandidate
           ? unresolved('resolved', [datasetCandidate])
           : unresolved('not_found')
+      }
+      if (query.sourceKind === 'model' || query.sourceKind === 'training_task') {
+        const typeCandidates =
+          query.sourceKind === 'model' ? modelLineageCandidates() : trainingLineageCandidates()
+        if (query.sourceId === undefined)
+          return unresolved(typeCandidates.length ? 'ambiguous' : 'not_found', typeCandidates)
+        const typeCandidate = typeCandidates.find(
+          (candidate) => String(candidate.sourceId) === String(query.sourceId),
+        )
+        if (typeCandidate && query.sourceKind === 'model')
+          return unresolved(
+            'ambiguous',
+            typeCandidates.filter(
+              (candidate) => String(candidate.sourceId) === String(query.sourceId),
+            ),
+          )
+        if (typeCandidate)
+          return {
+            ...unresolved('resolved', [typeCandidate]),
+            subjectRef: structuredClone(typeCandidate.subjectRef),
+            modelId: query.sourceKind === 'model' ? typeCandidate.sourceId : null,
+            modelVersion: typeCandidate.modelVersion,
+          }
       }
       if (query.sourceId === undefined)
         return unresolved(
