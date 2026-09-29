@@ -1,5 +1,6 @@
 import type * as C from '../types/compliance'
 import type { ComplianceApi } from '../api/compliance'
+import { governanceResources } from './governance-resources'
 import { createModelDemo } from './model-workbench'
 
 // Isolated, deterministic design fixtures. Never a fallback for HTTP failures.
@@ -59,6 +60,33 @@ export const demoLineage: C.Lineage = {
     trainingTaskId: index === 2 ? demoRefs.training : null,
   })),
   gaps: [gap],
+}
+
+function datasetLineageCandidates(): C.ContextCandidate[] {
+  return governanceResources().flatMap((dataset) =>
+    dataset.versions.map((version) => ({
+      sourceKind: 'dataset',
+      sourceId: dataset.id,
+      subjectRef: ref('dataset', dataset.id, version.id, dataset.name, version.id),
+      modelVersion: version.id,
+      captureId: null,
+      label: `${dataset.name} / ${version.id} · 数据版本`,
+    })),
+  )
+}
+
+function datasetLineage(): C.LineageNode[] {
+  return governanceResources().flatMap((dataset) =>
+    dataset.versions.map((version) => ({
+      id: `dataset:${dataset.id}:${version.id}`,
+      type: 'dataset',
+      entityType: 'dataset',
+      entityId: dataset.id,
+      displayId: version.id,
+      label: dataset.name,
+      versionId: version.id,
+    })),
+  )
 }
 export const demoOverview: C.Overview = {
   asOf: time,
@@ -395,6 +423,14 @@ export function createComplianceDemo(): ComplianceApi {
       return clone(demoOverview)
     },
     async lineage(query) {
+      if (query.entityType === 'dataset') {
+        const root = datasetLineage().find(
+          (node) =>
+            String(node.entityId) === String(query.entityId) &&
+            (!query.versionId || query.versionId === node.versionId),
+        )
+        if (root) return clone({ nodes: [root], edges: [], gaps: [] })
+      }
       if (
         !subjects.some(
           (s) =>
@@ -463,6 +499,13 @@ export function createComplianceDemo(): ComplianceApi {
         }
       }
       // Read-only mapping of existing workspace fixture identity. No invented audit/capture links.
+      if (query.sourceKind === 'dataset') {
+        const datasetCandidates = datasetLineageCandidates()
+        return unresolved(
+          datasetCandidates.length ? 'ambiguous' : 'not_found',
+          datasetCandidates,
+        )
+      }
       const existing = createModelDemo()
       const source =
         query.sourceKind === 'model'
