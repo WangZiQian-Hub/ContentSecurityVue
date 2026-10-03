@@ -58,6 +58,7 @@ let resultSeq = 0
 let sampleSeq = 0
 let historySeq = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
+let disposed = false
 const tierNames = { high: '高价值', medium: '中价值', low: '低价值', unavailable: '不可评估' }
 const statusNames = {
   pending: '等待执行',
@@ -249,21 +250,24 @@ async function analyze() {
   const key = scopeKey()
   try {
     const task = await api.createValueTask({ ...scope })
+    if (disposed || key !== scopeKey()) return
     ElMessage.success('分析任务已提交')
     if (key !== scopeKey()) return
     tasks.value = [task]
     clearTimeout(taskTimer)
     const poll = async () => {
-      if (key !== scopeKey()) return
+      if (disposed || key !== scopeKey()) return
       try {
         const updated = await api.getValueTask(task.taskId)
-        if (key !== scopeKey()) return
+        if (disposed || key !== scopeKey()) return
         tasks.value = [updated]
-        if (updated.status === 'pending' || updated.status === 'running') taskTimer = setTimeout(poll, 2000)
+        if (updated.status === 'pending' || updated.status === 'running') {
+          if (!disposed) taskTimer = setTimeout(poll, 2000)
+        }
         else if (updated.status === 'succeeded' && updated.resultId) await loadResult(updated.resultId)
         else if (updated.status === 'failed') ElMessage.error(updated.errorMessage || '分析任务失败')
       } catch (e) {
-        if (key === scopeKey()) ElMessage.error(e instanceof Error ? e.message : String(e))
+        if (!disposed && key === scopeKey()) ElMessage.error(e instanceof Error ? e.message : String(e))
       }
     }
     // 价值分析后端 may complete synchronously (and returns resultId). Load
@@ -326,6 +330,7 @@ async function exportPage() {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 onBeforeUnmount(() => {
+  disposed = true
   clearTimeout(taskTimer)
   ++resultSeq
   ++sampleSeq

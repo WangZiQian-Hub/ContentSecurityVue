@@ -56,7 +56,7 @@ const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
         >
           <AppIcon :name="icons[index]" />{{ tab.title }}
         </router-link>
-        <button v-else type="button" disabled :title="`${tab.title}暂未开放`">
+        <button v-else type="button" disabled>
           <AppIcon :name="icons[index]" />{{ tab.title }}
         </button>
       </template>

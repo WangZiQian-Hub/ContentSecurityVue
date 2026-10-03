@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../../api/data-value', () => api)
 vi.mock('../../api/request', () => ({ isMock: false }))
+vi.mock('../../api/governance-llm', () => ({ isGovernanceLlm: false, getLlmToken: vi.fn() }))
 vi.mock('./components/ValueChart.vue', () => ({ default: { render: () => null } }))
 vi.mock('./components/ValueMetrics.vue', () => ({ default: { render: () => null } }))
 vi.mock('../../components/PanelCard.vue', () => ({ default: { render: () => null } }))
@@ -260,5 +261,36 @@ describe('价值页范围切换与只读解释', () => {
     expect(api.listValueSamples.mock.lastCall?.[0]).toBe('new-result')
     unmount()
   })
+  it('离开页面后在途轮询响应不会续期下一次查询', async () => {
+    vi.useFakeTimers()
+    try {
+      const { state, unmount } = mount()
+      await flush()
+      api.createValueTask.mockResolvedValue({ taskId: 'task', status: 'pending', resultId: null })
+      let resolvePoll!: (value: ValueTask) => void
+      api.getValueTask.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePoll = resolve
+          }),
+      )
+      await state.analyze()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(api.getValueTask).toHaveBeenCalledTimes(1)
+      unmount()
+      resolvePoll({
+        taskId: 'task',
+        name: '分析',
+        createdAt: '2026-09-25',
+        status: 'running',
+        resultId: null,
+      })
+      await flush()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(api.getValueTask).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
-vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), info: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), info: vi.fn(), error: vi.fn() } }))
