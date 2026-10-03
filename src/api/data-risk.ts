@@ -1,4 +1,5 @@
-import { isMock, request } from './request'
+import { isMock as businessMock, request as businessRequest } from './request'
+import { isGovernanceLlm, llmRequest } from './governance-llm'
 import { getGovernanceResources } from './governance-resources'
 import type { PageResult } from '../types'
 import type {
@@ -14,13 +15,16 @@ import type {
 } from '../types/data-risk'
 const kind = 'governance-risk'
 const base = '/data-governance/risk-results'
+const useMock = () => businessMock && !isGovernanceLlm
+const request: typeof businessRequest = isGovernanceLlm ? llmRequest : businessRequest
+const modelScope = (scope: Scope): Scope => ({ ...scope, language: isGovernanceLlm ? 'all' : scope.language })
 const path = (id: string) => `${base}/${encodeURIComponent(id)}`
 const samplePath = (id: string, sample: string) =>
   `${path(id)}/samples/${encodeURIComponent(sample)}`
 const mock = async () => (await import('../mock/data-risk')).riskMock
 export async function getRiskOptions(): Promise<Options> {
   const [options, datasets] = await Promise.all([
-    isMock
+    useMock()
       ? (await mock()).options()
       : request<Options>({ url: '/data-governance/risk-options', params: { kind } }),
     getGovernanceResources(),
@@ -37,7 +41,7 @@ export async function getRiskOptions(): Promise<Options> {
       ...options.defaultScope,
       datasetId: dataset.id,
       versionId: version.id,
-      language: version.languages.some((l) => l.code === options.defaultScope.language)
+      language: isGovernanceLlm ? 'all' : version.languages.some((l) => l.code === options.defaultScope.language)
         ? options.defaultScope.language
         : 'all',
     },
@@ -48,36 +52,36 @@ export async function getRiskOptions(): Promise<Options> {
   }
 }
 export async function getRiskOverview(): Promise<Overview> {
-  return isMock
+  return useMock()
     ? (await mock()).overview()
     : request({ url: '/data-governance/risk-overview', params: { kind } })
 }
 export async function getLatestRisk(scope: Scope): Promise<Result | null> {
-  return isMock
+  return useMock()
     ? (await mock()).latest(scope)
-    : request({ url: `${base}/latest`, params: { kind, ...scope } })
+    : request({ url: `${base}/latest`, params: { kind, ...modelScope(scope) } })
 }
 export async function getRiskResult(id: string): Promise<Result> {
-  return isMock ? (await mock()).result(id) : request({ url: path(id) })
+  return useMock() ? (await mock()).result(id) : request({ url: path(id) })
 }
 export async function listRiskSamples(id: string, q: Query): Promise<PageResult<Sample>> {
-  return isMock
+  return useMock()
     ? (await mock()).samples(id, q)
     : request({ url: `${path(id)}/samples`, params: { ...q } })
 }
 export async function getRiskSample(id: string, sample: string): Promise<Sample> {
-  return isMock ? (await mock()).detail(id, sample) : request({ url: samplePath(id, sample) })
+  return useMock() ? (await mock()).detail(id, sample) : request({ url: samplePath(id, sample) })
 }
 export async function getRiskHistory(scope: Scope): Promise<Result[]> {
-  return isMock ? (await mock()).history(scope) : request({ url: base, params: { kind, ...scope } })
+  return useMock() ? (await mock()).history(scope) : request({ url: base, params: { kind, ...modelScope(scope) } })
 }
 export async function startRisk(scope: Scope): Promise<Task> {
-  if (isMock) return (await mock()).start(scope)
+  if (useMock()) return (await mock()).start(scope)
   return normalizeTask(
     await request<TaskResponse>({
       url: '/data-governance/risk-tasks',
       method: 'POST',
-      data: { kind, name: '内容风险识别与分级', input: scope },
+      data: { kind, name: '内容风险识别与分级', input: modelScope(scope) },
     }),
   )
 }
@@ -88,7 +92,7 @@ function normalizeTask(task: TaskResponse): Task {
   return { ...task, id }
 }
 export async function getRiskTask(id: string): Promise<Task> {
-  if (isMock) return (await mock()).task(id)
+  if (useMock()) return (await mock()).task(id)
   return normalizeTask(
     await request<TaskResponse>({
       url: `/data-governance/risk-tasks/${encodeURIComponent(id)}`,
@@ -103,7 +107,7 @@ export async function reviewRisk(
   input: ReviewInput,
   reviewId?: string,
 ): Promise<Sample> {
-  return isMock
+  return useMock()
     ? (await mock()).review(id, sample, revisionId, input, reviewId)
     : request({
         url: `${samplePath(id, sample)}/reviews`,
@@ -116,12 +120,12 @@ export async function searchRiskKnowledge(
   sample: string,
   keyword: string,
 ): Promise<Rule[]> {
-  return isMock
+  return useMock()
     ? (await mock()).knowledge(id, sample, keyword)
     : request({ url: '/risk-knowledge', params: { resultId: id, sampleId: sample, keyword } })
 }
 export async function exportRiskSamples(id: string, q: Query): Promise<Sample[]> {
-  if (isMock) return (await mock()).export(id, q)
+  if (useMock()) return (await mock()).export(id, q)
   // 由服务端导出当前保存结果下全部匹配记录，不传分页窗口。
   return request({
     url: `${path(id)}/export`,

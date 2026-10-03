@@ -85,9 +85,10 @@ export interface Result {
 }
 export interface Task {
   id: string
-  status: 'running' | 'succeeded' | 'failed'
+  taskId?: string
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
   input: Scope
-  resultId?: string
+  resultId?: string | null
   createdAt: string
   errorMessage?: string
 }

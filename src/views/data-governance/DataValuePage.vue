@@ -5,6 +5,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import ValueMetrics from './components/ValueMetrics.vue'
 import ValueChart from './components/ValueChart.vue'
 import { isMock } from '../../api/request'
+import { getLlmToken, isGovernanceLlm } from '../../api/governance-llm'
 import { languageName } from '../../utils/governance-language'
 import * as api from '../../api/data-value'
 import type {
@@ -56,6 +57,7 @@ const creating = ref(false)
 let resultSeq = 0
 let sampleSeq = 0
 let historySeq = 0
+let taskTimer: ReturnType<typeof setTimeout> | undefined
 const tierNames = { high: '高价值', medium: '中价值', low: '低价值', unavailable: '不可评估' }
 const statusNames = {
   pending: '等待执行',
@@ -102,7 +104,7 @@ const metrics = computed(() => {
   ]
 })
 function resetVersion() {
-  scope.language = languages.value[0]?.code ?? 'all'
+  scope.language = isGovernanceLlm ? 'all' : languages.value[0]?.code ?? 'all'
 }
 function resetDataset() {
   scope.versionId = versions.value[0]?.id ?? ''
@@ -177,6 +179,7 @@ async function loadResult(id?: string) {
   }
 }
 watch(scopeKey, () => {
+  clearTimeout(taskTimer)
   historyOpen.value = false
   historyLoading.value = false
   historyFailed.value = false
@@ -234,7 +237,11 @@ async function showHistory() {
 }
 async function analyze() {
   if (!ready.value || creating.value) return
-  if (isMock) {
+  if (isGovernanceLlm && !getLlmToken()) {
+    ElMessage.error('请先填写模型访问令牌')
+    return
+  }
+  if (isMock && !isGovernanceLlm) {
     ElMessage.info('示例模式展示已有结果；重新分析需连接后端服务。')
     return
   }
@@ -245,6 +252,20 @@ async function analyze() {
     ElMessage.success('分析任务已提交')
     if (key !== scopeKey()) return
     tasks.value = [task]
+    clearTimeout(taskTimer)
+    const poll = async () => {
+      if (key !== scopeKey()) return
+      try {
+        const updated = await api.getValueTask(task.taskId)
+        if (key !== scopeKey()) return
+        tasks.value = [updated]
+        if (updated.status === 'pending' || updated.status === 'running') taskTimer = setTimeout(poll, 2000)
+        else if (updated.status === 'succeeded' && updated.resultId) await loadResult(updated.resultId)
+        else if (updated.status === 'failed') ElMessage.error(updated.errorMessage || '分析任务失败')
+      } catch (e) {
+        if (key === scopeKey()) ElMessage.error(e instanceof Error ? e.message : String(e))
+      }
+    }
     // 价值分析后端 may complete synchronously (and returns resultId). Load
     // that immutable snapshot immediately so the current page reflects the
     // analysis instead of leaving the user in the empty initial state.
@@ -252,6 +273,7 @@ async function analyze() {
       await loadResult(task.resultId)
       return
     }
+    if (task.status === 'pending' || task.status === 'running') taskTimer = setTimeout(poll, 2000)
     historyOpen.value = true
   } catch {
     /* 请求层统一展示错误。 */
@@ -260,7 +282,7 @@ async function analyze() {
   }
 }
 async function refreshTask(task: ValueTask) {
-  if (isMock) return
+  if (isMock && !isGovernanceLlm) return
   const key = scopeKey()
   try {
     const updated = await api.getValueTask(task.taskId)
@@ -279,15 +301,18 @@ function openHistoryResult(id: string) {
   historyOpen.value = false
   void loadResult(id)
 }
-function exportPage() {
+async function exportPage() {
   const cell = (value: unknown) => {
     let text = String(value ?? '')
     if (/^[=+@-]/.test(text)) text = `'${text}`
     return `"${text.replaceAll('"', '""')}"`
   }
+  const exportRows = result.value
+    ? await api.exportValueSamples(result.value.id, { ...query, page: 1, pageSize: 100 })
+    : rows.value
   const content = [
     ['样本ID', '语料摘要', '语种', '综合评分', '价值档位'],
-    ...rows.value.map((row) => [row.id, row.text, row.language, row.score, tierNames[row.tier]]),
+    ...exportRows.map((row) => [row.id, row.text, row.language, row.score, tierNames[row.tier]]),
   ]
     .map((row) => row.map(cell).join(','))
     .join('\r\n')
@@ -296,11 +321,12 @@ function exportPage() {
   )
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `${isMock ? '示例-' : ''}语料价值明细-第${query.page}页.csv`
+  anchor.download = `${isMock && !isGovernanceLlm ? '示例-' : ''}语料价值明细-全部.csv`
   anchor.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 onBeforeUnmount(() => {
+  clearTimeout(taskTimer)
   ++resultSeq
   ++sampleSeq
   ++historySeq
@@ -336,7 +362,7 @@ onMounted(loadOptions)
               :value="item.id" /></el-select
         ></label>
         <label
-          >语种<el-select v-model="scope.language"
+          >语种<el-select v-model="scope.language" :disabled="isGovernanceLlm"
             ><el-option label="全部语种" value="all" /><el-option
               v-for="item in languages"
               :key="item.code"
@@ -464,7 +490,7 @@ onMounted(loadOptions)
           aria-label="搜索语料明细"
           @change="search"
         /><el-button type="primary" :disabled="!rows.length || sampleLoading" @click="exportPage"
-          >导出本页</el-button
+          >导出全部</el-button
         >
       </div>
       <el-tag v-if="query.bin" closable class="bin-tag" @close="chooseBin('')"

@@ -55,7 +55,7 @@ export interface Result {
 export interface Task {
   taskId: string
   input: Scope
-  status: 'running' | 'succeeded' | 'failed'
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
   resultId?: string
   createdAt: string
   coverage: number

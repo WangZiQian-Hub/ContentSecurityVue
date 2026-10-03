@@ -1,4 +1,5 @@
-import { isMock, request } from './request'
+import { isMock as businessMock, request as businessRequest } from './request'
+import { isGovernanceLlm, llmRequest } from './governance-llm'
 import { getGovernanceResources } from './governance-resources'
 import { latestDemoResult, savedDemoResult, valueOptions } from '../mock/data-value'
 import { getResourceSamples } from './data-resource'
@@ -12,10 +13,13 @@ import type {
   ValueTask,
 } from '../types/data-value'
 import type { PageResult } from '../types'
+const useMock = () => businessMock && !isGovernanceLlm
+const request: typeof businessRequest = isGovernanceLlm ? llmRequest : businessRequest
+const modelScope = (scope: ValueScope): ValueScope => ({ ...scope, language: isGovernanceLlm ? 'all' : scope.language })
 
 export async function getValueOptions(): Promise<ValueOptions> {
   const [options, datasets] = await Promise.all([
-    isMock
+    useMock()
       ? structuredClone(valueOptions)
       : request<ValueOptions>({ url: '/data-governance/options', params: { kind: VALUE_KIND } }),
     getGovernanceResources(),
@@ -23,12 +27,13 @@ export async function getValueOptions(): Promise<ValueOptions> {
   return { ...options, datasets }
 }
 export async function getLatestValueResult(scope: ValueScope): Promise<ValueResult | null> {
-  return isMock
+  const input = modelScope(scope)
+  return useMock()
     ? latestDemoResult(scope)
-    : request({ url: '/data-governance/value-results/latest', params: scope })
+    : request({ url: '/data-governance/value-results/latest', params: input })
 }
 export async function getValueResult(id: string): Promise<ValueResult> {
-  return isMock
+  return useMock()
     ? savedDemoResult(id).result
     : request({ url: `/data-governance/value-results/${encodeURIComponent(id)}` })
 }
@@ -36,7 +41,7 @@ export async function listValueSamples(
   id: string,
   query: ValueSampleQuery,
 ): Promise<PageResult<ValueSample>> {
-  if (!isMock) {
+  if (!useMock()) {
     const [result, page] = await Promise.all([
       getValueResult(id),
       request<PageResult<ValueSample>>({
@@ -44,6 +49,15 @@ export async function listValueSamples(
         params: query,
       }),
     ])
+    if (isGovernanceLlm) {
+      if (page.items.some((row) => {
+        const item = row as ValueSample & { datasetId?: number; versionId?: string }
+        return (item.datasetId != null && item.datasetId !== result.scope.datasetId) ||
+          (item.versionId != null && item.versionId !== result.scope.versionId)
+      }))
+        throw new Error('评分样本与数据资源版本不一致')
+      return page
+    }
     const resources = await getResourceSamples(
       result.scope.datasetId,
       result.scope.versionId,
@@ -94,8 +108,8 @@ export async function listValueSamples(
   }
 }
 export async function listValueTasks(scope: ValueScope): Promise<PageResult<ValueTask>> {
-  if (!isMock)
-    return request({ url: '/tasks', params: { kind: VALUE_KIND, ...scope, page: 1, pageSize: 20 } })
+  if (!useMock())
+    return request({ url: '/tasks', params: { kind: VALUE_KIND, ...modelScope(scope), page: 1, pageSize: 20 } })
   const result = latestDemoResult(scope)
   return {
     items: result
@@ -134,10 +148,11 @@ export async function exportValueSamples(
   }
 }
 export function createValueTask(scope: ValueScope): Promise<ValueTask> {
+  const input = modelScope(scope)
   return request({
     url: '/tasks',
     method: 'POST',
-    data: { kind: VALUE_KIND, name: '数据价值分析', input: scope },
+    data: { kind: VALUE_KIND, name: '数据价值分析', input },
   })
 }
 export function getValueTask(taskId: string): Promise<ValueTask> {

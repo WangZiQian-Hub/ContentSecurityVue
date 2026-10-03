@@ -6,6 +6,7 @@ import { languageName } from '../../utils/governance-language'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
 import * as api from '../../api/data-anomaly'
+import { isGovernanceLlm } from '../../api/governance-llm'
 import type {
   ChangeSet,
   Options,
@@ -157,7 +158,10 @@ async function loadScope() {
   error.value = ''
   const input = snapshot()
   try {
-    const [r, c] = await Promise.all([api.getLatestAnomaly(input), api.getAnomalyChangeSet(input)])
+    const [r, c] = await Promise.all([
+      api.getLatestAnomaly(input),
+      isGovernanceLlm ? Promise.resolve(undefined) : api.getAnomalyChangeSet(input),
+    ])
     if (ticket !== generation) return
     assertResultScope(r, input)
     result.value = r
@@ -174,7 +178,7 @@ function changeDataset() {
   changeVersion()
 }
 function changeVersion() {
-  scope.language = version.value?.languages[0]?.code || 'all'
+  scope.language = isGovernanceLlm ? 'all' : version.value?.languages[0]?.code || 'all'
   void loadScope()
 }
 function filter(status = '', type = query.type) {
@@ -189,7 +193,10 @@ async function refresh(sampleId?: string) {
   const id = result.value?.id,
     ticket = generation
   if (!id) return
-  const [r, c] = await Promise.all([api.getAnomalyResult(id), api.getAnomalyChangeSet(snapshot())])
+  const [r, c] = await Promise.all([
+    api.getAnomalyResult(id),
+    isGovernanceLlm ? Promise.resolve(undefined) : api.getAnomalyChangeSet(snapshot()),
+  ])
   if (ticket !== generation) return
   result.value = r
   changeSet.value = c
@@ -229,7 +236,7 @@ async function start() {
         const t = await api.getAnomalyTask(taskId)
         if (ticket !== generation) return
         task.value = t
-        if (t.status === 'running') timer = setTimeout(poll, 1000)
+        if (t.status === 'pending' || t.status === 'running') timer = setTimeout(poll, 2000)
         else if (t.status === 'succeeded' && t.resultId) {
           const saved = await api.getAnomalyResult(t.resultId)
           if (ticket === generation) {
@@ -243,7 +250,7 @@ async function start() {
         if (ticket === generation) error.value = String(e)
       }
     }
-    timer = setTimeout(poll, 1000)
+    timer = setTimeout(poll, 2000)
   })
 }
 async function openHistory() {
@@ -351,6 +358,7 @@ onMounted(() =>
     options.value = await api.getAnomalyOptions()
     if (!dataset.value) scope.datasetId = options.value.datasets[0]!.id
     scope.versionId = dataset.value!.versions[0]!.id
+    scope.language = isGovernanceLlm ? 'all' : dataset.value!.versions[0]!.languages[0]?.code || 'all'
     scope.schemeId = options.value.schemes[0]!.id
     await loadScope()
   }),
@@ -390,7 +398,7 @@ watch(
               :value="v.id" /></el-select
         ></label>
         <label
-          >语种<el-select v-model="scope.language" :disabled="busy" @change="loadScope"
+          >语种<el-select v-model="scope.language" :disabled="busy || isGovernanceLlm" @change="loadScope"
             ><el-option label="全部语种" value="all" /><el-option
               v-for="l in version?.languages"
               :key="l.code"
@@ -640,15 +648,15 @@ watch(
             /><el-button
               :disabled="busy || !selected.actions.includes('generate')"
               @click="act('generate')"
-              >重新生成建议</el-button
+              v-if="!isGovernanceLlm">重新生成建议</el-button
             ><el-button
               type="primary"
               :disabled="busy || !selected.actions.includes('submit')"
               @click="act('submit')"
-              >提交复核</el-button
+              v-if="!isGovernanceLlm">提交复核</el-button
             ><el-button link type="primary" @click="drawer = '处理时间线'">查看修复记录</el-button
             ><el-button
-              v-if="selected.actions.includes('approve')"
+              v-if="selected.actions.includes('approve') && !isGovernanceLlm"
               :disabled="busy"
               @click="drawer = '人工复核'"
               >人工复核</el-button
@@ -658,7 +666,7 @@ watch(
           ><el-button
             :disabled="busy || !selected.actions.includes('generate')"
             @click="act('generate')"
-            >生成建议</el-button
+            v-if="!isGovernanceLlm">生成建议</el-button
           ></template
         ><el-empty v-else description="选择样本查看字段级修复候选" :image-size="50"
       /></PanelCard>
@@ -685,7 +693,7 @@ watch(
             type="primary"
             :disabled="busy || !changeSet.actions.includes('publish')"
             @click="preparePublish"
-            >生成新版本</el-button
+            v-if="!isGovernanceLlm">生成新版本</el-button
           >
         </div>
         <p class="anomaly-note">
@@ -763,7 +771,7 @@ watch(
           ><el-table-column label="操作"
             ><template #default="{ row }"
               ><el-button link type="danger" :disabled="busy" @click="remove(row.candidateId)"
-                >移除条目</el-button
+                v-if="!isGovernanceLlm">移除条目</el-button
               ></template
             ></el-table-column
           ></el-table
@@ -800,15 +808,15 @@ watch(
             type="primary"
             :disabled="busy || !selected?.actions.includes('approve')"
             @click="act('approve').then(() => (drawer = ''))"
-            >审核通过</el-button
+            v-if="!isGovernanceLlm">审核通过</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('reject')"
             @click="act('reject').then(() => (drawer = ''))"
-            >驳回</el-button
+            v-if="!isGovernanceLlm">驳回</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('withdraw')"
             @click="act('withdraw').then(() => (drawer = ''))"
-            >撤回复核</el-button
+            v-if="!isGovernanceLlm">撤回复核</el-button
           >
         </div></template
       >

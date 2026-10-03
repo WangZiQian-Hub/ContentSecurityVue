@@ -6,6 +6,7 @@ import { languageName } from '../../utils/governance-language'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
 import * as api from '../../api/data-risk'
+import { isGovernanceLlm } from '../../api/governance-llm'
 import type {
   Options,
   Query,
@@ -186,7 +187,7 @@ async function start() {
         const next = await api.getRiskTask(t.id)
         if (ticket !== generation) return
         task.value = next
-        if (next.status === 'running') timer = setTimeout(poll, 1000)
+        if (next.status === 'pending' || next.status === 'running') timer = setTimeout(poll, 2000)
         else if (next.status === 'succeeded' && next.resultId) {
           const saved = await api.getRiskResult(next.resultId)
           if (ticket !== generation) return
@@ -386,7 +387,7 @@ onBeforeUnmount(() => {
               :label="v.id" /></el-select
         ></label>
         <label
-          >语种<el-select v-model="scope.language" :disabled="busy" @change="loadScope"
+          >语种<el-select v-model="scope.language" :disabled="busy || isGovernanceLlm" @change="loadScope"
             ><el-option label="全部语种" value="all" /><el-option
               v-for="l in version?.languages"
               :key="l"
@@ -625,7 +626,7 @@ onBeforeUnmount(() => {
                 busy || !selected.actions.some((a) => ['viewReview', 'createReview'].includes(a))
               "
               @click="openReview"
-              >{{ selected.review ? '查看复核' : '发起复核' }}</el-button
+              v-if="!isGovernanceLlm">{{ selected.review ? '查看复核' : '发起复核' }}</el-button
             ><el-button @click="drawer = '原始样本（只读）'">原始样本</el-button>
           </div> </template
         ><el-empty v-else description="选择样本查看已保存证据" :image-size="60" />
@@ -854,7 +855,7 @@ onBeforeUnmount(() => {
             type="primary"
             :loading="busy"
             :disabled="!review.opinion.trim() || !review.reviewer"
-            >{{ selected.review ? '提交人工结论' : '创建复核工单' }}</el-button
+            v-if="!isGovernanceLlm">{{ selected.review ? '提交人工结论' : '创建复核工单' }}</el-button
           >
         </el-form>
       </template>
