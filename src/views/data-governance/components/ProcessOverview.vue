@@ -5,7 +5,12 @@ import { formatProcessKpi, processKpiDescriptions } from '../../../utils/process
 </script>
 
 <template>
-  <KpiStrip :kind="PROCESS_KIND" hide-comparison :title-descriptions="processKpiDescriptions">
+  <KpiStrip
+    class="governance-kpi-strip"
+    :kind="PROCESS_KIND"
+    hide-comparison
+    :title-descriptions="processKpiDescriptions"
+  >
     <template #value="{ item, items }">
       <span
         :title="item.id === 'process-2' ? `${item.value.toLocaleString('zh-CN')} 条次` : undefined"

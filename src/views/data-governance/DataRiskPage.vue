@@ -429,9 +429,6 @@ onBeforeUnmount(() => {
           <span>当前风险候选</span
           ><strong>{{ result.riskCount.toLocaleString() }}<small>条</small></strong>
         </button>
-        <div>
-          <span>风险占比</span><strong>{{ result.ratio.toFixed(1) }}<small>%</small></strong>
-        </div>
         <button :class="{ active: query.level === 'HIGH' }" @click="filter('HIGH')">
           <span>高风险样本</span
           ><strong class="danger">{{ result.highCount.toLocaleString() }}<small>条</small></strong>
@@ -440,6 +437,9 @@ onBeforeUnmount(() => {
           <span>待人工复核</span
           ><strong>{{ result.pendingCount.toLocaleString() }}<small>条</small></strong>
         </button>
+        <div>
+          <span>风险占比</span><strong>{{ result.ratio.toFixed(1) }}<small>%</small></strong>
+        </div>
       </div>
       <p v-if="result" class="risk-note">
         已复核 {{ result.reviewedCount }} · 无法判断 {{ result.unassessableCount }} · 检测失败
@@ -662,8 +662,13 @@ onBeforeUnmount(() => {
       </div>
       <el-empty v-else description="选择风险样本后展示命中知识" :image-size="45" />
     </PanelCard>
-    <el-drawer :model-value="!!drawer" :title="drawer" size="min(700px, 94vw)" @close="drawer = ''">
-      <template v-if="drawer === '分级标准'"
+    <el-drawer
+      :model-value="!!drawer"
+      :class="{ 'governance-history-drawer': drawer === '历史结果' }"
+      :title="drawer"
+      size="min(700px, 94vw)"
+      @close="drawer = ''"
+      ><template v-if="drawer === '分级标准'"
         ><h3>{{ scheme?.name }}</h3>
         <p v-for="l in scheme?.levels" :key="l.level">
           <b :style="{ color: l.color }">{{ l.label }}</b
@@ -675,7 +680,7 @@ onBeforeUnmount(() => {
         </p></template
       >
       <template v-else-if="drawer === '历史结果'"
-        ><el-table :data="history" empty-text="当前固定条件无历史结果"
+        ><el-table class="history-table" :data="history" empty-text="当前固定条件无历史结果"
           ><el-table-column prop="finishedAt" label="完成时间" min-width="190" /><el-table-column
             prop="riskCount"
             label="风险候选"
@@ -890,15 +895,14 @@ onBeforeUnmount(() => {
   gap: 12px;
   font-size: 16px;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: center;
 }
 .risk-controls label {
   display: flex;
-  flex-direction: column;
-  gap: 7px;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 700;
-  color: #6682a5;
 }
 /* 右侧风险等级标签文字 */
 .risk-selected :deep(.el-tag__content) {
@@ -910,6 +914,9 @@ onBeforeUnmount(() => {
 }
 .risk-controls .el-select {
   width: 155px;
+}
+.risk-controls .el-button {
+  font-size: 16px;
 }
 .risk-controls label:first-child .el-select,
 .risk-controls label:nth-child(4) .el-select {
@@ -1045,6 +1052,9 @@ onBeforeUnmount(() => {
 .risk-selected b {
   font-size: 16px;
   overflow-wrap: anywhere;
+}
+.history-table :deep(th.el-table__cell .cell) {
+  font-weight: 700;
 }
 blockquote {
   margin: 14px 0;

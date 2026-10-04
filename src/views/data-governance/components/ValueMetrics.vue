@@ -1,79 +1,62 @@
 <script setup lang="ts">
-import AppIcon from '../../../components/AppIcon.vue'
+// 指标条外观与"异常数据治理""风险识别与分级"两页保持一致：浅蓝底扁平格子，不再使用圆形图标。
 defineProps<{
   items: { label: string; value: number | null; unit: string; note: string; icon: string }[]
 }>()
 </script>
 <template>
   <div class="value-metrics">
-    <article v-for="(item, index) in items" :key="item.label">
-      <div class="value-icon" :class="`tone-${index}`"><AppIcon :name="item.icon" /></div>
-      <div>
-        <h3>{{ item.label }}</h3>
-        <strong
-          >{{
-            item.value === null
-              ? '—'
-              : item.value.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
-          }}
-          <small>{{ item.unit }}</small></strong
-        >
-        <p>{{ item.note }}</p>
-      </div>
-    </article>
+    <div v-for="item in items" :key="item.label">
+      <span>{{ item.label }}</span>
+      <strong
+        >{{
+          item.value === null
+            ? '—'
+            : item.value.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
+        }}
+        <small>{{ item.unit }}</small></strong
+      >
+      <p v-if="item.value !== null">{{ item.note }}</p>
+    </div>
   </div>
 </template>
 <style scoped>
 .value-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: -15px;
+  gap: 12px;
+  margin-top: 14px;
 }
-article {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 16px;
-  background: white;
-  border: 1px solid #e1efff;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px #157aff09;
+.value-metrics > div {
   min-width: 0;
+  border-radius: 7px;
+  background: #f4f8fe;
+  border: 1px solid #e7effb;
+  padding: 15px 20px;
+  text-align: left;
+  color: #587398;
+  font: inherit;
 }
-.value-icon {
-  flex: 0 0 60px;
-  height: 60px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #d7eaff;
-  color: #087bff;
-  font-size: 35px;
-}
-.tone-1 {
-  background: #d1f8ec;
-  color: #00b784;
-}
-.tone-3 {
-  background: #e9deff;
-  color: #8755ed;
-}
-h3 {
-  margin: 0 0 5px;
-  font-size: 18px;
-  color: #173774;
-}
-strong {
-  color: #082b83;
-  font-size: 28px;
-}
-small {
+.value-metrics span {
+  display: inline;
   font-size: 16px;
+  font-weight: 700;
 }
-p {
-  margin: 5px 0 0;
-  font-size: 14px;
+.value-metrics strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 28px;
+  color: #113d7c;
+}
+.value-metrics small {
+  margin-left: 7px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.value-metrics p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
   color: #6e85ab;
   line-height: 1.5;
 }

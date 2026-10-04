@@ -192,6 +192,18 @@ async function submit() {
     ElMessage.warning('请填写要接入的数据表，或提供只读 SELECT 查询')
     return
   }
+  if (!form.sourceName.trim() && !form.owner.trim()) {
+    ElMessage.warning('请填写来源名称和数据所有者')
+    return
+  }
+  if (!form.sourceName.trim()) {
+    ElMessage.warning('请填写来源名称')
+    return
+  }
+  if (!form.owner.trim()) {
+    ElMessage.warning('请填写数据所有者')
+    return
+  }
   if (isMock) {
     ElMessage.info('当前为示例模式。文件尚未上传，任务执行需连接真实后端。')
     return
@@ -217,11 +229,11 @@ async function submit() {
         languages: [...form.languages],
         modalities: [...form.modalities],
         files: fileIds,
-        sourceName: form.sourceName,
+        sourceName: form.sourceName.trim(),
         sourceAddress: form.sourceAddress || null,
         sourceTable: form.sourceTable || null,
         sourceQuery: form.sourceQuery || null,
-        owner: form.owner,
+        owner: form.owner.trim(),
       },
       config: {
         removeEmpty: form.removeEmpty,
@@ -360,7 +372,7 @@ onMounted(async () => {
             </div>
           </div>
           <div>
-            <el-form-item label="来源名称"
+            <el-form-item label="来源名称" required
               ><el-input v-model="form.sourceName" placeholder="请输入来源名称" /></el-form-item
             ><el-form-item v-if="source !== 'file'" :label="selectedSource.addressLabel" required
               ><el-input
@@ -378,8 +390,8 @@ onMounted(async () => {
                 <el-input v-model="form.sourceQuery" type="textarea" :rows="3" placeholder="SELECT id, content FROM orders" />
               </el-form-item>
             </template>
-            ><el-form-item label="数据所有者"
-              ><el-input v-model="form.owner" placeholder="请输入数据所有者"
+            <el-form-item label="数据所有者" required>
+              <el-input v-model="form.owner" placeholder="请输入数据所有者"
             /></el-form-item>
           </div>
         </div>

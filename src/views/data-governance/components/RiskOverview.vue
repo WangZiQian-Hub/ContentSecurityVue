@@ -28,7 +28,9 @@ onMounted(async () => {
         <div>
           <h3>{{ card.label }}</h3>
           <strong>{{ card.value.toLocaleString() }} <small>条</small></strong>
-          <p>总体口径与纳入记录 ›</p>
+        </div>
+        <div class="mini-bars" aria-hidden="true">
+          <i v-for="bar in 5" :key="bar" :style="{ height: `${bar * 6 + 6}px` }"></i>
         </div>
       </button>
     </div>

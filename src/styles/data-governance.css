@@ -85,7 +85,7 @@
   background: #ffffffd9;
   border-radius: 8px;
   padding: 0 15px;
-  margin-bottom: 0px;
+  margin-bottom: 10px;
 }
 .governance-tabs > a,
 .governance-tabs > button {
@@ -378,6 +378,14 @@
 }
 .process-history-drawer .el-pagination {
   --el-pagination-font-size: 17px;  /*下方页码*/
+}
+/* 异常治理 / 风险识别 / 数据价值三个页面的"历史结果"抽屉：标题字号与标题到内容的距离 */
+.governance-history-drawer .el-drawer__title {
+  font-size: 18px; /* 标题字号 */
+  font-weight: 600;
+}
+.governance-history-drawer .el-drawer__header {
+  margin-bottom: 0px; /* 标题与下方表格的距离（Element Plus 默认 32px） */
 }
 .governance-dialog .el-descriptions {
   margin-bottom: 20px;

@@ -54,9 +54,14 @@ const historyLoading = ref(false)
 const historyFailed = ref(false)
 const tasks = ref<ValueTask[]>([])
 const creating = ref(false)
+const taskOpen = ref(false)
+const taskLoading = ref(false)
+const taskFailed = ref(false)
+const taskStatus = ref('')
 let resultSeq = 0
 let sampleSeq = 0
 let historySeq = 0
+let taskSeq = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 let disposed = false
 const tierNames = { high: '高价值', medium: '中价值', low: '低价值', unavailable: '不可评估' }
@@ -105,7 +110,7 @@ const metrics = computed(() => {
   ]
 })
 function resetVersion() {
-  scope.language = isGovernanceLlm ? 'all' : languages.value[0]?.code ?? 'all'
+  scope.language = isGovernanceLlm ? 'all' : (languages.value[0]?.code ?? 'all')
 }
 function resetDataset() {
   scope.versionId = versions.value[0]?.id ?? ''
@@ -236,6 +241,30 @@ async function showHistory() {
     if (seq === historySeq) historyLoading.value = false
   }
 }
+async function showTaskDetail() {
+  const id = result.value?.taskId
+  if (!id) return
+  taskOpen.value = true
+  taskLoading.value = true
+  taskFailed.value = false
+  const seq = ++taskSeq
+  try {
+    const task = await api.getValueTask(id)
+    if (seq === taskSeq) taskStatus.value = statusNames[task.status]
+  } catch {
+    if (seq === taskSeq) taskFailed.value = true
+  } finally {
+    if (seq === taskSeq) taskLoading.value = false
+  }
+}
+function upsertTask(task: ValueTask) {
+  // 历史结果列表：同一任务就地更新状态，新任务置顶；最多保留 20 条，与抽屉底部说明一致。
+  const index = tasks.value.findIndex((item) => item.taskId === task.taskId)
+  tasks.value =
+    index >= 0
+      ? tasks.value.map((item) => (item.taskId === task.taskId ? task : item))
+      : [task, ...tasks.value].slice(0, 20)
+}
 async function analyze() {
   if (!ready.value || creating.value) return
   if (isGovernanceLlm && !getLlmToken()) {
@@ -253,21 +282,23 @@ async function analyze() {
     if (disposed || key !== scopeKey()) return
     ElMessage.success('分析任务已提交')
     if (key !== scopeKey()) return
-    tasks.value = [task]
+    upsertTask(task)
     clearTimeout(taskTimer)
     const poll = async () => {
       if (disposed || key !== scopeKey()) return
       try {
         const updated = await api.getValueTask(task.taskId)
         if (disposed || key !== scopeKey()) return
-        tasks.value = [updated]
+        upsertTask(updated)
         if (updated.status === 'pending' || updated.status === 'running') {
           if (!disposed) taskTimer = setTimeout(poll, 2000)
-        }
-        else if (updated.status === 'succeeded' && updated.resultId) await loadResult(updated.resultId)
-        else if (updated.status === 'failed') ElMessage.error(updated.errorMessage || '分析任务失败')
+        } else if (updated.status === 'succeeded' && updated.resultId)
+          await loadResult(updated.resultId)
+        else if (updated.status === 'failed')
+          ElMessage.error(updated.errorMessage || '分析任务失败')
       } catch (e) {
-        if (!disposed && key === scopeKey()) ElMessage.error(e instanceof Error ? e.message : String(e))
+        if (!disposed && key === scopeKey())
+          ElMessage.error(e instanceof Error ? e.message : String(e))
       }
     }
     // 价值分析后端 may complete synchronously (and returns resultId). Load
@@ -341,7 +372,7 @@ onMounted(loadOptions)
 <template>
   <div class="value-page">
     <PanelCard title="当前数据集分析" icon="DataAnalysis">
-      <template #extra><span class="muted value-panel-note">下方结果随分析范围变化</span></template>
+      <template #extra><span class="muted value-panel-note"></span></template>
       <el-alert v-if="optionsFailed" title="分析选项加载失败" type="error" :closable="false"
         ><el-button link @click="loadOptions">重试</el-button></el-alert
       >
@@ -396,7 +427,7 @@ onMounted(loadOptions)
           >当前结果：{{ result.versionLabel }} / {{ result.languageName }} /
           {{ result.schemeName }} · 分析时间 ·
           {{ new Date(result.finishedAt).toLocaleString('zh-CN') }}</span
-        ><el-button link type="primary" @click="showHistory">查看任务 ›</el-button>
+        ><el-button link type="primary" @click="showTaskDetail">查看任务 ›</el-button>
       </div>
       <div v-else class="muted">
         {{
@@ -407,11 +438,11 @@ onMounted(loadOptions)
               : '当前范围尚未分析'
         }}
       </div>
+      <ValueMetrics :items="metrics" />
       <el-alert v-if="resultFailed" title="分析结果加载失败，请重试" type="error" :closable="false"
         ><el-button link @click="loadResult()">重试</el-button></el-alert
       >
     </PanelCard>
-    <ValueMetrics :items="metrics" />
     <div v-if="result" class="value-charts">
       <PanelCard title="多维价值画像" icon="Odometer"
         ><template #extra
@@ -601,7 +632,11 @@ onMounted(loadOptions)
         <p class="muted">解释仅针对本样本，评分方案：{{ result?.schemeName }}。</p></template
       ></el-drawer
     >
-    <el-dialog v-model="historyOpen" title="当前分析范围 · 最近分析任务" width="min(850px, 95vw)"
+    <el-drawer
+      v-model="historyOpen"
+      class="governance-history-drawer"
+      title="当前分析范围 · 最近分析任务"
+      size="min(720px, 90vw)"
       ><el-alert v-if="historyFailed" title="任务记录加载失败" type="error" :closable="false"
         ><el-button link @click="showHistory">重试</el-button></el-alert
       ><el-table v-loading="historyLoading" :data="tasks" empty-text="当前范围暂无分析任务"
@@ -634,8 +669,23 @@ onMounted(loadOptions)
           ></el-table-column
         ></el-table
       >
-      <p class="muted">最多展示当前范围最近 20 个任务；进行中的任务可手动刷新状态。</p></el-dialog
+      <p class="muted">最多展示当前范围最近 20 个任务；进行中的任务可手动刷新状态。</p></el-drawer
     >
+    <el-drawer v-model="taskOpen" title="任务详情" size="min(720px, 90vw)">
+      <el-descriptions v-loading="taskLoading" :column="1" border>
+        <el-descriptions-item label="任务ID">{{ result?.taskId }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{
+          taskFailed ? '—' : taskStatus || '查询中…'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="数据集">{{ result?.datasetName }}</el-descriptions-item>
+        <el-descriptions-item label="固定版本">{{ result?.versionLabel }}</el-descriptions-item>
+        <el-descriptions-item label="语种">{{ result?.languageName }}</el-descriptions-item>
+        <el-descriptions-item label="方案">{{ result?.schemeName }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ result?.finishedAt }}</el-descriptions-item>
+        <el-descriptions-item label="结果ID">{{ result?.id || '尚未生成' }}</el-descriptions-item>
+      </el-descriptions>
+      <p>输入为固定数据版本与方案；详情仅读取已保存证据。</p>
+    </el-drawer>
   </div>
 </template>
 <style scoped>
@@ -693,16 +743,14 @@ onMounted(loadOptions)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  background: #edf6ff;
-  padding: 5px 10px;
-  margin-top: 10px;
-  font-size: 15px;
-  color: #31588d;
-  border-radius: 5px;
+  background: #eaf5ff;
+  padding: 10px 14px;
+  margin: 16px 0;
+  font-size: 16px;
+  border-radius: 6px;
 }
 .value-result-line .el-button {
-  font-size: 15px;
+  font-size: 16px;
 }
 .value-charts {
   display: grid;

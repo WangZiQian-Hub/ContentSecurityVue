@@ -53,10 +53,34 @@ const rules = computed(() =>
 const metrics = computed(() =>
   result.value
     ? [
-        { label: '当前异常', value: result.value.anomalyCount, status: '' },
-        { label: '异常占比', value: `${result.value.ratio.toFixed(2)}%` },
-        { label: '待处理', value: result.value.pendingCount, status: '待处理' },
-        { label: '待复核', value: result.value.reviewCount, status: '待复核' },
+        {
+          label: '当前异常',
+          value: result.value.anomalyCount.toLocaleString(),
+          unit: '条',
+          status: '',
+          active: !query.status,
+        },
+        {
+          label: '待处理',
+          value: result.value.pendingCount.toLocaleString(),
+          unit: '条',
+          status: '待处理',
+          active: query.status === '待处理',
+        },
+        {
+          label: '待复核',
+          value: result.value.reviewCount.toLocaleString(),
+          unit: '条',
+          status: '待复核',
+          active: query.status === '待复核',
+        },
+        {
+          label: '异常占比',
+          value: result.value.ratio.toFixed(2),
+          unit: '%',
+          status: undefined,
+          active: false,
+        },
       ]
     : [],
 )
@@ -448,18 +472,19 @@ watch(
         >查看当前任务详情</el-button
       >
       <template v-if="result"
-        ><div class="anomaly-metrics">
+        ><div class="anomaly-metrics result-cards">
           <button
             v-for="m in metrics"
             :key="m.label"
+            :class="{ active: m.active }"
             :disabled="m.status === undefined"
             @click="filter(m.status)"
           >
             <span>{{ m.label }}</span
-            ><strong>{{ m.value }}</strong>
+            ><strong>{{ m.value }}<small>{{ m.unit }}</small></strong>
           </button>
         </div>
-        <p class="anomaly-note">
+        <p class="anomaly-note result-note">
           失败 {{ result.failedCount }} · 不可评估 {{ result.unavailableCount }} · 已处理
           {{ result.processedCount }}（具体处置见详情）
         </p>
@@ -705,8 +730,13 @@ watch(
           type="success"
           :closable="false" /></template
     ></PanelCard>
-    <el-drawer :model-value="!!drawer" :title="drawer" size="min(720px, 90vw)" @close="drawer = ''">
-      <template v-if="drawer === '历史结果'"
+    <el-drawer
+      :model-value="!!drawer"
+      :class="{ 'governance-history-drawer': drawer === '历史结果' }"
+      :title="drawer"
+      size="min(720px, 90vw)"
+      @close="drawer = ''"
+      ><template v-if="drawer === '历史结果'"
         ><el-empty v-if="!history.length" description="无匹配历史结果" /><el-table :data="history"
           ><el-table-column prop="finishedAt" label="完成时间" /><el-table-column
             prop="anomalyCount"
@@ -963,6 +993,43 @@ watch(
   font-size: 20px;
   margin-top: 8px;
   color: #05296a;
+}
+/* 顶部结果指标条：外观与"风险识别与分级"页保持一致；只作用于带 result-cards 的这条，
+   "待发布修改集"面板里复用 .anomaly-metrics 的三格不受影响。 */
+.anomaly-metrics.result-cards > button,
+.anomaly-metrics.result-cards > div {
+  padding: 15px 20px;
+  background: #f4f8fe;
+  border: 1px solid #e7effb;
+  border-radius: 7px;
+  color: #587398;
+  text-align: left;
+  font: inherit;
+}
+.anomaly-metrics.result-cards .active {
+  border-color: #78b3ff;
+  background: #eef6ff;
+}
+.anomaly-metrics.result-cards span {
+  display: inline;
+}
+.anomaly-metrics.result-cards strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 5px;
+  color: #113d7c;
+}
+.anomaly-metrics.result-cards small {
+  font-size: 16px;
+  font-weight: 700;
+  margin-left: 7px;
+}
+.result-note {
+  font-size: 16px;
+  font-weight: 700;
+  color: #8191a9;
+  line-height: 1.8;
+  margin: 10px 0 0;
 }
 .anomaly-finding {
   font-size: 15px;
