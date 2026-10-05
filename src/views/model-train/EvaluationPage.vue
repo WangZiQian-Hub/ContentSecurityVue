@@ -221,8 +221,8 @@ function submitEdit() {
       <div class="mw-info-strip">
         关联版本 {{ baseline || '未选择' }} → {{ edited || '未选择' }}
       </div>
-      <router-link class="mw-link" :to="{ path: '/compliance/neuron-audit', query: { modelId } }"
-        >神经元审计 →</router-link
+      <router-link class="mw-link" :to="{ path: '/compliance/model-internal', query: { modelId } }"
+        >模型内部审计 →</router-link
       ></PanelCard
     >
     <PanelCard title="编辑前后效果" icon="Histogram"

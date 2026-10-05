@@ -5,14 +5,7 @@ export type VerificationState =
   'verified' | 'missing' | 'unavailable' | 'not_applicable' | 'unknown'
 export type Capability =
   'lineage_audit' | 'training_monitor' | 'reasoning_audit' | 'neuron_audit' | 'full_chain_audit'
-export type ComplianceTab =
-  | ''
-  | 'lineage'
-  | 'training-monitor'
-  | 'reasoning-audit'
-  | 'neuron-audit'
-  | 'risk-alert'
-  | 'full-chain'
+export type ComplianceTab = '' | 'lineage' | 'full-chain' | 'model-internal' | 'risk-alert'
 export interface SubjectRef {
   entityType: string
   entityId: EntityId

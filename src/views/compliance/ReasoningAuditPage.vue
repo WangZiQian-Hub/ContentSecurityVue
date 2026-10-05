@@ -90,14 +90,14 @@ watch(result, () => (selected.value = result.value?.riskNodes[0]?.stepId || ''))
             <p>
               <router-link
                 :to="{
-                  path: '/compliance/neuron-audit',
+                  path: '/compliance/model-internal',
                   query: {
                     modelId: String(activation.modelId),
                     versionId: activation.modelVersion,
                     captureId: activation.captureId,
                   },
                 }"
-                >神经元激活审计 →</router-link
+                >模型内部审计 →</router-link
               >
             </p></template
           ><el-empty v-else description="没有精确匹配的内部捕获记录" :image-size="70"

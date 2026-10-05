@@ -4,16 +4,113 @@ import { useComplianceStore } from '../../stores/compliance'
 import PanelCard from '../../components/PanelCard.vue'
 import StateBadge from './components/StateBadge.vue'
 import { formatCount, formatTime } from './presentation'
-import type { AuditSummary, Handoff } from '../../types/compliance'
+import type { AuditSummary } from '../../types/compliance'
+import { request } from '../../api/request'
 import { complianceApi } from '../../api/compliance'
 import { getModelWorkbench } from '../../api/model-workbench'
+/** 三层缺口的统计口径：链路层看引用、任务层看状态与五要素、模型层看检查点与内部激活。 */
+type Layer = 'link' | 'task' | 'model'
+interface GapStat {
+  expected: number | null
+  missing: number | null
+}
+/** 「合规检查清单」的一行：只描述"查什么、去哪处理"，不承载任何数值。 */
+interface CheckRow {
+  layer: Layer
+  layerLabel: string
+  item: string
+  unit: string
+  rule: string
+  target: string
+  entry: string
+}
 const store = useComplianceStore(),
-  scope = ref('all'),
   dates = ref(initialDateRange()),
-  gapsOnly = ref(false),
-  page = ref(1)
-// 真实接口模式下的交接矩阵；演示模式保持 null，继续用 mock 的 handoffs。
-const matrixRows = ref<Handoff[] | null>(null)
+  page = ref(1),
+  layer = ref<'' | Layer>('')
+// 真实接口模式下三层缺口的实时统计；演示模式改用下方 demoGaps。
+const gaps = ref<Record<Layer, GapStat> | null>(null)
+// 演示数据不含任务层 / 模型层的明细，这里给出与示例口径一致的固定值。
+const demoGaps: Record<Layer, GapStat> = {
+  link: { expected: 284, missing: 4 },
+  task: { expected: 12, missing: 3 },
+  model: { expected: 6, missing: 2 },
+}
+const layerOptions: { value: '' | Layer; label: string }[] = [
+  { value: '', label: '全部' },
+  { value: 'link', label: '链路层' },
+  { value: 'task', label: '任务层' },
+  { value: 'model', label: '模型层' },
+]
+// 清单本身是静态的：数值由上方卡片承载，表格只负责说明与跳转。
+const checkItems: CheckRow[] = [
+  {
+    layer: 'link',
+    layerLabel: '链路层',
+    item: '数据版本 → 治理任务',
+    unit: '交接关系',
+    rule: '引用的数据版本未在资源库登记',
+    target: '/compliance/lineage',
+    entry: '数据谱系追踪',
+  },
+  {
+    layer: 'link',
+    layerLabel: '链路层',
+    item: '治理版本 → 训练任务',
+    unit: '交接关系',
+    rule: '引用的数据版本未在资源库登记',
+    target: '/compliance/lineage',
+    entry: '数据谱系追踪',
+  },
+  {
+    layer: 'link',
+    layerLabel: '链路层',
+    item: '训练产物 → 模型版本',
+    unit: '交接关系',
+    rule: '来源训练任务未登记',
+    target: '/compliance/lineage',
+    entry: '数据谱系追踪',
+  },
+  {
+    layer: 'link',
+    layerLabel: '链路层',
+    item: '模型版本 → 推理输出',
+    unit: '交接关系',
+    rule: '调用的模型版本未登记',
+    target: '/compliance/lineage',
+    entry: '数据谱系追踪',
+  },
+  {
+    layer: 'task',
+    layerLabel: '任务层',
+    item: '执行状态 + 五要素完备性',
+    unit: '任务',
+    rule: '状态非成功，或五要素有空缺',
+    target: '/compliance/full-chain',
+    entry: '全链路追踪',
+  },
+  {
+    layer: 'model',
+    layerLabel: '模型层',
+    item: '训练检查点齐全',
+    unit: '检查点',
+    rule: '应有检查点数量不足',
+    target: '/compliance/model-internal',
+    entry: '模型内部审计',
+  },
+  {
+    layer: 'model',
+    layerLabel: '模型层',
+    item: '神经元激活异常',
+    unit: '捕获记录',
+    rule: '存在超阈值激活单元',
+    target: '/compliance/model-internal',
+    entry: '模型内部审计',
+  },
+]
+const checkRows = computed(() =>
+  layer.value ? checkItems.filter((row) => row.layer === layer.value) : checkItems,
+)
 function initialDateRange() {
   if (store.demo) return ['2026-09-21', '2026-09-28']
   const start = new Date(),
@@ -25,24 +122,33 @@ function initialDateRange() {
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
   )
 }
-const rows = computed(() => {
-  // 演示模式沿用 mock 的交接矩阵；真实模式用按关系聚合出来的矩阵。
-  const source = store.demo ? store.overview?.handoffs : matrixRows.value
-  return (source ?? []).filter((h) => !gapsOnly.value || (h.missingCount ?? 0) > 0)
-})
-// 后端 /compliance/overview 的 handoffs 把同一个证据计数复制成多行，无法表达交接关系。
-// 这里改问 /compliance/lineage：它按关系核验上下游引用是否已登记，再按关系聚合。
-const relationLabel: Record<string, string> = {
-  输入数据引用: '数据版本 → 治理任务',
-  训练数据绑定: '治理版本 → 训练任务',
-  训练产物登记: '训练产物 → 模型版本',
+/** 某一层的缺口数字：演示模式读示例值，真实模式读实时统计。 */
+function gapOf(target: Layer): GapStat {
+  if (store.demo) return demoGaps[target]
+  return gaps.value?.[target] ?? { expected: null, missing: null }
 }
-const relationOrder = ['输入数据引用', '训练数据绑定', '训练产物登记']
-async function loadMatrix() {
+// 三层缺口要逐个查询谱系，聚合期间用省略号表示"正在统计"，避免误显示成"未知"。
+const gapsLoading = ref(false)
+/** 卡片上的数字文案：统计中显示省略号，取不到才显示"未知"。 */
+function gapText(target: Layer, key: keyof GapStat): string {
+  if (gapsLoading.value) return '…'
+  return formatCount(gapOf(target)[key])
+}
+function toggleLayer(value: Layer) {
+  layer.value = layer.value === value ? '' : value
+}
+/**
+ * 汇总三层缺口。
+ * - 链路层：4 类交接关系的引用核验（3 类来自 /compliance/lineage，第 4 类由调用记录与模型版本比对得出）。
+ * - 任务层：执行状态未成功的任务数；五要素部分待后端提供聚合接口后并入。
+ * - 模型层：训练检查点缺口数；神经元激活部分待后端提供聚合接口后并入。
+ */
+async function loadLayerGaps() {
   if (store.demo) {
-    matrixRows.value = null
+    gaps.value = null
     return
   }
+  gapsLoading.value = true
   try {
     // 1. 取可查询的根节点：数据集（含被引用但未登记的）与模型。
     const [datasetContext, modelContext] = await Promise.all([
@@ -51,7 +157,7 @@ async function loadMatrix() {
     ])
     const datasetIds = [...new Set(datasetContext.candidates.map((item) => String(item.sourceId)))]
     const modelIds = [...new Set(modelContext.candidates.map((item) => String(item.sourceId)))]
-    // 2. 逐个根节点查询谱系：该接口只返回起点所在的连通分量，必须查全再合并。
+    // 2. 逐个根节点查询谱系，再按边 id 去重：同一条边会被多个起点重复返回。
     const graphs = await Promise.all([
       ...datasetIds.map((id) =>
         complianceApi.lineage({ entityType: 'dataset', entityId: id, direction: 'both' }),
@@ -60,79 +166,59 @@ async function loadMatrix() {
         complianceApi.lineage({ entityType: 'model', entityId: id, direction: 'both' }),
       ),
     ])
-    // 3. 合并并按边 id 去重（同一条边会在多个分量中重复出现）。
     const edges = new Map<string, (typeof graphs)[number]['edges'][number]>()
     graphs.forEach((graph) => graph.edges.forEach((edge) => edges.set(edge.id, edge)))
-    // 4. 按关系种类分组统计。
-    const grouped = new Map<
-      string,
-      { expected: number; verified: number; missing: number; reasons: Set<string> }
-    >()
+    // 3. 只统计清单里列出的 3 类谱系关系。
+    const countedRelations = new Set(['输入数据引用', '训练数据绑定', '训练产物登记'])
+    let linkExpected = 0,
+      linkMissing = 0
     edges.forEach((edge) => {
-      const group =
-        grouped.get(edge.relation) ??
-        { expected: 0, verified: 0, missing: 0, reasons: new Set<string>() }
-      group.expected += 1
-      if (edge.verificationState === 'verified') group.verified += 1
-      if (edge.verificationState === 'missing') {
-        group.missing += 1
-        if (edge.missingReason) group.reasons.add(edge.missingReason)
-      }
-      grouped.set(edge.relation, group)
+      if (!countedRelations.has(edge.relation)) return
+      linkExpected += 1
+      if (edge.verificationState === 'missing') linkMissing += 1
     })
-    // 5. 前三行：数据版本→治理任务、治理版本→训练任务、训练产物→模型版本。
-    const list: Handoff[] = relationOrder.map((relation) => {
-      const group = grouped.get(relation)
-      return {
-        kind: relation,
-        label: relationLabel[relation] ?? relation,
-        expectedCount: group?.expected ?? 0,
-        verifiedCount: group?.verified ?? 0,
-        missingCount: group?.missing ?? 0,
-        unavailableCount: 0,
-        missingReason: group?.reasons.size ? [...group.reasons].join(' / ') : null,
-        target: 'lineage',
-        subjectRef: null,
-      }
-    })
-    // 6. 第四行：调用记录引用的（模型 + 版本）是否在登记表里。
+    // 4. 链路层第 4 类 + 模型层的检查点数据，都来自模型工作台聚合接口。
     const workbench = await getModelWorkbench()
     const registered = new Set<string>()
     workbench.models.forEach((model) => {
       registered.add(`${model.id}::${model.version}`)
       model.versions.forEach((version) => registered.add(`${model.id}::${version.version}`))
     })
-    const callTotal = workbench.calls.length
-    const callVerified = workbench.calls.filter((call) =>
-      registered.has(`${call.modelId}::${call.version}`),
+    linkExpected += workbench.calls.length
+    linkMissing += workbench.calls.filter(
+      (call) => !registered.has(`${call.modelId}::${call.version}`),
     ).length
-    list.push({
-      kind: 'model_call_version',
-      label: '模型版本 → 推理输出',
-      expectedCount: callTotal,
-      verifiedCount: callVerified,
-      missingCount: callTotal - callVerified,
-      unavailableCount: 0,
-      missingReason: callTotal - callVerified > 0 ? '调用版本引用' : null,
-      target: 'reasoning-audit',
-      subjectRef: null,
+    // 5. 模型层：按训练配置推算应有检查点数，与实际保存数比较。
+    let checkpointExpected = 0,
+      checkpointMissing = 0
+    workbench.training.forEach((task) => {
+      const interval = Math.max(1, Math.floor((task.epochs || 1) / 3))
+      let shouldHave = 0
+      for (let index = 1; index <= (task.epoch || 0); index += 1)
+        if (index === task.epoch || index % interval === 0) shouldHave += 1
+      const actual = (task.checkpoints ?? []).length
+      checkpointExpected += shouldHave
+      checkpointMissing += Math.max(0, shouldHave - actual)
     })
-    // 7. 第五行：后端尚无场景回执数据，如实返回未知，不编造数字。
-    list.push({
-      kind: 'scenario_receipt',
-      label: '推理输出 → 场景回执',
-      expectedCount: null,
-      verifiedCount: null,
-      missingCount: null,
-      unavailableCount: null,
-      missingReason: '后端暂未提供场景回执数据',
-      target: 'full-chain',
-      subjectRef: null,
+    // 6. 任务层：执行状态未成功的任务。
+    const taskPage = await request<{ items: { status: string }[]; total: number }>({
+      url: '/tasks',
+      params: { page: 1, pageSize: 100 },
     })
-    matrixRows.value = list
+    const taskItems = taskPage.items ?? []
+    gaps.value = {
+      link: { expected: linkExpected, missing: linkMissing },
+      task: {
+        expected: taskPage.total ?? taskItems.length,
+        missing: taskItems.filter((item) => item.status !== 'succeeded').length,
+      },
+      model: { expected: checkpointExpected, missing: checkpointMissing },
+    }
   } catch {
-    // 失败时回退到 mock 分支的默认行为，不让表格空白。
-    matrixRows.value = null
+    // 取不到就显示"未知"，不编造数字。
+    gaps.value = null
+  } finally {
+    gapsLoading.value = false
   }
 }
 function load() {
@@ -143,7 +229,7 @@ function load() {
   if (dates.value?.length === 2)
     store.loadOverview(
       {
-        scope: scope.value,
+        scope: 'all',
         from: `${dates.value[0]}T00:00:00+08:00`,
         to: `${dates.value[1]}T00:00:00+08:00`,
       },
@@ -154,21 +240,9 @@ function filter() {
   page.value = 1
   load()
 }
-function target(item: Handoff) {
-  return {
-    path: `/compliance/${item.target}`,
-    query: item.subjectRef
-      ? {
-          sourceId: String(item.subjectRef.entityId),
-          entityType: item.subjectRef.entityType,
-          versionId: item.subjectRef.versionId || undefined,
-        }
-      : {},
-  }
-}
 function auditTarget(item: AuditSummary) {
   return {
-    path: `/compliance/${{ lineage_audit: 'lineage', full_chain_audit: 'full-chain', training_monitor: 'training-monitor', reasoning_audit: 'reasoning-audit', neuron_audit: 'neuron-audit' }[item.capabilityCode]}`,
+    path: `/compliance/${{ lineage_audit: 'lineage', full_chain_audit: 'full-chain', training_monitor: 'model-internal', reasoning_audit: 'full-chain', neuron_audit: 'model-internal' }[item.capabilityCode]}`,
     query: {
       sourceId: String(item.subjectRef.entityId),
       sourceKind: item.subjectRef.entityType,
@@ -179,18 +253,13 @@ function auditTarget(item: AuditSummary) {
 }
 onMounted(() => {
   load()
-  // 交接矩阵与日期筛选无关（后端未按时间过滤），只在进入页面时聚合一次。
-  void loadMatrix()
+  // 三层缺口与日期筛选无关（后端未按时间过滤），只在进入页面时聚合一次。
+  void loadLayerGaps()
 })
 </script>
 <template>
   <div class="compliance-filter">
     <label
-      >核验范围<el-select v-model="scope" aria-label="核验范围" @change="filter"
-        ><el-option label="全部业务模块" value="all" /><el-option
-          label="训练交接"
-          value="training" /><el-option label="推理交接" value="inference" /></el-select></label
-    ><label
       >时间范围（结束日期不含）<el-date-picker
         v-model="dates"
         type="daterange"
@@ -201,58 +270,64 @@ onMounted(() => {
   </div>
   <template v-if="store.overview"
     ><div class="compliance-kpis">
-      <PanelCard title="跨阶段关系缺口" icon="Share"
-        ><button class="compliance-metric" @click="gapsOnly = !gapsOnly">
-          <strong>{{ formatCount(store.overview.missingCount) }}</strong
-          ><span>/ {{ formatCount(store.overview.expectedCount) }} 条应交接关系</span
-          ><el-tag type="warning">{{ gapsOnly ? '显示全部' : '定位缺口' }}</el-tag>
+      <PanelCard title="链路断点" icon="Share"
+        ><button class="compliance-metric" @click="toggleLayer('link')">
+          <strong>{{ gapText('link', 'missing') }}</strong
+          ><span>/ {{ gapText('link', 'expected') }} 条交接关系</span
+          ><el-tag type="warning">{{ layer === 'link' ? '显示全部' : '定位缺口' }}</el-tag>
         </button></PanelCard
-      ><PanelCard title="审计结论待复核" icon="Shield"
+      ><PanelCard title="任务缺项" icon="Tickets"
+        ><button class="compliance-metric" @click="toggleLayer('task')">
+          <strong>{{ gapText('task', 'missing') }}</strong
+          ><span>/ {{ gapText('task', 'expected') }} 个任务</span
+          ><el-tag type="warning">{{ layer === 'task' ? '显示全部' : '定位缺口' }}</el-tag>
+        </button></PanelCard
+      ><PanelCard title="模型隐患" icon="Shield"
+        ><button class="compliance-metric" @click="toggleLayer('model')">
+          <strong>{{ gapText('model', 'missing') }}</strong
+          ><span>/ {{ gapText('model', 'expected') }} 项检查</span
+          ><el-tag type="warning">{{ layer === 'model' ? '显示全部' : '定位缺口' }}</el-tag>
+        </button></PanelCard
+      ><PanelCard title="待复核审计" icon="DataAnalysis"
         ><div class="compliance-metric">
           <strong>{{ formatCount(store.overview.pendingReviewsCount) }}</strong
           ><span>/ {{ formatCount(store.overview.completedAuditsCount) }} 份已完成审计</span>
         </div></PanelCard
-      ><PanelCard title="当前核验范围" icon="Tickets"
-        ><p>{{ store.overview.scopeDescription }}</p>
-        <small>分母依据后端策略和登记事实；不是当前分页数量。</small></PanelCard
       >
     </div>
-    <PanelCard title="跨阶段证据交接" icon="Share"
-      ><template #extra><el-checkbox v-model="gapsOnly">仅查看缺口</el-checkbox></template
-      ><el-table :data="rows" stripe
-        ><el-table-column prop="label" label="交接关系" min-width="220" /><el-table-column
-          label="应有关系"
-          min-width="95"
-          ><template #default="{ row }">{{
-            formatCount(row.expectedCount)
-          }}</template></el-table-column
-        ><el-table-column label="已验证" min-width="90"
-          ><template #default="{ row }">{{
-            formatCount(row.verifiedCount)
-          }}</template></el-table-column
-        ><el-table-column label="缺口" min-width="80"
+    <p class="compliance-scope">
+      当前核验范围说明：链路层看引用是否登记 · 任务层看执行状态与五要素完备性 · 模型层看检查点与内部激活
+    </p>
+    <PanelCard title="合规检查清单" icon="Share"
+      ><template #extra
+        ><el-button-group
+          ><el-button
+            v-for="option in layerOptions"
+            :key="option.value"
+            size="small"
+            :type="layer === option.value ? 'primary' : 'default'"
+            @click="layer = option.value"
+            >{{ option.label }}</el-button
+          ></el-button-group
+        ></template
+      ><el-table :data="checkRows" stripe
+        ><el-table-column label="层级" width="120"
           ><template #default="{ row }"
-            ><el-tag :type="row.missingCount === 0 ? 'success' : 'warning'">{{
-              formatCount(row.missingCount)
-            }}</el-tag></template
+            ><span class="compliance-layer-tag" :class="row.layer">{{
+              row.layerLabel
+            }}</span></template
           ></el-table-column
-        ><el-table-column label="不可用" min-width="80"
-          ><template #default="{ row }">{{
-            formatCount(row.unavailableCount)
-          }}</template></el-table-column
-        ><el-table-column
-          prop="missingReason"
-          label="主要缺失证据"
-          min-width="160"
-        /><el-table-column label="处理入口" min-width="140"
+        ><el-table-column prop="item" label="检查项" min-width="160" /><el-table-column
+          prop="unit"
+          label="单位"
+          width="200" /><el-table-column prop="rule" label="缺口说明" min-width="250" /><el-table-column
+          label="处理入口"
+          min-width="120"
           ><template #default="{ row }"
-            ><router-link :to="target(row)">查看关联证据 →</router-link></template
+            ><router-link :to="row.target">{{ row.entry }} →</router-link></template
           ></el-table-column
         ></el-table
-      >
-      <p v-if="store.overview.expectedCount === 0" class="compliance-note">
-        暂无可核验对象
-      </p></PanelCard
+      ></PanelCard
     ></template
   >
   <PanelCard title="待复核审计" icon="Tickets"

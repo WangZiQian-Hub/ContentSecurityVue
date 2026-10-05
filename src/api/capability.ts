@@ -89,19 +89,19 @@ export const CAPABILITIES = [
   {
     code: 'training_monitor',
     label: '训练合规监控',
-    route: '/compliance/training-monitor',
+    route: '/compliance/model-internal',
     input: { trainingTaskId: 'demo-training-001' },
   },
   {
     code: 'reasoning_audit',
     label: '推理路径审计',
-    route: '/compliance/reasoning-audit',
+    route: '/compliance/full-chain',
     input: { modelId: 1, input: '今天天气怎么样？' },
   },
   {
     code: 'neuron_audit',
-    label: '神经元激活审计',
-    route: '/compliance/neuron-audit',
+    label: '模型内部审计',
+    route: '/compliance/model-internal',
     input: { modelId: 1, layer: 16 },
   },
   {

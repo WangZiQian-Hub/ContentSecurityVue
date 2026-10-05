@@ -2,11 +2,9 @@ import type { ComplianceTab, VerificationState } from '../../types/compliance'
 export const tabs: { path: ComplianceTab; title: string; icon: string }[] = [
   { path: '', title: '审计总览', icon: 'Grid' },
   { path: 'lineage', title: '数据谱系追踪', icon: 'Coin' },
-  { path: 'training-monitor', title: '训练行为监控', icon: 'DataAnalysis' },
-  { path: 'reasoning-audit', title: '推理路径审计', icon: 'Share' },
-  { path: 'neuron-audit', title: '神经元激活审计', icon: 'Connection' },
-  { path: 'risk-alert', title: '合规风险预警', icon: 'Warning' },
   { path: 'full-chain', title: '全链路追踪', icon: 'Shield' },
+  { path: 'model-internal', title: '模型内部审计', icon: 'Connection' },
+  { path: 'risk-alert', title: '合规风险预警', icon: 'Warning' },
 ]
 export const labels: Record<string, string> = {
   verified: '已核验',

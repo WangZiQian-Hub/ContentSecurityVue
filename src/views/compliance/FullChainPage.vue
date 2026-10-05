@@ -54,10 +54,10 @@ const store = useComplianceStore()
             ><EvidenceLinks :refs="row.evidenceRefs" /><router-link
               v-if="row.subjectRef.entityType === 'training_task'"
               :to="{
-                path: '/compliance/training-monitor',
+                path: '/compliance/model-internal',
                 query: { trainingTaskId: row.subjectRef.entityId },
               }"
-              >训练监控 →</router-link
+              >查看模型内部 →</router-link
             ></template
           ></el-table-column
         ></el-table

@@ -374,7 +374,7 @@ export const demoOverview: C.Overview = {
     missingCount: [0, 1, 0, 3, 3][index]!,
     unavailableCount: 0,
     missingReason: [null, '检查点数据快照', null, '调用版本引用', '场景回执引用'][index]!,
-    target: index < 3 ? 'lineage' : index === 3 ? 'reasoning-audit' : 'full-chain',
+    target: index < 3 ? 'lineage' : 'full-chain',
     subjectRef: index < 3 ? model : call,
   })),
 }

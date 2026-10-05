@@ -205,8 +205,8 @@ async function submit() {
         }}</el-descriptions-item></el-descriptions
       ><router-link
         class="mw-link"
-        :to="{ path: '/compliance/training-monitor', query: { trainingTaskId: selected.id } }"
-        >查看训练行为监控 →</router-link
+        :to="{ path: '/compliance/model-internal', query: { trainingTaskId: selected.id } }"
+        >查看模型内部审计 →</router-link
       ></PanelCard
     >
   </div>

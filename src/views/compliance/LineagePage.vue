@@ -344,10 +344,10 @@ function selectRow(row: { id: string }) {
           <p v-if="edge.trainingTaskId">
             <router-link
               :to="{
-                path: '/compliance/training-monitor',
+                path: '/compliance/model-internal',
                 query: { trainingTaskId: edge.trainingTaskId },
               }"
-              >训练监控 →</router-link
+              >查看模型内部 →</router-link
             >
           </p></template
         ><el-empty v-else description="选择图中的关系线或下方校验行" :image-size="70"

@@ -4,51 +4,44 @@
 }
 .compliance-tabs {
   display: flex;
-  background: white;
-  border: 1px solid #e1ecfb;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 12px;
+  background: #ffffffd9;
+  border-radius: 8px;
+  padding: 0 15px;
+  margin-bottom: 10px;
   overflow-x: auto;
-  min-height: 57px;
 }
 .compliance-tabs a {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex: 1;
+  gap: 13px;
   white-space: nowrap;
-  padding: 17px 12px;
-  position: relative;
-  color: #7087ab;
-  font-size: 14px;
+  padding: 15px 22px;
+  border-bottom: 3px solid transparent;
+  color: #43608e;
+  font-size: 18px;
+  font-weight: 600;
+}
+.compliance-tabs a:hover,
+.compliance-tabs a.active {
+  color: #087bff;
 }
 .compliance-tabs a.active {
-  color: #176cff;
-  font-weight: 650;
-}
-.compliance-tabs a.active:after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 12px;
-  right: 12px;
-  height: 4px;
-  border-radius: 4px;
-  background: #176cff;
+  border-bottom-color: #087bff;
 }
 .compliance-tabs a:focus-visible {
-  outline: 2px solid #176cff;
+  outline: 2px solid #087bff;
   outline-offset: -3px;
 }
 .compliance-tabs :deep(svg) {
-  width: 21px;
-  height: 21px;
+  width: 23px;
+  height: 23px;
 }
 .compliance-tabs :deep(.el-icon) {
-  width: 21px;
-  height: 21px;
-  font-size: 21px;
+  width: 23px;
+  height: 23px;
+  font-size: 23px;
 }
 .compliance-workspace :deep(.compliance-graph-scroll foreignObject .el-icon) {
   font-size: 32px;
@@ -58,7 +51,7 @@
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  margin: 8px 2px 12px;
+  margin: -30px 2px 10px;
 }
 .compliance-content {
   min-height: 300px;
@@ -118,8 +111,35 @@
 }
 .compliance-workspace :deep(.compliance-kpis) {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.12fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 15px;
+}
+.compliance-workspace :deep(.compliance-scope) {
+  margin: -10px 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #778bac;
+  line-height: 1.6;
+}
+.compliance-workspace :deep(.compliance-layer-tag) {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.compliance-workspace :deep(.compliance-layer-tag.link) {
+  background: #e8f1ff;
+  color: #1766d6;
+}
+.compliance-workspace :deep(.compliance-layer-tag.task) {
+  background: #e6f7ef;
+  color: #12855a;
+}
+.compliance-workspace :deep(.compliance-layer-tag.model) {
+  background: #f0ecff;
+  color: #6741d9;
 }
 .compliance-workspace :deep(.compliance-kpis p) {
   line-height: 1.7;
@@ -140,6 +160,7 @@
   color: #7387a8;
   padding: 0;
   min-height: 45px;
+  font-size: 16px;
 }
 .compliance-workspace :deep(button.compliance-metric) {
   cursor: pointer;
@@ -452,11 +473,6 @@
   outline-offset: 2px;
 }
 @media (max-width: 1450px) {
-  .compliance-tabs a {
-    font-size: 12px;
-    padding-inline: 8px;
-    gap: 6px;
-  }
   .compliance-workspace :deep(.compliance-split) {
     grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
   }
