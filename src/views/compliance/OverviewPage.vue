@@ -2,13 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useComplianceStore } from '../../stores/compliance'
 import PanelCard from '../../components/PanelCard.vue'
-import StateBadge from './components/StateBadge.vue'
 import { formatCount, formatTime } from './presentation'
-import type { AuditSummary } from '../../types/compliance'
 import { request } from '../../api/request'
 import { complianceApi } from '../../api/compliance'
 import { getModelWorkbench } from '../../api/model-workbench'
-/** 三层缺口的统计口径：链路层看引用、任务层看状态与五要素、模型层看检查点与内部激活。 */
+/** 三层缺口的统计口径：链路层看引用、任务层看执行状态、模型层看检查点与内部激活。 */
 type Layer = 'link' | 'task' | 'model'
 interface GapStat {
   expected: number | null
@@ -26,7 +24,6 @@ interface CheckRow {
 }
 const store = useComplianceStore(),
   dates = ref(initialDateRange()),
-  page = ref(1),
   layer = ref<'' | Layer>('')
 // 真实接口模式下三层缺口的实时统计；演示模式改用下方 demoGaps。
 const gaps = ref<Record<Layer, GapStat> | null>(null)
@@ -83,9 +80,9 @@ const checkItems: CheckRow[] = [
   {
     layer: 'task',
     layerLabel: '任务层',
-    item: '执行状态 + 五要素完备性',
+    item: '执行状态',
     unit: '任务',
-    rule: '状态非成功，或五要素有空缺',
+    rule: '执行失败',
     target: '/compliance/full-chain',
     entry: '全链路追踪',
   },
@@ -134,13 +131,20 @@ function gapText(target: Layer, key: keyof GapStat): string {
   if (gapsLoading.value) return '…'
   return formatCount(gapOf(target)[key])
 }
+/** 「待处理问题」= 三层缺口条数之和（这里以"条问题"为单位，与各层自身的单位无关）。 */
+function gapTotalText(): string {
+  if (gapsLoading.value) return '…'
+  const parts = [gapOf('link').missing, gapOf('task').missing, gapOf('model').missing]
+  if (parts.some((value) => value === null)) return formatCount(null)
+  return formatCount(parts.reduce<number>((sum, value) => sum + (value ?? 0), 0))
+}
 function toggleLayer(value: Layer) {
   layer.value = layer.value === value ? '' : value
 }
 /**
  * 汇总三层缺口。
  * - 链路层：4 类交接关系的引用核验（3 类来自 /compliance/lineage，第 4 类由调用记录与模型版本比对得出）。
- * - 任务层：执行状态未成功的任务数；五要素部分待后端提供聚合接口后并入。
+ * - 任务层：执行失败的任务数（进行中 / 等待中还没有结论，不计入）。
  * - 模型层：训练检查点缺口数；神经元激活部分待后端提供聚合接口后并入。
  */
 async function loadLayerGaps() {
@@ -200,7 +204,7 @@ async function loadLayerGaps() {
       checkpointExpected += shouldHave
       checkpointMissing += Math.max(0, shouldHave - actual)
     })
-    // 6. 任务层：执行状态未成功的任务。
+    // 6. 任务层：执行失败的任务。进行中 / 等待中还没有结论，不算缺项。
     const taskPage = await request<{ items: { status: string }[]; total: number }>({
       url: '/tasks',
       params: { page: 1, pageSize: 100 },
@@ -210,7 +214,7 @@ async function loadLayerGaps() {
       link: { expected: linkExpected, missing: linkMissing },
       task: {
         expected: taskPage.total ?? taskItems.length,
-        missing: taskItems.filter((item) => item.status !== 'succeeded').length,
+        missing: taskItems.filter((item) => item.status === 'failed').length,
       },
       model: { expected: checkpointExpected, missing: checkpointMissing },
     }
@@ -226,30 +230,17 @@ function load() {
     store.invalidate()
     return
   }
-  if (dates.value?.length === 2)
-    store.loadOverview(
-      {
-        scope: 'all',
-        from: `${dates.value[0]}T00:00:00+08:00`,
-        to: `${dates.value[1]}T00:00:00+08:00`,
-      },
-      page.value,
-    )
+  store.loadOverview(
+    {
+      scope: 'all',
+      from: `${dates.value[0]}T00:00:00+08:00`,
+      to: `${dates.value[1]}T00:00:00+08:00`,
+    },
+    1,
+  )
 }
 function filter() {
-  page.value = 1
   load()
-}
-function auditTarget(item: AuditSummary) {
-  return {
-    path: `/compliance/${{ lineage_audit: 'lineage', full_chain_audit: 'full-chain', training_monitor: 'model-internal', reasoning_audit: 'full-chain', neuron_audit: 'model-internal' }[item.capabilityCode]}`,
-    query: {
-      sourceId: String(item.subjectRef.entityId),
-      sourceKind: item.subjectRef.entityType,
-      entityType: item.subjectRef.entityType,
-      versionId: item.subjectRef.versionId || undefined,
-    },
-  }
 }
 onMounted(() => {
   load()
@@ -288,15 +279,16 @@ onMounted(() => {
           ><span>/ {{ gapText('model', 'expected') }} 项检查</span
           ><el-tag type="warning">{{ layer === 'model' ? '显示全部' : '定位缺口' }}</el-tag>
         </button></PanelCard
-      ><PanelCard title="待复核审计" icon="DataAnalysis"
-        ><div class="compliance-metric">
-          <strong>{{ formatCount(store.overview.pendingReviewsCount) }}</strong
-          ><span>/ {{ formatCount(store.overview.completedAuditsCount) }} 份已完成审计</span>
-        </div></PanelCard
+      ><PanelCard title="待处理问题" icon="Warning"
+        ><router-link class="compliance-metric" to="/compliance/risk-alert">
+          <strong>{{ gapTotalText() }}</strong
+          ><span>个问题</span
+          ><el-tag type="danger">去处理 →</el-tag>
+        </router-link></PanelCard
       >
     </div>
     <p class="compliance-scope">
-      当前核验范围说明：链路层看引用是否登记 · 任务层看执行状态与五要素完备性 · 模型层看检查点与内部激活
+      当前核验范围说明：链路层看引用是否登记 · 任务层看执行状态 · 模型层看检查点与内部激活
     </p>
     <PanelCard title="合规检查清单" icon="Share"
       ><template #extra
@@ -330,27 +322,4 @@ onMounted(() => {
       ></PanelCard
     ></template
   >
-  <PanelCard title="待复核审计" icon="Tickets"
-    ><el-table :data="store.audits?.items || []" stripe
-      ><el-table-column prop="displayId" label="审计任务" /><el-table-column label="对象"
-        ><template #default="{ row }"
-          >{{ row.subjectRef.displayId }} / {{ row.subjectRef.versionId || '未记录版本' }}</template
-        ></el-table-column
-      ><el-table-column prop="reviewReason" label="复核原因" min-width="220" /><el-table-column
-        label="状态"
-        ><template #default="{ row }"
-          ><StateBadge :state="row.reviewStatus" /></template></el-table-column
-      ><el-table-column label="操作"
-        ><template #default="{ row }"
-          ><router-link :to="auditTarget(row)">打开审计 →</router-link></template
-        ></el-table-column
-      ></el-table
-    ><el-pagination
-      v-if="store.audits"
-      v-model:current-page="page"
-      :total="store.audits.total"
-      :page-size="5"
-      layout="total, prev, pager, next"
-      @current-change="load"
-  /></PanelCard>
 </template>

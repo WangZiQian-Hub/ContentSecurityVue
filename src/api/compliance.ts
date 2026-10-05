@@ -55,5 +55,15 @@ export const complianceApi = {
     }),
   task: (taskId: string, signal?: AbortSignal) =>
     request<C.ComplianceTask>({ url: `/tasks/${id(taskId)}`, signal }),
+  // 「合规风险审计」错误评论：errorId 是前端按业务对象拼出的稳定编号，后端按字符串存取。
+  errorComments: (errorId: string, signal?: AbortSignal) =>
+    request<C.ErrorComment[]>({ url: `/compliance/errors/${id(errorId)}/comments`, signal }),
+  addErrorComment: (errorId: string, data: { content: string }, requestId: string) =>
+    request<C.ErrorComment>({
+      url: `/compliance/errors/${id(errorId)}/comments`,
+      method: 'POST',
+      data,
+      headers: { 'X-Request-Id': requestId },
+    }),
 }
 export type ComplianceApi = typeof complianceApi

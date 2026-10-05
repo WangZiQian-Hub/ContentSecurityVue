@@ -6,6 +6,30 @@ export type VerificationState =
 export type Capability =
   'lineage_audit' | 'training_monitor' | 'reasoning_audit' | 'neuron_audit' | 'full_chain_audit'
 export type ComplianceTab = '' | 'lineage' | 'full-chain' | 'model-internal' | 'risk-alert'
+/** 「合规风险审计」错误清单的层级：链路层 / 任务层 / 模型层。 */
+export type AuditErrorLayer = 'link' | 'task' | 'model'
+/** 错误来源：system = 前端按检查口径算出的缺口；alert = 后端已登记的告警工单。 */
+export type AuditErrorSource = 'system' | 'alert'
+/** 错误状态：open = 待处理；fixed = 已修复（上一轮出现过、本轮已消失）。 */
+export type AuditErrorState = 'open' | 'fixed'
+/** 一条评论。 */
+export interface ErrorComment {
+  id: string
+  author: string
+  content: string
+  createdAt: string
+}
+/** 错误清单里的一条错误。id 由业务对象拼成，稳定不变，评论挂在它上面。 */
+export interface AuditError {
+  id: string
+  source: AuditErrorSource
+  layer: AuditErrorLayer
+  title: string
+  detail: string
+  state: AuditErrorState
+  target: string | null
+  commentCount: number
+}
 export interface SubjectRef {
   entityType: string
   entityId: EntityId

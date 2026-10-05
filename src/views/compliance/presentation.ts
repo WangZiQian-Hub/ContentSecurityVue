@@ -4,7 +4,7 @@ export const tabs: { path: ComplianceTab; title: string; icon: string }[] = [
   { path: 'lineage', title: '数据谱系追踪', icon: 'Coin' },
   { path: 'full-chain', title: '全链路追踪', icon: 'Shield' },
   { path: 'model-internal', title: '模型内部审计', icon: 'Connection' },
-  { path: 'risk-alert', title: '合规风险预警', icon: 'Warning' },
+  { path: 'risk-alert', title: '合规风险审计', icon: 'Warning' },
 ]
 export const labels: Record<string, string> = {
   verified: '已核验',

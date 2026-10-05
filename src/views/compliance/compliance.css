@@ -162,8 +162,10 @@
   min-height: 45px;
   font-size: 16px;
 }
-.compliance-workspace :deep(button.compliance-metric) {
+.compliance-workspace :deep(button.compliance-metric),
+.compliance-workspace :deep(a.compliance-metric) {
   cursor: pointer;
+  text-decoration: none;
 }
 .compliance-workspace :deep(.compliance-metric strong) {
   font-size: 34px;

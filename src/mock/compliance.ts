@@ -400,6 +400,103 @@ const ruleChecks: C.RuleCheck[] = [
     '需追加数据快照引用后重新核验',
   ][index]!,
 }))
+/**
+ * 「合规风险审计」的错误清单演示数据。
+ * 真实模式下这份清单由前端按检查口径从谱系 / 任务 / 模型工作台现算；
+ * 演示模式没有那些数据源，所以直接给出一份结果，覆盖三个层级与告警工单，并含一条「已修复」示例。
+ */
+export const demoAuditErrors: C.AuditError[] = [
+  {
+    id: 'link:训练数据绑定:demo_edge_0002',
+    source: 'system',
+    layer: 'link',
+    title: 'dsv_000031（训练版本） → TRAIN-2408',
+    detail: 'CP-12 未写入 snapshot_ref，训练数据快照引用缺失',
+    state: 'open',
+    target: '/compliance/lineage',
+    commentCount: 0,
+  },
+  {
+    id: 'link:输入数据引用:demo_edge_0000',
+    source: 'system',
+    layer: 'link',
+    title: 'dsv_000027（源版本） → TASK-8832',
+    detail: '引用的数据版本未在资源库登记',
+    state: 'open',
+    target: '/compliance/lineage',
+    commentCount: 0,
+  },
+  {
+    id: 'link:训练产物登记:demo_edge_0003',
+    source: 'system',
+    layer: 'link',
+    title: 'TRAIN-2408 → M-024 v1.4.0',
+    detail: '来源训练任务未登记',
+    state: 'open',
+    target: '/compliance/lineage',
+    commentCount: 0,
+  },
+  {
+    id: 'link:模型版本引用:demo_call_20260927_9081',
+    source: 'system',
+    layer: 'link',
+    title: 'CALL-9081',
+    detail: '调用的模型版本 v1.4.0 未在登记表里',
+    state: 'open',
+    target: '/compliance/lineage',
+    commentCount: 0,
+  },
+  {
+    id: 'task:demo_governance_8832:failed',
+    source: 'system',
+    layer: 'task',
+    title: '脱敏任务（demo_governance_8832）',
+    detail: '执行失败：源数据版本不可用',
+    state: 'open',
+    target: '/compliance/full-chain',
+    commentCount: 0,
+  },
+  {
+    id: `model:${demoRefs.training}:checkpoint:8`,
+    source: 'system',
+    layer: 'model',
+    title: '训练任务 TRAIN-2408',
+    detail: '应有第 8 轮的检查点，实际未保存',
+    state: 'open',
+    target: '/compliance/model-internal',
+    commentCount: 0,
+  },
+  {
+    id: `model:${demoRefs.training}:checkpoint:12`,
+    source: 'system',
+    layer: 'model',
+    title: '训练任务 TRAIN-2408',
+    detail: '应有第 12 轮的检查点，实际未保存',
+    state: 'open',
+    target: '/compliance/model-internal',
+    commentCount: 0,
+  },
+  {
+    id: `alert:${demoRefs.alert}`,
+    source: 'alert',
+    layer: 'task',
+    title: 'ALT-0231 · 内容安全微调',
+    detail: '训练链路存在待人工确认的合规证据',
+    state: 'open',
+    target: null,
+    commentCount: 0,
+  },
+  {
+    id: 'link:输出版本登记:demo_edge_fixed',
+    source: 'system',
+    layer: 'link',
+    title: 'TASK-8832 → dsv_000029',
+    detail: '产出的数据版本未在资源库登记（已补登记）',
+    state: 'fixed',
+    target: '/compliance/lineage',
+    commentCount: 0,
+  },
+]
 export const demoNeuron: C.NeuronResult = {
   kind: 'neuron_audit',
   availability: 'available',
@@ -1022,6 +1119,12 @@ export function createComplianceDemo(): ComplianceApi {
     },
     async task() {
       return missing()
+    },
+    async errorComments() {
+      return []
+    },
+    async addErrorComment() {
+      throw new Error('示例演示不持久化评论，请切换真实接口后使用')
     },
   }
 }
