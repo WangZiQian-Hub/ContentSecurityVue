@@ -3,6 +3,7 @@ import type { ComplianceApi } from '../api/compliance'
 import { processOptions, processTasks } from './data-governance'
 import { governanceResources } from './governance-resources'
 import { createModelDemo } from './model-workbench'
+import type { TrainingTask } from '../types/model-workbench'
 
 // Isolated, deterministic design fixtures. Never a fallback for HTTP failures.
 export const demoRefs = {
@@ -403,9 +404,30 @@ const ruleChecks: C.RuleCheck[] = [
 /**
  * 「合规风险审计」的错误清单演示数据。
  * 真实模式下这份清单由前端按检查口径从谱系 / 任务 / 模型工作台现算；
- * 演示模式没有那些数据源，所以直接给出一份结果，覆盖三个层级与告警工单，并含一条「已修复」示例。
+ * 演示模式没有那些数据源，所以直接给出一份结果。
+ * 三层的「待处理」条数与总览页 demoGaps 的 missing 一一对应（链路 4 / 任务 3 / 模型 2），另含一条「已修复」示例。
  */
 export const demoAuditErrors: C.AuditError[] = [
+  {
+    id: 'task:demo_governance_8829:failed',
+    source: 'system',
+    layer: 'task',
+    title: '清洗任务（demo_governance_8829）',
+    detail: '执行失败：上游数据版本已下线',
+    state: 'open',
+    target: '/compliance/full-chain',
+    commentCount: 0,
+  },
+  {
+    id: 'task:demo_training_2407:failed',
+    source: 'system',
+    layer: 'task',
+    title: '训练任务（demo_training_2407）',
+    detail: '执行中断：显存不足，未产出模型版本',
+    state: 'open',
+    target: '/compliance/full-chain',
+    commentCount: 0,
+  },
   {
     id: 'link:训练数据绑定:demo_edge_0002',
     source: 'system',
@@ -474,16 +496,6 @@ export const demoAuditErrors: C.AuditError[] = [
     detail: '应有第 12 轮的检查点，实际未保存',
     state: 'open',
     target: '/compliance/model-internal',
-    commentCount: 0,
-  },
-  {
-    id: `alert:${demoRefs.alert}`,
-    source: 'alert',
-    layer: 'task',
-    title: 'ALT-0231 · 内容安全微调',
-    detail: '训练链路存在待人工确认的合规证据',
-    state: 'open',
-    target: null,
     commentCount: 0,
   },
   {
@@ -666,6 +678,61 @@ export const demoTraceEvidences: Record<string, C.Evidence> = {
     ],
   ),
 }
+/**
+ * 「模型内部审计」区块①（训练检查点留痕）的演示数据。
+ * 字段与 model-workbench 的 TrainingTask 对齐；loss 为逐轮损失，供绘制训练损失曲线。
+ * 刻意做成一个「缺检查点」、一个「齐全」，便于对照演示。
+ */
+export const demoTrainings: TrainingTask[] = [
+  {
+    id: 'demo_training_0101',
+    name: '内容安全识别微调',
+    description: '基于多语种数据优化内容安全识别能力',
+    status: 'succeeded',
+    progress: 100,
+    modelId: '1',
+    baseVersion: 'v1.2.0',
+    datasetId: '1',
+    datasetVersion: 'dsv_000027',
+    epochs: 10,
+    epoch: 10,
+    learningRate: 0.0002,
+    batchSize: 8,
+    targetVersion: 'v1.4.0',
+    elapsed: '4小时12分',
+    updatedAt: '2026-09-27T10:02:11+08:00',
+    loss: [2.4, 1.6, 0.95, 0.55, 0.36, 0.29, 0.24, 0.21, 0.19, 0.17],
+    validationLoss: [2.6, 1.75, 1.1, 0.71, 0.42, 0.39, 0.31, 0.28, 0.26, 0.25],
+    checkpoints: [{ name: 'checkpoint-10', epoch: 10, loss: 0.17 }],
+    method: '低秩适配微调',
+  },
+  {
+    id: 'demo_training_0102',
+    name: '风险分类基线',
+    description: '构建通用风险分类基线模型',
+    status: 'succeeded',
+    progress: 100,
+    modelId: '2',
+    baseVersion: 'v1.0.0',
+    datasetId: '2',
+    datasetVersion: 'dsv_000031',
+    epochs: 9,
+    epoch: 9,
+    learningRate: 0.0003,
+    batchSize: 16,
+    targetVersion: 'v1.1.0',
+    elapsed: '2小时48分',
+    updatedAt: '2026-09-26T16:20:00+08:00',
+    loss: [2.1, 1.4, 0.98, 0.72, 0.55, 0.44, 0.36, 0.31, 0.28],
+    validationLoss: [2.3, 1.55, 1.12, 0.85, 0.64, 0.52, 0.43, 0.38, 0.35],
+    checkpoints: [
+      { name: 'checkpoint-03', epoch: 3, loss: 0.98 },
+      { name: 'checkpoint-06', epoch: 6, loss: 0.44 },
+      { name: 'checkpoint-09', epoch: 9, loss: 0.28 },
+    ],
+    method: '全量微调',
+  },
+]
 export const demoNeuron: C.NeuronResult = {
   kind: 'neuron_audit',
   availability: 'available',

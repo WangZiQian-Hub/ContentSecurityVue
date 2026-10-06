@@ -7,14 +7,10 @@ import { getModelWorkbench } from '../../api/model-workbench'
 import { useComplianceStore } from '../../stores/compliance'
 import { demoAuditErrors } from '../../mock/compliance'
 import { formatCount, formatTime } from './presentation'
-import type {
-  AuditError,
-  AuditErrorLayer,
-  AuditErrorSource,
-  ErrorComment,
-} from '../../types/compliance'
+import type { AuditError, AuditErrorLayer, ErrorComment } from '../../types/compliance'
 /**
- * 「合规风险审计」：把三层检查算出的缺口，和后端已登记的告警工单，合并成一份错误清单。
+ * 「合规风险审计」：把三层检查（链路 / 任务 / 模型）算出的缺口整理成一份错误清单，
+ * 条数与总览页「待处理问题」卡片一一对应（后端告警工单属另一条线，不并入本清单）。
  * 每条错误有一个由业务对象拼成的稳定编号，评论挂在编号上；
  * 某条错误上一轮出现过、本轮消失，即判定为「已修复」，仍保留在清单里可查看历史评论。
  */
@@ -42,7 +38,6 @@ const store = useComplianceStore()
 const loading = ref(false),
   loadError = ref(''),
   items = ref<AuditError[]>([]),
-  source = ref<'' | AuditErrorSource>(''),
   layer = ref<'' | AuditErrorLayer>(''),
   state = ref<'' | 'open' | 'fixed'>(''),
   drawer = ref(false),
@@ -54,19 +49,12 @@ const loading = ref(false),
 const rows = computed(() =>
   items.value.filter(
     (item) =>
-      (!source.value || item.source === source.value) &&
       (!layer.value || item.layer === layer.value) &&
       (!state.value || item.state === state.value),
   ),
 )
 const openCount = computed(() => items.value.filter((item) => item.state === 'open').length)
 const fixedCount = computed(() => items.value.filter((item) => item.state === 'fixed').length)
-/** 依据主体类型把对象归到三层；告警工单没有层级字段，按它指向的对象判断。 */
-function layerOfSubject(entityType: string): AuditErrorLayer {
-  if (entityType === 'model' || entityType === 'model_version') return 'model'
-  if (entityType === 'model_call' || entityType === 'dataset') return 'link'
-  return 'task'
-}
 function readArchive(): Record<string, ArchivedError> {
   try {
     const raw = localStorage.getItem(ARCHIVE_KEY)
@@ -222,20 +210,6 @@ async function loadErrors() {
           commentCount: 0,
         })
       })
-    // 4. 告警工单：后端已登记的。
-    const alertPage = await complianceApi.alerts({ page: 1, pageSize: 100 })
-    ;(alertPage.items ?? []).forEach((alert) => {
-      list.push({
-        id: `alert:${alert.id}`,
-        source: 'alert',
-        layer: layerOfSubject(alert.subjectRef.entityType),
-        title: `${alert.displayId} · ${alert.subjectRef.label}`,
-        detail: alert.description,
-        state: alert.currentStatus === 'resolved' ? 'fixed' : 'open',
-        target: null,
-        commentCount: 0,
-      })
-    })
     items.value = withCommentCount(reconcile(list))
   } catch (exception) {
     loadError.value = exception instanceof Error ? exception.message : '错误清单加载失败'
@@ -298,7 +272,6 @@ function rowClass({ row }: { row: AuditError }) {
   return row.state === 'fixed' ? 'audit-error-fixed' : ''
 }
 function resetFilter() {
-  source.value = ''
   layer.value = ''
   state.value = ''
 }
@@ -307,11 +280,6 @@ onMounted(loadErrors)
 <template>
   <div class="compliance-filter">
     <label
-      >来源<el-select v-model="source" aria-label="错误来源"
-        ><el-option label="全部来源" value="" /><el-option
-          label="系统检测"
-          value="system" /><el-option label="告警工单" value="alert" /></el-select></label
-    ><label
       >层级<el-select v-model="layer" aria-label="错误层级"
         ><el-option label="全部层级" value="" /><el-option label="链路层" value="link" /><el-option
           label="任务层"
@@ -334,12 +302,6 @@ onMounted(loadErrors)
         >评论暂存本机，后端接口就绪后自动切换</span
       ></template
     ><el-table v-loading="loading" :data="rows" stripe :row-class-name="rowClass"
-      ><el-table-column label="来源" width="120"
-        ><template #default="{ row }"
-          ><span class="audit-error-source" :class="row.source">{{
-            row.source === 'system' ? '系统检测' : '告警工单'
-          }}</span></template
-        ></el-table-column
       ><el-table-column label="层级" width="110"
         ><template #default="{ row }"
           ><span class="compliance-layer-tag" :class="row.layer">{{
@@ -401,22 +363,6 @@ onMounted(loadErrors)
   </el-drawer>
 </template>
 <style scoped>
-.audit-error-source {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.audit-error-source.system {
-  background: #eef3fb;
-  color: #45628f;
-}
-.audit-error-source.alert {
-  background: #fdeceb;
-  color: #c0392b;
-}
 .audit-error-link {
   margin-left: 12px;
 }

@@ -180,3 +180,5 @@ GET /api/v1/compliance/tasks/five-elements?from=&to=&capability_code=
 | 3 | `model_calls` 没有记录"用的数据是哪份" | 同上 |
 | 4 | 前端 `utils/enums.ts` 的 `TASK_CATEGORY` 没有收录 `data_process`，会显示成"其他" | `src/utils/enums.ts` |
 | 5 | `GET /compliance/evidence/{id}` 对未登记的证据返回 404（前端已按"数据状态"友好处理） | `compliance.py:289` |
+| **6** | **`training_tasks` 的 `loss` / `validation_loss` 数组长度与 `epochs` 不一致**：例如 `TR-COMPLIANCE-001` 声明 `epochs=10, epoch=10`，但两个数组都只有 **5** 个值。前端已改为按 `epochs` 铺开横轴并如实留白（不会再把检查点标记挤到一起），但**数据本身不自洽**，建议后端补齐或明确"损失值仅为抽样记录" | `models/tables.py`、`core/seed.py` |
+| **7** | **神经元审计的 `heatmap` 与 `abnormal_neurons` 不一致**：`AUDIT-NEURON-001` 阈值 `0.8`，`heatmap` 中第 24 层某单元为 **0.87**（超阈值），但 `abnormal_neurons` 只列出 `L8/309 (0.83)` 与 `L16/205 (0.91)`。建议二者用同一套判定逻辑生成 | `services/compliance_service.py` |
