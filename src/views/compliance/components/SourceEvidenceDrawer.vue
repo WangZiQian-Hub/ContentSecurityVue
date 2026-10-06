@@ -45,6 +45,7 @@ async function copy() {
 </script>
 <template>
   <el-drawer
+    class="evidence-detail-drawer"
     :model-value="modelValue"
     title="源证据详情"
     size="min(620px, 95vw)"
@@ -55,8 +56,9 @@ async function copy() {
       <el-alert
         v-if="store.evidenceError"
         :title="store.evidenceError"
-        type="error"
+        type="warning"
         :closable="false"
+        show-icon
       /><el-button v-if="store.evidenceError" @click="store.openEvidence(props.evidenceId)"
         >重试</el-button
       >
@@ -89,11 +91,15 @@ async function copy() {
           type="warning"
           :closable="false"
         />
-        <h3>留痕五要素核验</h3>
+        <h3>证据字段</h3>
+        <p>
+          以下为该条证据记录里保存的原始字段值。五要素是否齐备属于整条链的结论，请在「全链路追踪」查看。
+        </p>
         <el-table :data="store.evidence.redactedFields"
-          ><el-table-column prop="label" label="字段" /><el-table-column label="记录值"
+          ><el-table-column prop="label" label="字段" width="100"/>
+          <el-table-column label="记录值" width="340"
             ><template #default="{ row }">{{ row.value ?? '缺失' }}</template></el-table-column
-          ><el-table-column label="核验"
+          ><el-table-column label="字段状态" width="130" 
             ><template #default="{ row }"
               ><StateBadge :state="row.state" /></template></el-table-column
         ></el-table>
@@ -141,5 +147,53 @@ async function copy() {
   display: flex;
   gap: 20px;
   align-items: center;
+}
+/* ① 整个抽屉的基础字号（dt 和 dd 都跟它） */
+.compliance-evidence {
+  font-size: 18px;
+}
+
+/* ② 标题「tsk_process_demo_01 / 未记录版本」 */
+.compliance-evidence h2 {
+  font-size: 20px ;
+}
+
+/* ③ 标签（对象内部编号 等）单独调小一点、调淡一点 */
+.compliance-evidence dt {
+  font-size: 16px;
+  font-weight: 600;
+  color: #7a8eaf;
+}
+
+/* ④ 每行的间距（原 20px） */
+.compliance-evidence dl {
+  gap: 16px;
+}
+
+/* ⑤ 「只读来源证据」那个小标签 */
+.compliance-evidence :deep(.el-tag) {
+  --el-tag-font-size: 14px;
+  height: 26px;
+}
+/* ⑥ 值（对象内部编号右边的那些）单独调字号 */
+.compliance-evidence dd {
+  font-size: 16px;
+}
+
+/* ⑦ 抽屉标题「源证据详情」。
+   抽屉内容被传送到 <body>，:deep() 需要一个带 scoped 标记的祖先、匹配不到，
+   因此改用 :global() + 抽屉专属 class —— 与 DataValuePage.vue 第 873 行的写法一致。 */
+:global(.evidence-detail-drawer .el-drawer__title) {
+  font-size: 20px;
+  font-weight: 600;
+}
+/* ⑪ 标题栏下方的间距（Element Plus 默认 margin-bottom: 32px） */
+:global(.evidence-detail-drawer .el-drawer__header) {
+  margin-bottom: 12px;
+}
+
+/* ⑫ 内容区的上内边距（Element Plus 默认 padding: 20px） */
+:global(.evidence-detail-drawer .el-drawer__body) {
+  padding-top: 12px;
 }
 </style>

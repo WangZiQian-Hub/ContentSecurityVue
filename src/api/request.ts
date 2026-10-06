@@ -17,7 +17,15 @@ client.interceptors.request.use((config) => {
   config.params = mapKeys(config.params, 'snake')
   return config
 })
-export async function request<T>(config: AxiosRequestConfig): Promise<T> {
+/** 请求配置：在 axios 配置之上追加前端本地标记（不会随请求发送到后端）。 */
+export type RequestConfig = AxiosRequestConfig & {
+  /**
+   * 为 true 时，请求失败不弹全局提示，由调用方自行用中文说明原因。
+   * 用于「数据尚未登记」这类正常数据状态，避免被误认为页面故障。
+   */
+  silent?: boolean
+}
+export async function request<T>(config: RequestConfig): Promise<T> {
   try {
     const response = await client.request(config)
     const envelope = mapKeys(response.data, 'camel') as ApiResponse<T>
@@ -35,7 +43,7 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
       : error instanceof Error
         ? error.message
         : '网络异常'
-    ElMessage.error(String(message))
+    if (!config.silent) ElMessage.error(String(message))
     throw error
   }
 }

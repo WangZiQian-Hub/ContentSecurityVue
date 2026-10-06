@@ -8,8 +8,9 @@ export const TASK_STATUS = {
 
 /** 根据能力编码统一生成任务类别，供所有任务创建入口复用。 */
 export const TASK_CATEGORY = {
-  data_ingest: '数据资源',
-  value_score: '数据治理',
+  data_process: '数据处理',
+  data_ingest: '数据接入',
+  value_score: '价值分析',
   high_value_detect: '数据治理',
   causal_trace: '风险治理',
   data_risk_weight: '风险治理',
@@ -27,7 +28,7 @@ export const TASK_CATEGORY = {
   neuron_audit: '合规审计',
   full_chain_audit: '合规审计',
   scenario_governance: '场景应用',
-  evaluation: '测试评估',
+  evaluation: '模型评估',
 } as const
 
 export function getTaskCategory(capabilityCode: string): string {

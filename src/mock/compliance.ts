@@ -497,6 +497,175 @@ export const demoAuditErrors: C.AuditError[] = [
     commentCount: 0,
   },
 ]
+/**
+ * 「全链路追踪」按任务筛查五要素的演示数据。
+ * 任务字段与 GET /tasks 对齐；证据编号与页面拼法一致：
+ * 数据治理任务沿用 evidence-process-{task_id}，其余任务类型为 evidence-task-{task_id}。
+ */
+export const demoTraceTasks: {
+  taskId: string
+  name: string
+  capabilityCode: string
+  status: string
+  createdAt: string
+  finishedAt: string | null
+  datasetName: string | null
+  datasetVersion: string | null
+}[] = [
+  {
+    taskId: 'demo_process_0301',
+    name: '政务问答语料标准清洗',
+    capabilityCode: 'data_process',
+    status: 'succeeded',
+    createdAt: '2026-09-27T09:12:40+08:00',
+    finishedAt: '2026-09-27T10:02:11+08:00',
+    datasetName: '政务问答数据集',
+    datasetVersion: 'dsv_000027',
+  },
+  {
+    taskId: 'demo_process_0302',
+    name: '历史批次异常格式修复',
+    capabilityCode: 'data_process',
+    status: 'failed',
+    createdAt: '2026-09-26T14:20:05+08:00',
+    finishedAt: '2026-09-26T14:41:38+08:00',
+    datasetName: '历史批次数据集',
+    datasetVersion: 'dsv_000031',
+  },
+  {
+    taskId: 'demo_ingest_0303',
+    name: '内容安全多模态数据集接入',
+    capabilityCode: 'data_ingest',
+    status: 'succeeded',
+    createdAt: '2026-09-25T11:36:00+08:00',
+    finishedAt: '2026-09-25T11:52:47+08:00',
+    datasetName: '多模态数据集',
+    datasetVersion: 'dsv_000019',
+  },
+  {
+    taskId: 'demo_value_0304',
+    name: '数据价值分析',
+    capabilityCode: 'value_score',
+    status: 'succeeded',
+    createdAt: '2026-09-24T16:08:12+08:00',
+    finishedAt: '2026-09-24T16:15:03+08:00',
+    datasetName: '政务问答数据集',
+    datasetVersion: 'dsv_000027',
+  },
+  {
+    taskId: 'demo_risk_governance_0305',
+    name: '模型安全治理调用',
+    capabilityCode: 'model_risk_governance',
+    status: 'succeeded',
+    createdAt: '2026-09-27T09:24:12+08:00',
+    finishedAt: '2026-09-27T09:24:19+08:00',
+    datasetName: null,
+    datasetVersion: null,
+  },
+]
+type DemoField = { key: string; label: string; value: string | null; state: C.VerificationState }
+const ok = (key: string, label: string, value: string): DemoField => ({ key, label, value, state: 'verified' })
+const missing = (key: string, label: string): DemoField => ({ key, label, value: null, state: 'missing' })
+const notApplicable = (key: string, label: string): DemoField => ({
+  key,
+  label,
+  value: null,
+  state: 'not_applicable',
+})
+function demoTraceEvidence(
+  taskId: string,
+  label: string,
+  prefix: string,
+  occurredAt: string,
+  sourceModule: string,
+  fields: DemoField[],
+): C.Evidence {
+  return {
+    id: `${prefix}${taskId}`,
+    displayId: `EV-${taskId}`,
+    sourceModule,
+    subjectRef: ref('task', taskId, taskId, label),
+    occurredAt,
+    sourceTraceId: `trace_${taskId}`,
+    versionRef: fields.find((item) => item.key === 'version')?.value ?? null,
+    redactedFields: fields,
+    integrityState: fields.some((item) => item.state === 'missing') ? 'missing' : 'verified',
+    allowedActions: ['copy', 'open_source'],
+  }
+}
+/** 证据编号 → 该任务的五要素证据（演示模式）。编号规则与页面拼法一致。 */
+export const demoTraceEvidences: Record<string, C.Evidence> = {
+  'evidence-process-demo_process_0301': demoTraceEvidence(
+    'demo_process_0301',
+    '政务问答语料标准清洗',
+    'evidence-process-',
+    '2026-09-27T10:02:11+08:00',
+    'data-governance',
+    [
+      ok('input', '输入', 'dsv_000027'),
+      ok('time', '时间', '2026-09-27 10:02:11'),
+      ok('interface', '接口', '标准清洗流程 → 文本规范化'),
+      ok('version', '版本', 'dsv_000028'),
+      ok('output', '输出', '186,420 / 186,420 条'),
+    ],
+  ),
+  'evidence-process-demo_process_0302': demoTraceEvidence(
+    'demo_process_0302',
+    '历史批次异常格式修复',
+    'evidence-process-',
+    '2026-09-26T14:41:38+08:00',
+    'data-governance',
+    [
+      ok('input', '输入', 'dsv_000031'),
+      ok('time', '时间', '2026-09-26 14:41:38'),
+      ok('interface', '接口', '异常格式修复模板'),
+      missing('version', '版本'),
+      missing('output', '输出'),
+    ],
+  ),
+  'evidence-task-demo_ingest_0303': demoTraceEvidence(
+    'demo_ingest_0303',
+    '内容安全多模态数据集接入',
+    'evidence-task-',
+    '2026-09-25T11:52:47+08:00',
+    'data-resource',
+    [
+      ok('input', '输入', '内容安全多模态数据源'),
+      ok('time', '时间', '2026-09-25 11:52:47'),
+      ok('interface', '接口', '对象存储连接器'),
+      notApplicable('version', '版本'),
+      ok('output', '输出', '128,640 条'),
+    ],
+  ),
+  'evidence-task-demo_value_0304': demoTraceEvidence(
+    'demo_value_0304',
+    '数据价值分析',
+    'evidence-task-',
+    '2026-09-24T16:15:03+08:00',
+    'data-governance',
+    [
+      ok('input', '输入', 'dsv_000027'),
+      ok('time', '时间', '2026-09-24 16:15:03'),
+      ok('interface', '接口', '多维价值评分方案'),
+      notApplicable('version', '版本'),
+      ok('output', '输出', '综合得分 78.4'),
+    ],
+  ),
+  'evidence-task-demo_risk_governance_0305': demoTraceEvidence(
+    'demo_risk_governance_0305',
+    '模型安全治理调用',
+    'evidence-task-',
+    '2026-09-27T09:24:19+08:00',
+    'model-invoke',
+    [
+      ok('input', '输入', '模型安全治理提示词'),
+      ok('time', '时间', '2026-09-27 09:24:19'),
+      ok('interface', '接口', '风险改写策略 v2'),
+      ok('version', '版本', 'v1.4.0'),
+      ok('output', '输出', '治理后输出已生成'),
+    ],
+  ),
+}
 export const demoNeuron: C.NeuronResult = {
   kind: 'neuron_audit',
   availability: 'available',

@@ -150,7 +150,7 @@ function selectVersion(value: string) {
 function inbound() {
   if (
     typeof route.query.entityType === 'string' &&
-    ['model', 'dataset', 'training_task'].includes(route.query.entityType)
+    ['model', 'dataset'].includes(route.query.entityType)
   )
     entityType.value = route.query.entityType
   entityId.value = String(route.query.sourceId || '')
@@ -184,7 +184,7 @@ function selectRow(row: { id: string }) {
       >对象类型<el-select v-model="entityType" aria-label="对象类型" @change="typeChanged"
         ><el-option label="模型版本" value="model" /><el-option
           label="数据版本"
-          value="dataset" /><el-option label="训练任务" value="training_task" /></el-select></label
+          value="dataset" /></el-select></label
     ><label
       >对象名称<el-select
         v-model="entityId"
@@ -215,18 +215,7 @@ function selectRow(row: { id: string }) {
           label="下游引用"
           value="downstream" /><el-option label="双向关系" value="both" /></el-select></label
     ><el-button type="primary" :loading="store.loading" @click="load">查询谱系</el-button>
-    <el-button
-      :disabled="
-        store.demo || !store.lineage || !['model', 'dataset'].includes(entityType) || store.busy
-      "
-      :loading="store.busy"
-      @click="store.execute('lineage_audit', { entityType, entityId })"
-      >重新审计</el-button
-    >
   </div>
-  <p v-if="store.task" class="compliance-note">
-    审计执行 {{ store.task.taskId }}：{{ store.task.status }}；执行成功不等于关系核验通过。
-  </p>
   <template v-if="store.lineage"
     ><div class="compliance-split">
       <PanelCard title="工程谱系关系" icon="Share"
@@ -382,3 +371,53 @@ function selectRow(row: { id: string }) {
     description="选择对象与版本，查询工程关系"
   />
 </template>
+<style scoped>
+/* 本页三个面板（工程谱系关系 / 选中关系证据 / 关联校验结果）的标题字号统一为 22px。
+   与全链路追踪页保持一致；只在本页生效，compliance.css 与 shared-components.css 的全局值不变。 */
+:deep(.panel-heading h2) {
+  font-size: 22px !important;
+}
+/* 关系图下方的图例说明：compliance.css 的 .compliance-muted 是 12px。
+   这里只选 p 元素，避免影响筛选栏里同为 .compliance-muted 的提示文字（那是 span）。 */
+:deep(p.compliance-muted) {
+  font-size: 14px !important;
+}
+/* 缺口提示条：Element Plus el-alert 默认 13px、常规字重。 */
+:deep(.el-alert__title) {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+/* 【2】关系名「seed-model-edit-1 → 1」16px → 19px */
+:deep(h3) {
+  font-size: 20px !important;
+}
+
+/* 【3】【4】标签和值的字号 13px → 15px */
+:deep(.compliance-details) {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+/* 【5】每行的高度（原 padding: 16px 0） */
+:deep(.compliance-details dt),
+:deep(.compliance-details dd) {
+  padding: 14px 0 !important;
+}
+/* 【行 1】「查看源证据」—— 改 Element Plus 按钮的字号 */
+:deep(.el-button.is-link) {
+  font-size: 16px;          /* ← 默认 14px */
+  height: auto;             /* ← 防止按钮被固定高度限制 */
+  line-height: 1.6;
+}
+
+/* 【行 2】「查看模型内部 →」—— 改 <a> 的字号 */
+:deep(.compliance-details ~ p a) {
+  font-size: 16px;          /* ← 之前靠继承，这里显式指定 */
+  line-height: 1.6;
+}
+
+/* 【两行之间的间距】—— 给包裹链接的 <p> 加外边距 */
+:deep(.compliance-details ~ p) {
+  margin-top: 8px;          /* ← 0 → 8px，两行就分开了 */
+}
+</style>

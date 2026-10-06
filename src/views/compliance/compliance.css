@@ -71,7 +71,8 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
   color: #7085a4;
   min-width: 140px;
   flex: 1;
@@ -295,7 +296,7 @@
   background: #deebfd;
 }
 .compliance-workspace :deep(h3) {
-  font-size: 16px;
+  font-size: 18px;
   color: #193a71;
   margin: 0 0 10px;
 }

@@ -169,24 +169,6 @@ const queryPreview = computed<ContextQuery>(() => ({
       sourceId ? `${queryPreview.sourceKind} · 完整引用查询` : '先选择对象，或从来源模块进入'
     }}</span
     ><el-button type="primary" :loading="store.loading" @click="load">查询记录</el-button>
-    <el-button
-      v-if="capability && capability !== 'neuron_audit'"
-      :disabled="
-        !store.context?.subjectRef ||
-        store.context.resolution !== 'resolved' ||
-        store.demo ||
-        store.busy
-      "
-      :loading="store.busy"
-      @click="store.execute(capability)"
-      >重新审计</el-button
-    >
-    <el-button
-      v-if="!capability"
-      :disabled="!store.context?.taskId || store.demo || store.busy"
-      @click="store.execute('full_chain_audit')"
-      >重新审计</el-button
-    >
   </div>
   <el-alert
     v-if="store.context && store.context.resolution !== 'resolved'"
@@ -206,9 +188,4 @@ const queryPreview = computed<ContextQuery>(() => ({
       :label="`${item.displayId} · ${item.reviewReason}`"
       :value="item.id"
   /></el-select>
-  <p v-if="store.task" class="compliance-note">
-    执行任务 {{ store.task.taskId }}：{{
-      store.task.status
-    }}。执行成功不代表合规通过；完成后请查询已落库审计结果。
-  </p>
 </template>

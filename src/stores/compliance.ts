@@ -12,6 +12,9 @@ export function describeError(error: unknown) {
   const status = value?.response?.status
   return `${status === 403 ? '无权限：' : status === 404 ? '未找到：' : status === 409 ? '版本冲突：' : ''}${value?.response?.data?.message || value?.message || '请求失败，请重试'}`
 }
+export function isNotFound(error: unknown) {
+  return (error as { response?: { status?: number } } | null)?.response?.status === 404
+}
 export function validateAudit(
   detail: C.AuditDetail,
   scope: C.AuditQuery,
@@ -273,7 +276,10 @@ export const useComplianceStore = defineStore('compliance', () => {
       const result = await api().evidence(id, evidenceController.signal)
       if (current === evidenceGeneration) evidence.value = result
     } catch (exception) {
-      if (current === evidenceGeneration) evidenceError.value = describeError(exception)
+      if (current === evidenceGeneration)
+        evidenceError.value = isNotFound(exception)
+          ? '这条关系在后端还没有登记源证据，因此暂时看不到明细。通常是因为上游对象（例如来源训练任务）未登记造成的，可在「合规风险审计」中跟进处理。'
+          : describeError(exception)
     } finally {
       if (current === evidenceGeneration) evidenceLoading.value = false
     }

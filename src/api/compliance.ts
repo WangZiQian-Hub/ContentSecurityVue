@@ -24,8 +24,10 @@ export const complianceApi = {
     request<C.CompliancePage<C.AlertSummary>>({ url: '/alerts', params, signal }),
   alert: (alertId: string, signal?: AbortSignal) =>
     request<C.AlertDetail>({ url: `/alerts/${id(alertId)}`, signal }),
+  // silent：证据尚未登记时后端返回 404，属于数据现状而非页面故障，交由页面用中文说明。
+  // 注意：silent 只是前端本地标记，不会发给后端，接口地址与参数均不变。
   evidence: (evidenceId: string, signal?: AbortSignal) =>
-    request<C.Evidence>({ url: `/compliance/evidence/${id(evidenceId)}`, signal }),
+    request<C.Evidence>({ url: `/compliance/evidence/${id(evidenceId)}`, signal, silent: true }),
   alertAction: (
     alertId: string,
     action: 'claim' | 'evidence' | 'resolve',
