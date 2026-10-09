@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.response import success
 from app.core.database import SessionLocal
-from app.models.tables import Dataset, Task
+from app.models.tables import Dataset, Model, Task
 
 
 router = APIRouter()
@@ -58,7 +58,26 @@ def _resource_storage_gb() -> float:
     return round(storage_gb, 3) if storage_gb > 0 else DEFAULT_RESOURCE_STORAGE_GB
 
 
-# 首页卡片的兜底展示值全部由后端维护；有资源存储数据时仅第一项按数据库实时汇总。
+def _managed_model_count() -> int:
+    """Use the same database model population as the model workbench."""
+    with SessionLocal() as db:
+        return len(db.scalars(select(Model)).all())
+
+
+def _process_task_count() -> int:
+    """首页与数据处理页共用的治理任务统计口径。"""
+    with SessionLocal() as db:
+        return int(
+            db.scalar(
+                select(func.count())
+                .select_from(Task)
+                .where(Task.capability_code == PROCESS_CAPABILITY)
+            )
+            or 0
+        )
+
+
+# 首页卡片的兜底展示值由后端维护；资源、模型和治理任务按数据库实时汇总。
 DASHBOARD_KPIS = [
     {
         "id": "dashboard-1",
@@ -95,7 +114,7 @@ DASHBOARD_KPIS = [
     {
         "id": "dashboard-5",
         "label": "累计治理任务",
-        "value": 12680,
+        "value": 0,
         "unit": "个",
         "change_rate": 12,
         "icon": "CircleCheckFilled",
@@ -122,6 +141,11 @@ def get_kpis(
     if kind == "dashboard":
         kpis = [dict(item) for item in DASHBOARD_KPIS]
         kpis[0].update({"value": _resource_storage_gb(), "unit": "GB"})
+        # The model workbench renders one row per Model record. Keep the
+        # dashboard KPI on that exact source and counting rule as well.
+        kpis[3].update({"value": _managed_model_count(), "unit": "个"})
+        # Must stay identical to governance-process / process-0.
+        kpis[4].update({"value": _process_task_count(), "unit": "个", "change_rate": 0})
         return success(
             data=kpis,
             message="首页指标查询成功",
@@ -177,4 +201,3 @@ def get_kpis(
         data=[],
         message=f"暂未配置 {kind} 页面指标",
     )
-

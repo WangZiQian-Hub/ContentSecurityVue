@@ -227,13 +227,14 @@ class Model(Base):
 
 
 class DatasetRecord(Base):
-    """平台 MySQL 中保存的外部数据库原始数据行。"""
+    """平台 MySQL 中保存的外部数据库原始数据行及其内容指纹。"""
 
     __tablename__ = "dataset_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     dataset_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     task_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
 
@@ -357,6 +358,20 @@ class ComplianceEvidence(Base):
     trace_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False)
+
+
+class ComplianceErrorComment(Base):
+    """用户对合规错误的评论；error_id 由前端稳定地生成。"""
+
+    __tablename__ = "compliance_error_comments"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    error_id: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    author_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    author_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_shanghai, nullable=False, index=True)
 
 
 class ComplianceLineageEdge(Base):

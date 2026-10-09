@@ -102,6 +102,76 @@ def process_evidence(task: Task, evidence_id: str) -> dict:
     }
 
 
+def task_evidence(task: Task, evidence_id: str) -> dict:
+    """Build a five-element record for every non-data-process task.
+
+    Do not invent fallback values here. An absent business field is audit
+    evidence that still needs to be registered, and must remain ``missing``.
+    """
+    input_data = task.input_data or {}
+    result = task.result if isinstance(task.result, dict) else {}
+    mappings = {
+        "data_ingest": ("数据源 ID", "接入接口", "目标数据版本", "接入条数"),
+        "value_score": ("数据集版本", "价值评估方法", "算法版本", "评分结果"),
+        "model_risk_governance": ("模型调用 ID", "治理策略", "模型版本", "治理后输出"),
+        "anomaly_detect": ("待检测对象", "检测规则", "规则版本", "风险等级"),
+        "evaluation": ("模型版本", "评估方法", "评估集版本", "各指标得分"),
+        "reasoning_audit": ("审计对象", "审计规则", "规则版本", "审计结论"),
+        "scenario_governance": ("场景 ID", "治理流程", "场景版本", "处理结果"),
+    }
+    input_label, interface_label, version_label, output_label = mappings.get(
+        task.capability_code, ("输入对象", "执行接口", "关联版本", "任务输出")
+    )
+
+    def first(*values: Any) -> Any:
+        return next((value for value in values if value is not None and str(value).strip()), None)
+
+    input_ref = first(
+        input_data.get("source_id"), input_data.get("sourceId"),
+        input_data.get("dataset_version_id"), input_data.get("datasetVersionId"),
+        input_data.get("dataset_id"), input_data.get("datasetId"),
+        input_data.get("model_call_id"), input_data.get("modelCallId"),
+        input_data.get("model_version"), input_data.get("modelVersion"),
+        input_data.get("scenario_id"), input_data.get("scenarioId"), task.dataset_version,
+    )
+    occurred_at = task.finished_at or task.created_at or now_shanghai()
+    interface = first(
+        input_data.get("endpoint"), input_data.get("interface"), input_data.get("method"),
+        input_data.get("strategy"), input_data.get("rule"), input_data.get("rule_id"),
+        input_data.get("workflow"), task.config.get("endpoint") if isinstance(task.config, dict) else None,
+        task.config.get("method") if isinstance(task.config, dict) else None,
+    )
+    version = first(
+        result.get("output_version"), result.get("version"), input_data.get("version"),
+        input_data.get("algorithm_version"), input_data.get("rule_version"),
+        input_data.get("model_version"), input_data.get("modelVersion"), task.model_version,
+        task.dataset_version,
+    )
+    output = first(
+        result.get("summary"), result.get("message"), result.get("output"), result.get("risk_level"),
+        result.get("score"), result.get("result"), result.get("count"), result.get("total_count"),
+    )
+    fields = [
+        _field("input", "输入", input_ref, input_label),
+        _field("time", "时间", iso(occurred_at), "当前任务时间"),
+        _field("interface", "接口", interface, interface_label),
+        _field("version", "版本", version, version_label),
+        _field("output", "输出", output, output_label),
+    ]
+    return {
+        "id": evidence_id,
+        "display_id": evidence_id.replace("evidence-", "EVD-"),
+        "source_module": "task-execution",
+        "subject_ref": subject("task", task.task_id, task.name),
+        "occurred_at": iso(occurred_at),
+        "source_trace_id": task.trace_id or f"trace-{task.task_id}",
+        "version_ref": str(version),
+        "redacted_fields": fields,
+        "integrity_state": "verified" if all(item["state"] == "verified" for item in fields) else "missing",
+        "allowed_actions": ["copy", "open_source"],
+    }
+
+
 def training_evidence(task: TrainingTask, evidence_id: str) -> dict:
     checkpoints = task.checkpoints or []
     if task.status == "pending":
@@ -204,12 +274,16 @@ def ensure_compliance_data(db: Session) -> None:
             learning_rate=0.0002,
             batch_size=8,
             target_version="v1.4.0",
-            loss_history=[2.4, 1.5, 0.8, 0.42, 0.23],
-            validation_loss_history=[2.6, 1.7, 0.95, 0.51, 0.29],
+            loss_history=[2.4, 1.5, 0.8, 0.42, 0.23, 0.18, 0.14, 0.11, 0.09, 0.07],
+            validation_loss_history=[2.6, 1.7, 0.95, 0.51, 0.29, 0.22, 0.17, 0.14, 0.11, 0.08],
             checkpoints=[{"name": "checkpoint-10", "epoch": 10, "loss": 0.29}],
         )
         db.add(training)
         db.flush()
+    elif training.id == "TR-COMPLIANCE-001" and len(training.loss_history or []) < training.epochs:
+        training.loss_history = [2.4, 1.5, 0.8, 0.42, 0.23, 0.18, 0.14, 0.11, 0.09, 0.07]
+        training.validation_loss_history = [2.6, 1.7, 0.95, 0.51, 0.29, 0.22, 0.17, 0.14, 0.11, 0.08]
+        training.updated_at = now_shanghai()
 
     model_version = db.scalar(select(ModelVersion).where(
         ModelVersion.model_id == int(training.model_id),
@@ -245,6 +319,8 @@ def ensure_compliance_data(db: Session) -> None:
 
     for task in db.scalars(select(Task).where(Task.capability_code == "data_process")).all():
         _upsert_evidence(db, process_evidence(task, f"evidence-process-{task.task_id}"))
+    for task in db.scalars(select(Task).where(Task.capability_code != "data_process")).all():
+        _upsert_evidence(db, task_evidence(task, f"evidence-task-{task.task_id}"))
     train_evidence_id = f"evidence-training-{training.id}"
     _upsert_evidence(db, training_evidence(training, train_evidence_id))
 
@@ -310,34 +386,35 @@ def ensure_compliance_data(db: Session) -> None:
                 "adapter_version": "compliance-db-v1", "data_origin": "model_calls",
                 "evidence_refs": ["evidence-neuron-capture"], "allowed_actions": ["review"],
                 "result": {
-                    "kind": "neuron_audit", "availability": "available", "unavailable_reason": None,
-                    "model_version": call.version, "inference_id": call.id, "capture_id": "CAPTURE-COMPLIANCE-001",
-                    "layer_indices": [8, 16, 24], "neuron_indices": [101, 205, 309, 412],
-                    "unit": "normalized activation", "normalization_baseline": "同模型安全样本基线",
-                    "threshold": 0.8,
-                    "heatmap": [[0.21, 0.38, 0.83, 0.44], [0.18, 0.91, 0.35, 0.56], [0.41, 0.32, 0.87, 0.62]],
-                    "abnormal_neurons": [
-                        {"layer": 8, "index": 309, "value": 0.83, "concept": "隐私实体", "evidence_refs": ["evidence-neuron-capture"]},
-                        {"layer": 16, "index": 205, "value": 0.91, "concept": "联系方式", "evidence_refs": ["evidence-neuron-capture"]},
-                    ],
-                    "observed_count": 12, "ratio": 2 / 12,
+                    "kind": "neuron_audit", "availability": "unavailable",
+                    "unavailable_reason": "当前环境未部署可采集激活值的模型推理服务，无法提供真实神经元激活数据。",
+                    "model_version": call.version, "inference_id": call.id, "capture_id": None,
+                    "layer_indices": [], "neuron_indices": [], "unit": "normalized activation",
+                    "normalization_baseline": "未采集", "threshold": 0.8, "heatmap": [],
+                    "abnormal_neurons": [], "observed_count": 0, "ratio": None,
                 },
             },
         ),
     ]
     for audit_id, capability, stype, sid, version, capture, status, payload in audit_specs:
-        if db.get(ComplianceAudit, audit_id) is None:
+        existing_audit = db.get(ComplianceAudit, audit_id)
+        if existing_audit is None:
             db.add(ComplianceAudit(
                 id=audit_id, capability_code=capability, subject_type=stype, subject_id=str(sid),
                 version_id=version, capture_id=capture, review_status="pending", review_reason="等待人工复核",
                 revision=1, task_id=f"TASK-{audit_id}", execution_status="succeeded",
                 compliance_status=status, payload=payload,
             ))
+        elif audit_id == "AUDIT-NEURON-001":
+            existing_audit.capture_id = None
+            existing_audit.compliance_status = status
+            existing_audit.payload = payload
+            existing_audit.updated_at = now_shanghai()
 
     generic_evidences = [
         ("evidence-call-input", call.prompt, "model-invoke"),
         ("evidence-call-output", call.governed_output, "model-invoke"),
-        ("evidence-neuron-capture", "已保存精确版本激活捕获", "neuron-capture"),
+        ("evidence-neuron-capture", "尚未接入推理服务的神经元激活采集", "neuron-capture"),
     ]
     for evidence_id, value, module in generic_evidences:
         payload = {

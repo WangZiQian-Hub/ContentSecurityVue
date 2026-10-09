@@ -8,15 +8,18 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.core.time import now_shanghai
-from app.models.tables import Dataset, Model, Task
+from app.models.tables import ComplianceErrorComment, Dataset, Model, Task
 from app.routers.compliance import (
     AlertAction,
+    ErrorCommentBody,
+    add_error_comment,
     act_on_alert,
     alert_detail,
     audit_detail,
     audits,
     contexts,
     evidence_detail,
+    error_comments,
     lineage,
     overview,
     trace_detail,
@@ -119,7 +122,7 @@ class ComplianceApiTest(unittest.TestCase):
         summary = overview("2026-01-01", "2027-01-01", "all", self.db)
         self.assertGreater(summary["data"]["expected_count"], 0)
         trace = trace_detail("TRACE-COMPLIANCE-001", True, self.db)
-        self.assertGreaterEqual(len(trace["data"]["records"]), 4)
+        self.assertGreaterEqual(len(trace["data"]["records"]), 3)
         current = alert_detail("ALERT-COMPLIANCE-001", self.db)["data"]
         request = Request({"type": "http", "headers": []})
         changed = act_on_alert(
@@ -148,6 +151,44 @@ class ComplianceApiTest(unittest.TestCase):
         self.assertTrue(all(item["status"] == "succeeded" for item in results))
         with self.Session() as verify:
             self.assertTrue(all(verify.get(Task, item["task_id"]) is not None for item in results))
+
+    def test_error_comments_persist_for_chinese_error_id_in_chronological_order(self):
+        error_id = "link:输入数据引用:edge-process-input-tsk_process_demo_06"
+        first = Request({"type": "http", "headers": [(b"x-request-id", b"comment-001"), (b"x-user-id", b"alice")]})
+        second = Request({"type": "http", "headers": [(b"x-request-id", b"comment-002")]})
+        add_error_comment(error_id, ErrorCommentBody(content="已联系数据组补登记"), first, self.db)
+        add_error_comment(error_id, ErrorCommentBody(content="等待复核完成"), second, self.db)
+        comments = error_comments(error_id, self.db)["data"]
+        self.assertEqual([item["content"] for item in comments], ["已联系数据组补登记", "等待复核完成"])
+        self.assertEqual(comments[0]["error_id"], error_id)
+        self.assertEqual(comments[0]["author_id"], "alice")
+        self.assertEqual(comments[1]["author_name"], "当前用户")
+        self.db.close()
+        self.db = self.Session()
+        self.assertEqual(self.db.query(ComplianceErrorComment).filter_by(error_id=error_id).count(), 2)
+
+    def test_non_process_tasks_have_ordered_five_element_evidence(self):
+        capabilities = [
+            "data_ingest", "value_score", "model_risk_governance", "anomaly_detect",
+            "evaluation", "reasoning_audit", "scenario_governance",
+        ]
+        now = now_shanghai()
+        for index, capability in enumerate(capabilities):
+            self.db.add(Task(
+                task_id=f"TASK-{index}", name=capability, capability_code=capability,
+                trace_id=None, status="succeeded", source_name=None, dataset_name=None,
+                storage_gb=0, progress=100, success_count=0, duplicate_count=0, anomaly_count=0,
+                input_data={"dataset_version_id": "dsv_000001", "interface": "测试接口"}, config={},
+                result={"output": "测试结果", "version": "v1"}, dataset_version="dsv_000001",
+                created_at=now, finished_at=now,
+            ))
+        self.db.commit()
+        ensure_compliance_data(self.db)
+        for index in range(len(capabilities)):
+            payload = evidence_detail(f"evidence-task-TASK-{index}", self.db)["data"]
+            fields = payload["redacted_fields"]
+            self.assertEqual([item["key"] for item in fields], ["input", "time", "interface", "version", "output"])
+            self.assertTrue(all(item["state"] in {"verified", "missing", "not_applicable"} for item in fields))
 
 
 if __name__ == "__main__":

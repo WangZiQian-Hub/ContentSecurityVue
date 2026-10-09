@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from math import ceil
 from typing import Any
 
@@ -15,6 +16,7 @@ from app.models.tables import (
     ComplianceAlert,
     ComplianceAudit,
     ComplianceEvidence,
+    ComplianceErrorComment,
     Dataset,
     Model,
     ModelCall,
@@ -23,6 +25,7 @@ from app.models.tables import (
     TrainingTask,
 )
 from app.services.compliance_service import alert_payload, audit_payload, ensure_compliance_data, subject
+from uuid import uuid4
 
 
 router = APIRouter()
@@ -37,6 +40,56 @@ def _page(items: list[dict], page: int, page_size: int) -> dict:
         "page_size": page_size,
         "total_pages": ceil(total / page_size) if total else 0,
     }
+
+
+def _comment_payload(row: ComplianceErrorComment) -> dict:
+    return {
+        "id": row.id,
+        "error_id": row.error_id,
+        "content": row.content,
+        "author_id": row.author_id,
+        "author_name": row.author_name,
+        "author": row.author_name,
+        "created_at": row.created_at.isoformat(),
+    }
+
+
+class ErrorCommentBody(BaseModel):
+    content: str = Field(min_length=1, max_length=500)
+
+
+@router.get("/compliance/errors/{error_id}/comments")
+def error_comments(error_id: str, db: Session = Depends(get_db)):
+    rows = db.scalars(
+        select(ComplianceErrorComment)
+        .where(ComplianceErrorComment.error_id == error_id)
+        .order_by(ComplianceErrorComment.created_at.asc(), ComplianceErrorComment.id.asc())
+    ).all()
+    return success(data=[_comment_payload(row) for row in rows], message="错误评论查询成功")
+
+
+@router.post("/compliance/errors/{error_id}/comments")
+def add_error_comment(error_id: str, body: ErrorCommentBody, request: Request, db: Session = Depends(get_db)):
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="评论内容不能为空")
+    request_id = request.headers.get("X-Request-Id")
+    if request_id:
+        existing = db.scalar(select(ComplianceErrorComment).where(ComplianceErrorComment.request_id == request_id))
+        if existing is not None:
+            if existing.error_id != error_id or existing.content != content:
+                raise HTTPException(status_code=409, detail="请求标识已用于另一条评论")
+            return success(data=_comment_payload(existing), message="错误评论已保存")
+    author_id = request.headers.get("X-User-Id")
+    row = ComplianceErrorComment(
+        id=str(uuid4()), error_id=error_id, request_id=request_id, content=content,
+        author_id=author_id, author_name=request.headers.get("X-User-Name") or author_id or "当前用户",
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return success(data=_comment_payload(row), message="错误评论已发布")
 
 
 def _node(entity_type: str, entity_id: Any, version: str | None, label: str, *, node_id: str | None = None) -> dict:
@@ -297,13 +350,7 @@ def trace_detail(trace_id: str, include_provenance: bool = True, db: Session = D
     if call is None:
         raise HTTPException(status_code=404, detail="Trace 不存在")
     training = db.scalar(select(TrainingTask).where(TrainingTask.model_id == call.model_id, TrainingTask.target_version == call.version))
-    process = db.scalar(select(Task).where(Task.capability_code == "data_process").order_by(Task.created_at.desc()))
     records: list[dict] = []
-    if include_provenance and process:
-        records.extend([
-            {"stage": "原始数据", "record_scope": "provenance", "subject_ref": subject("dataset", process.input_data.get("dataset_id", "unknown"), process.dataset_name or "数据集", process.dataset_version), "source_trace_id": process.trace_id, "occurred_at": process.created_at.isoformat(), "evidence_refs": [f"evidence-process-{process.task_id}"], "verification_state": "verified"},
-            {"stage": "清洗治理", "record_scope": "provenance", "subject_ref": subject("task", process.task_id, process.name), "source_trace_id": process.trace_id, "occurred_at": process.created_at.isoformat(), "evidence_refs": [f"evidence-process-{process.task_id}"], "verification_state": "verified"},
-        ])
     if include_provenance and training:
         records.append({"stage": "训练过程", "record_scope": "provenance", "subject_ref": subject("training_task", training.id, training.name, training.target_version), "source_trace_id": f"trace-{training.id}", "occurred_at": training.updated_at.isoformat(), "evidence_refs": [f"evidence-training-{training.id}"], "verification_state": "verified" if training.status == "succeeded" else "missing"})
     records.extend([
@@ -405,4 +452,3 @@ def alerts(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
         detail = alert_payload(row)
         summaries.append({key: detail[key] for key in ("id", "display_id", "subject_ref", "description", "risk_level", "current_status", "stage")})
     return success(data=_page(summaries, page, page_size), message="风险告警查询成功")
-
