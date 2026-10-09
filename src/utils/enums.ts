@@ -6,7 +6,7 @@ export const TASK_STATUS = {
   cancelled: { label: '已取消', color: 'info' },
 } as const
 
-/** 根据能力编码统一生成任务类别，供所有任务创建入口复用。 */
+/** 能力编码 → 任务类别的本地兜底字典：接口返回 task_category 时以后端为准，这里只在后端缺失时使用。 */
 export const TASK_CATEGORY = {
   data_process: '数据处理',
   data_ingest: '数据接入',

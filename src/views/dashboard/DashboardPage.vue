@@ -69,7 +69,11 @@ const infrastructureDetails = [
 ]
 </script>
 <template>
-  <KpiStrip hide-mini-bars-without-comparison />
+  <KpiStrip
+    hide-mini-bars-without-comparison
+    empty-text="暂无指标数据"
+    empty-hint="指标接口未返回数据，稍后重试即可"
+  />
   <PanelCard title="项目核心任务链" icon="Connection"
     ><template #extra>
       <span class="title-description">聚焦数据价值发现与风险治理，构建安全可控的内容治理闭环</span>
@@ -100,7 +104,7 @@ const infrastructureDetails = [
           </div></router-link
         >
       </div></PanelCard
-    ><PanelCard title="最近任务" icon="Download" link="/evaluation/tasks"><TaskTable /></PanelCard>
+    ><PanelCard title="最近任务" icon="Download" link="/compliance/full-chain"><TaskTable /></PanelCard>
   </div>
   <PanelCard title="一体化平台支撑能力" icon="HelpFilled"
     ><template #extra>

@@ -1,17 +1,23 @@
 .mw-root {
   display: contents;
 }
+/* 页签条外观对齐“数据治理”的 .governance-tabs（styles/data-governance.css）与
+   “数据资源”的 .resource-tabs（styles/data-resource.css），三处数值保持一致：
+   半透明底、无外框、8px 圆角、条目 15px 22px 内边距、18px 文字、23px 图标。
+   仅保留下面两条本页必需的布局约束：固定高度画布内禁止导航收缩为仅剩边框的
+   滚动区域（flex/min-height），以及窄屏时条目不换行挤压。 */
 .mw-tabs {
   display: flex;
+  align-items: center;
   /* 固定高度画布内禁止导航收缩为仅剩边框的滚动区域。 */
   flex: 0 0 auto;
   min-height: 54px;
   gap: 12px;
   order: -1;
-  margin-bottom: 14px;
-  background: #fff;
-  border: 1px solid #e2eefa;
-  border-radius: 7px;
+  padding: 0 15px;
+  margin-bottom: 10px;
+  background: #ffffffd9;
+  border-radius: 8px;
   overflow-x: auto;
 }
 .mw-tabs a {
@@ -20,22 +26,24 @@
   min-height: 52px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 13px;
   min-width: 130px;
-  padding: 15px 26px;
-  color: #526b94;
+  padding: 15px 22px;
+  color: #43608e;
   border-bottom: 3px solid transparent;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   white-space: nowrap;
 }
+.mw-tabs a:hover,
 .mw-tabs a.selected {
   color: #087bff;
+}
+.mw-tabs a.selected {
   border-bottom-color: #087bff;
-  background: #f7fbff;
 }
 .mw-tabs .el-icon {
-  font-size: 21px;
+  font-size: 23px;
 }
 .mw-root,
 .mw-dialog {
@@ -43,48 +51,9 @@
   font-size: 14px;
   letter-spacing: 0;
 }
-.mw-kpis {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin: -24px 0 14px;
-  order: -2;
-}
-.mw-kpi {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 102px;
-  padding: 18px;
-  background: white;
-  border: 1px solid #e6eff9;
-  border-radius: 7px;
-  min-width: 0;
-}
-.mw-kpi-icon {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  font-size: 28px;
-}
-.mw-kpi h3 {
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0 0 10px;
-  overflow-wrap: anywhere;
-}
-.mw-kpi strong {
-  font-size: 28px;
-  color: #072675;
-  line-height: 1.2;
-}
-.mw-kpi small {
-  font-size: 13px;
-  font-weight: 500;
-}
+/* KPI 卡片（WorkbenchKpis.vue）统一复用 styles/shared-components.css 的
+   .kpi-strip / .kpi-card，与“数据治理”等页面同尺寸同文字层级，
+   因此本文件不再单独定义卡片样式；调整外观请改共享样式。 */
 .mw-grid,
 .mw-training-grid,
 .mw-evaluation-grid {
@@ -372,18 +341,6 @@
   max-width: calc(100vw - 32px);
 }
 @media (max-width: 1450px) {
-  .mw-kpi {
-    padding: 14px 10px;
-    gap: 9px;
-  }
-  .mw-kpi-icon {
-    width: 42px;
-    height: 42px;
-    font-size: 23px;
-  }
-  .mw-kpi strong {
-    font-size: 24px;
-  }
   .mw-training-grid {
     grid-template-columns: minmax(230px, 1fr) minmax(300px, 1.5fr);
   }
@@ -401,33 +358,12 @@
   }
 }
 @media (max-width: 1050px) {
-  .mw-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
   .mw-wide-left,
   .mw-invoke-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 680px) {
-  .mw-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 0;
-  }
-  .mw-kpi {
-    min-height: 90px;
-  }
-  .mw-kpi h3 {
-    font-size: 12px;
-  }
-  .mw-kpi strong {
-    font-size: 22px;
-  }
-  .mw-kpi-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 19px;
-  }
   .mw-training-grid,
   .mw-evaluation-grid,
   .mw-halves {

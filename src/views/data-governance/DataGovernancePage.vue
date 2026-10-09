@@ -10,7 +10,7 @@ import AnomalyOverview from './components/AnomalyOverview.vue'
 import RiskOverview from './components/RiskOverview.vue'
 import ProcessOverview from './components/ProcessOverview.vue'
 import ValueOverview from './components/ValueOverview.vue'
-import GovernanceTokenBar from './components/GovernanceTokenBar.vue'
+import GovernanceTokenBar from '../../components/GovernanceTokenBar.vue'
 const riskRevision = ref(0)
 const anomalyRevision = ref(0)
 const route = useRoute()

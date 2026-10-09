@@ -23,6 +23,7 @@ import { navigation } from '../router/navigation'  /** 导入菜单配置 */
 import AppIcon from '../components/AppIcon.vue'
 import TaskTable from '../components/TaskTable.vue'
 import CapabilityDock from '../components/CapabilityDock.vue'
+import GovernanceTokenBar from '../components/GovernanceTokenBar.vue'
 import { usePlatformStore } from '../stores/platform'
 import { isMock } from '../api/request'  /** 判断是否是 Mock模式 */
 const route = useRoute()
@@ -101,7 +102,7 @@ function openUserManagement() {
           <AppIcon name="BellFilled" /><i v-if="hasUnread"></i></button
         >
         <button class="top-button user-button" @click="isProfileOpen = true">
-          <span class="avatar">张</span>张三<AppIcon name="ArrowDown" />
+          <span class="avatar"><AppIcon name="UserFilled" /></span>演示用户<AppIcon name="ArrowDown" />
         </button>
       </div>
     </header>
@@ -140,6 +141,14 @@ function openUserManagement() {
           ><span class="motto">让内容更安全 · 让社会更美好</span>
         </div>
       </div>
+      <!-- 模型服务访问令牌属于全局配置，放在子页面导览上方。
+           数据治理模块自行维护页签，令牌栏已在它的组件里，这里只处理场景应用。
+           组件内部自带模型模式判断，业务后端模式不会出现。 -->
+      <GovernanceTokenBar
+        v-if="current.path === '/scenario'"
+        class="page-token-bar"
+        compact
+      />
       <!-- 数据资源在父页面中维护自己的总览与子页面导航。 -->
       <nav v-if="current.tabs.length && !['/data-resource', '/data-governance', '/model-train', '/compliance', '/evaluation'].includes(current.path)" class="page-tabs" aria-label="页面子导航">
         <!-- 遍历当前模块配置的所有二级页签 -->
@@ -147,13 +156,13 @@ function openUserManagement() {
           v-for="(tab, index) in current.tabs"
           :key="tab.path"
           :to="`${current.path}/${tab.path}`"
-          :class="{ selected: route.params.tab === tab.path || (!route.params.tab && index === 0) }"
+          :class="{ selected: route.params.tab === tab.path || (!route.params.tab && index === 0), 'icon-tab': Boolean(tab.icon) }"
           >
-          <!-- 显示页签名称 -->
-          {{ tab.title }}
+          <!-- 配了图标的页签在文字前显示图标（图标在 router/navigation.ts 里按模块配置） -->
+          <AppIcon v-if="tab.icon" :name="tab.icon" />{{ tab.title }}
         </router-link>
       </nav>
-      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train', '/compliance', '/evaluation'].includes(current.path)" />
+      <router-view /><CapabilityDock v-if="!['/data-resource', '/data-governance', '/model-train', '/compliance', '/evaluation', '/scenario'].includes(current.path)" />
       <footer class="page-footer">
         内容安全治理原型平台 <span>统一数据 · 智能治理 · 全程可溯</span>
       </footer>
@@ -174,7 +183,7 @@ function openUserManagement() {
     >
     <el-dialog v-model="isProfileOpen" title="个人信息" width="420px" class="profile-dialog"
       ><el-descriptions :column="1" border
-        ><el-descriptions-item label="用户">张三</el-descriptions-item
+        ><el-descriptions-item label="用户">演示用户</el-descriptions-item
         ><el-descriptions-item label="角色">平台管理员（演示）</el-descriptions-item
         ><el-descriptions-item label="工作空间"
           >内容安全治理中心</el-descriptions-item
@@ -185,3 +194,13 @@ function openUserManagement() {
     >
   </div>
 </template>
+<style scoped>
+/* .main-content 是 flex 纵向容器，直属子元素按 order 排序，与 DOM 顺序无关：
+   页面标题 -3、KPI 卡片 -2、子页面导览 -1，其余默认 0。
+   令牌栏取 -1，且在 DOM 中位于导览之前，因此显示在子页面导览上方。
+   flex: 0 0 auto 与 .page-tabs 一致，避免被容器压缩。 */
+.page-token-bar {
+  order: -1;
+  flex: 0 0 auto;
+}
+</style>

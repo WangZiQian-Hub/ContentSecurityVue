@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useEvaluationStore } from '../../stores/evaluation'
@@ -11,6 +11,7 @@ import EvaluationExecutionPage from './EvaluationExecutionPage.vue'
 import EvaluationResultPage from './EvaluationResultPage.vue'
 import EvaluationRecordPage from './EvaluationRecordPage.vue'
 import EvaluationEvidenceDetail from './EvaluationEvidenceDetail.vue'
+import AppIcon from '../../components/AppIcon.vue'
 import './evaluation.css'
 const route = useRoute()
 const store = useEvaluationStore()
@@ -46,16 +47,16 @@ onBeforeUnmount(store.clear)
     <nav class="evaluation-tabs" aria-label="测试评估子页面">
       <router-link
         v-for="tab in [
-          { path: '/evaluation', title: '指标管理' },
-          { path: '/evaluation/tasks', title: '测试任务' },
-          { path: '/evaluation/execution', title: '测试执行' },
-          { path: '/evaluation/results', title: '测试结果' },
-          { path: '/evaluation/records', title: '测试记录' },
+          { path: '/evaluation', title: '指标管理', icon: 'DataAnalysis' },
+          { path: '/evaluation/tasks', title: '测试任务', icon: 'Tickets' },
+          { path: '/evaluation/execution', title: '测试执行', icon: 'VideoPlay' },
+          { path: '/evaluation/results', title: '测试结果', icon: 'Histogram' },
+          { path: '/evaluation/records', title: '测试记录', icon: 'Document' },
         ]"
         :key="tab.path"
         :to="tab.path"
         :class="{ selected: tab.path === '/evaluation' ? route.path === '/evaluation' : route.path.startsWith(tab.path) }"
-      >{{ tab.title }}</router-link>
+      ><AppIcon :name="tab.icon" />{{ tab.title }}</router-link>
     </nav>
     <div v-if="isEvaluationDemo" class="ev-note" role="status">
       <b>示例演示模式</b> · 数据与操作仅用于演示，刷新后重置；不写入后端，不生成正式报告。

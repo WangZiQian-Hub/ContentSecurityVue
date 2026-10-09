@@ -5,7 +5,15 @@ import type { ExecuteTaskReq, PageResult, Task } from '../types'
 export async function listTasks(): Promise<PageResult<Task>> {
   if (isMock)
     return { items: [...tasks], total: tasks.length, page: 1, pageSize: 20, totalPages: 1 }
-  return request({ url: '/tasks', params: { page: 1, pageSize: 20 } })
+  const page = await request<PageResult<Task>>({ url: '/tasks', params: { page: 1, pageSize: 20 } })
+  // 任务类别以后端返回的 task_category 为准；接口没给这个字段时，才用本地字典兜底。
+  return {
+    ...page,
+    items: page.items.map((task) => ({
+      ...task,
+      taskCategory: task.taskCategory || getTaskCategory(task.capabilityCode),
+    })),
+  }
 }
 export async function executeTask(data: ExecuteTaskReq): Promise<Task> {
   if (isMock) {

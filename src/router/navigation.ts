@@ -10,10 +10,11 @@ export interface NavItem {
   title: string
   icon: string
   description: string
-  tabs: { path: string; title: string }[]
+  tabs: { path: string; title: string; icon?: string }[]
 }
-const tabs = (paths: string[], titles: string[]) =>
-  paths.map((path, index) => ({ path, title: titles[index] || path }))
+/** icons 可选：只给需要“图标 + 文字”页签的模块传，其余模块保持纯文字页签。 */
+const tabs = (paths: string[], titles: string[], icons: string[] = []) =>
+  paths.map((path, index) => ({ path, title: titles[index] || path, icon: icons[index] }))
 export const navigation: NavItem[] = [
   {
     path: '/dashboard',  /* 一级网址 */
@@ -94,6 +95,8 @@ export const navigation: NavItem[] = [
         'cyber-security',
       ],
       ['舆情分析', '热点事件跟踪', '跨文化交流', '多民族社会治理', '智能政务', '网络空间安防'],
+      /* 与“综合态势”页场景入口卡片保持同一套图标 */
+      ['ChatDotRound', 'Sunrise', 'Football', 'UserFilled', 'OfficeBuilding', 'Checked'],
     ),
   },
   {
@@ -104,6 +107,7 @@ export const navigation: NavItem[] = [
     tabs: tabs(
       ['users', 'roles', 'model-config', 'logs'],
       ['用户管理', '角色权限', '模型接入配置', '系统日志'],
+      ['User', 'Lock', 'Setting', 'Document'],
     ),
   },
 ]

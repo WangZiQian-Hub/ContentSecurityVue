@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import PanelCard from '../../../components/PanelCard.vue'
-import {
-  clearLlmToken,
-  getLlmToken,
-  isGovernanceLlm,
-  saveLlmToken,
-} from '../../../api/governance-llm'
-// 令牌存在 sessionStorage 里，读取结果不是响应式的；用本地状态记录，保存或清除后右上角标签立即更新。
+import PanelCard from './PanelCard.vue'
+import { clearLlmToken, getLlmToken, isGovernanceLlm, saveLlmToken } from '../api/governance-llm'
+/* 模型服务访问令牌输入条。
+   令牌是模型服务签发的凭证，业务登录令牌和上游模型 API Key 都不能替代（文档第 16 行）。
+   令牌只存在 sessionStorage：刷新页面仍有效，关闭标签页后需要重新填写。
+   原先只挂在数据治理页面，场景应用等直连页面也需要填写入口，因此移到公共组件目录。 */
+const props = withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
 const input = ref('')
 const configured = ref(!!getLlmToken())
+const emit = defineEmits<{ (event: 'saved'): void }>()
+
 function save() {
   if (!input.value.trim()) return
   saveLlmToken(input.value)
   input.value = ''
   configured.value = true
   ElMessage.success('模型访问令牌已保存')
+  emit('saved')
 }
 function clear() {
   clearLlmToken()
@@ -26,7 +28,13 @@ function clear() {
 }
 </script>
 <template>
-  <PanelCard v-if="isGovernanceLlm" class="governance-token-panel" title="模型服务访问令牌" icon="Key">
+  <PanelCard
+    v-if="isGovernanceLlm"
+    class="governance-token-panel"
+    :class="{ compact: props.compact }"
+    title="模型服务访问令牌"
+    icon="Key"
+  >
     <template #extra>
       <el-tag :type="configured ? 'success' : 'info'" effect="plain">{{
         configured ? '已配置' : '未配置'
@@ -52,6 +60,11 @@ function clear() {
 .governance-token-panel {
   margin-top: -30px;
   margin-bottom: 40px; /* 与下方 KPI 卡片的距离；净间距 ≈ 这个值 − 30px */
+}
+/* compact 用于非数据治理页面：不做负外边距，直接跟在内容流里。 */
+.governance-token-panel.compact {
+  margin-top: 0;
+  margin-bottom: 15px;
 }
 .governance-token-bar .el-input {
   flex: none;

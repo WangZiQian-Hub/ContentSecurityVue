@@ -150,6 +150,10 @@
   background: linear-gradient(130deg, #49aafa, #2c66c2);
   font-weight: bold;
 }
+/* 头像里的通用人像图标；颜色跟随顶部栏文字，大小按 35px 圆底调整。 */
+.avatar .el-icon {
+  font-size: 21px;
+}
 /* ==================== 03. 左侧导航（layouts/AppLayout.vue） ==================== */
 /* 从顶部栏下沿延伸到视口底部；菜单过多时可在侧栏内滚动。 */
 .sidebar {

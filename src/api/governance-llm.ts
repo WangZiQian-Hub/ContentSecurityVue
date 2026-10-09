@@ -1,4 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios'
+import { ref } from 'vue'
 import { mapKeys } from '../utils/case'
 
 export const LLM_TOKEN_KEY = 'llmAccessToken'
@@ -13,11 +14,17 @@ export function getLlmToken() {
   if (typeof sessionStorage === 'undefined') return ''
   return sessionStorage.getItem(LLM_TOKEN_KEY)?.trim() || ''
 }
+/** 令牌是否已配置。
+ *  sessionStorage 本身不是响应式的，而令牌栏现在挂在全局布局里，
+ *  需要随令牌变化重新取数的页面（例如场景应用的模型目录）靠这个标记感知。 */
+export const llmTokenConfigured = ref(!!getLlmToken())
 export function saveLlmToken(token: string) {
   if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LLM_TOKEN_KEY, token.trim())
+  llmTokenConfigured.value = true
 }
 export function clearLlmToken() {
   if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(LLM_TOKEN_KEY)
+  llmTokenConfigured.value = false
 }
 
 client.interceptors.request.use((config) => {
@@ -39,7 +46,7 @@ async function showError(message: string) {
 export async function llmRequest<T>(config: AxiosRequestConfig): Promise<T> {
   const token = getLlmToken()
   if (!token) {
-    const message = '尚未填写模型服务访问令牌，请在数据治理页面填写后重试。'
+    const message = '尚未填写模型服务访问令牌，请先填写令牌后重试。'
     await showError(message)
     throw new Error(message)
   }
@@ -58,7 +65,7 @@ export async function llmRequest<T>(config: AxiosRequestConfig): Promise<T> {
     if (axios.isCancel(error)) throw error
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
     if (status === 401 || status === 403) {
-      const message = '模型服务访问令牌无效或已失效，请在数据治理页面重新填写。'
+      const message = '模型服务访问令牌无效或已失效，请重新填写。'
       await showError(message)
       throw new Error(message)
     }

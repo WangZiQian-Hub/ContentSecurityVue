@@ -18,10 +18,18 @@
 .evaluation-workspace .evaluation-tabs a {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   padding: 0 28px;
   color: #7186a7;
   font-size: 14px;
   border-bottom: 3px solid transparent;
+}
+/* 页签图标：跟随文字颜色，尺寸按这条页签条的字号取 18px。 */
+.evaluation-workspace .evaluation-tabs a .el-icon,
+.evaluation-workspace .evaluation-tabs a svg {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
 }
 .evaluation-workspace .evaluation-tabs a:hover,
 .evaluation-workspace .evaluation-tabs a.selected {

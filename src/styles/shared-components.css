@@ -94,6 +94,10 @@
 .page-tabs {
   /* 子页面选项条显示在 KPI 小卡片之后。 */
   order: -1;
+  /* 固定设计画布下 .main-content 是固定高度的 flex 纵向容器，而页签条自身
+     overflow: auto 会让它的自动最小高度变成 0，于是被压缩到看不见。
+     这里禁止压缩，超出部分交给 .main-content 滚动。 */
+  flex: 0 0 auto;
   display: flex;
   background: #fff;
   border: 1px solid #e2eefa;
@@ -114,6 +118,30 @@
   font-weight: bold;
   background: #f9fcff;
 }
+/* 配了图标的页签（router/navigation.ts 里的 tab.icon）：图标 + 文字，
+   尺寸与配色对齐“全链路合规治理”模块自己的页签条。 */
+.page-tabs a.icon-tab {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 22px;
+  color: #43608e;
+  font-size: 18px;
+  font-weight: 600;
+}
+.page-tabs a.icon-tab:hover,
+.page-tabs a.icon-tab.selected {
+  color: #087bff;
+}
+.page-tabs a.icon-tab.selected {
+  border-bottom-color: #087bff;
+}
+.page-tabs a.icon-tab .el-icon,
+.page-tabs a.icon-tab svg {
+  width: 23px;
+  height: 23px;
+  font-size: 23px;
+}
 /* ==================== 06. KPI 指标卡（components/KpiStrip.vue） ==================== */
 /* 桌面列数由组件按指标数量写入行内样式；小屏 @media 用 !important 覆盖。 */
 .kpi-strip {
@@ -124,6 +152,35 @@
   margin-top: -30px; /* 整组卡片移动 */
   margin-right: 0px; /* 卡片组右侧留白 */
   margin-bottom: 14px;
+}
+/* 没拿到指标数据时的占位块（KpiStrip 的 empty-text）：高度与卡片一致，避免页面跳动。 */
+.kpi-empty {
+  min-height: 120px;
+  background: #fff;
+  border: 1px dashed #cfe1f6;
+  border-radius: 8px;
+  padding: 19px 16px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  text-align: center;
+  box-shadow: 0 4px 14px #b8d8f212;
+}
+.kpi-empty strong {
+  color: #43608e;
+  font-size: 17px;
+  font-weight: 600;
+}
+.kpi-empty small {
+  color: #93a6c2;
+  font-size: 13px;
+}
+/* 没有对比数据时的中性说明文字（原来是空着或 NaN）。 */
+.kpi-card p.no-comparison {
+  color: #93a6c2;
+  font-size: 14px;
+  font-weight: 600;
 }
 .kpi-card {
   min-height: 120px; /* 卡片高度 */
