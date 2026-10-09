@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from hashlib import sha256
+import json
 import re
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
@@ -36,6 +38,17 @@ def _json_value(value: Any) -> Any:
     if isinstance(value, (list, tuple, set)):
         return [_json_value(item) for item in value]
     return str(value)
+
+
+def record_hash(payload: dict[str, Any]) -> str:
+    """Return a stable digest independent of database column order."""
+    canonical = json.dumps(
+        _json_value(payload),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _statement(input_data: dict[str, Any]) -> tuple[str, str]:
@@ -90,11 +103,37 @@ def read_mysql_rows(input_data: dict[str, Any]) -> tuple[list[dict[str, Any]], i
     return rows, byte_count, source_kind
 
 
-def save_dataset_rows(db: Session, *, dataset_id: int, task_id: str, rows: list[dict[str, Any]]) -> None:
-    """将外部 MySQL 的每一行写入平台自身的 MySQL。"""
+def save_dataset_rows(db: Session, *, dataset_id: int, task_id: str, rows: list[dict[str, Any]]) -> int:
+    """Write every source row and return the number with an existing content hash.
+
+    Duplicate data remains available to downstream users.  A duplicate is thus
+    counted in both the successful-ingest total and the duplicate total.
+    """
+    hashes = [record_hash(row) for row in rows]
+    existing_hashes = set(
+        db.scalars(
+            select(DatasetRecord.content_hash).where(
+                DatasetRecord.dataset_id == dataset_id,
+                DatasetRecord.content_hash.in_(set(hashes)),
+            )
+        ).all()
+    ) if hashes else set()
+    seen_hashes = set(existing_hashes)
+    duplicate_count = 0
     for start in range(0, len(rows), FETCH_SIZE):
+        batch = []
+        for row, content_hash in zip(rows[start : start + FETCH_SIZE], hashes[start : start + FETCH_SIZE]):
+            if content_hash in seen_hashes:
+                duplicate_count += 1
+            seen_hashes.add(content_hash)
+            batch.append(DatasetRecord(
+                dataset_id=dataset_id,
+                task_id=task_id,
+                content_hash=content_hash,
+                payload=row,
+            ))
         db.add_all(
-            DatasetRecord(dataset_id=dataset_id, task_id=task_id, payload=row)
-            for row in rows[start : start + FETCH_SIZE]
+            batch
         )
         db.flush()
+    return duplicate_count

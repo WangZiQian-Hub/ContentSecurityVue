@@ -372,11 +372,13 @@ def run_mock_task(
                 # 模拟能力的固定 1,000 条不作为真实接入统计；以文件大小推导的
                 # 记录数为准，确保每次接入都能改变数据集记录总数。
                 success_count = record_count
-                _, default_duplicate, default_anomaly = task_ingest_statistics(
+                _, _, default_anomaly = task_ingest_statistics(
                     task_id,
                     storage_gb,
                 )
-                duplicate_count = duplicate_count or default_duplicate
+                # 本地文件、API 等当前不会把内容解析成独立记录，不能用模拟值
+                # 冒充重复检测结果；数据库来源在写入时按内容哈希返回真实重复数。
+                duplicate_count = 0
                 anomaly_count = anomaly_count or default_anomaly
                 result.update(
                     {
@@ -401,7 +403,13 @@ def run_mock_task(
                 )
                 dataset_name = dataset.name
                 if connector_type == "database":
-                    save_dataset_rows(db, dataset_id=dataset.id, task_id=task_id, rows=database_rows)
+                    duplicate_count = save_dataset_rows(
+                        db,
+                        dataset_id=dataset.id,
+                        task_id=task_id,
+                        rows=database_rows,
+                    )
+                    result["duplicate_count"] = duplicate_count
                 result["dataset_id"] = dataset.id
                 result["dataset_name"] = dataset.name
 

@@ -3,3 +3,11 @@ dist/
 .env.local
 *.tsbuildinfo
 playwright-report/
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.python-version
+
+# 其他常见缓存
+.cache/

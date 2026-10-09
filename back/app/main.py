@@ -36,6 +36,7 @@ from app.core.seed import (
     ensure_model_columns,
     ensure_training_task_columns,
     ensure_evaluation_metric_columns,
+    ensure_dataset_record_columns,
     ensure_task_columns,
     migrate_legacy_resources,
     seed_initial_data,
@@ -72,6 +73,7 @@ async def lifespan(app: FastAPI):
 
     ensure_dataset_source_type_column()
     ensure_task_columns()
+    ensure_dataset_record_columns()
     ensure_model_columns()
     ensure_training_task_columns()
     # 迁移旧的统一资源表，并确保独立资源表有初始数据

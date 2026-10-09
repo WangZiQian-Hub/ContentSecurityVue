@@ -56,6 +56,53 @@ RISK_LAST_RESULT: dict | None = None
 RISK_TOTALS = {"valid_count": 0, "risk_count": 0, "high_count": 0, "pending_count": 0}
 
 
+def _risk_results_from_database() -> list[dict]:
+    """恢复已经完成的风险检测结果，避免服务重启后概览指标回到零。"""
+    with SessionLocal() as db:
+        tasks = db.scalars(
+            select(Task)
+            .where(
+                Task.capability_code == "risk_detect",
+                Task.status == "succeeded",
+            )
+            .order_by(Task.finished_at.desc(), Task.created_at.desc())
+        ).all()
+        return [dict(task.result) for task in tasks if isinstance(task.result, dict)]
+
+
+def _saved_risk_result(result_id: str) -> dict | None:
+    for result in RISK_RESULTS.values():
+        if result["id"] == result_id:
+            return result
+    return next((result for result in _risk_results_from_database() if result.get("id") == result_id), None)
+
+
+def _saved_risk_result_for_scope(scope: dict) -> dict | None:
+    result = RISK_RESULTS.get(_risk_key(scope))
+    if result is not None:
+        return result
+    return next(
+        (
+            result
+            for result in _risk_results_from_database()
+            if result.get("scope") == scope
+        ),
+        None,
+    )
+
+
+def _save_risk_result(result: dict) -> None:
+    """Persist reviews made after a restart back to the task result snapshot."""
+    task_id = result.get("task_id")
+    if not task_id:
+        return
+    with SessionLocal() as db:
+        task = db.get(Task, task_id)
+        if task is not None:
+            task.result = result
+            db.commit()
+
+
 def _anomaly_snapshot_for_result(result_id: str) -> dict | None:
     """读取异常结果快照，并在进程重启后从已持久化任务恢复样本。"""
     snapshot = ANOMALY_SIMULATIONS.get(result_id)
@@ -655,15 +702,25 @@ def current_change_set(
 
 @router.get("/data-governance/risk-overview")
 def risk_overview(kind: str = Query(default="governance-risk")):
-    latest = RISK_LAST_RESULT
+    if kind != "governance-risk":
+        raise ValueError("不支持的治理类型")
+    persisted = _risk_results_from_database()
+    # 新完成但尚未重启的结果在内存中；按 result id 去重，数据库为统计基准。
+    all_results = {result["id"]: result for result in [*persisted, *RISK_RESULTS.values()]}
+    results = sorted(
+        all_results.values(),
+        key=lambda result: str(result.get("finished_at") or ""),
+        reverse=True,
+    )
+    latest = results[0] if results else None
     cards = [
-        {"label": "已检测样本", "value": RISK_TOTALS["valid_count"], "icon": "Document"},
+        {"label": "已检测样本", "value": sum(int(result.get("valid_count") or 0) for result in results), "icon": "Document"},
         {"label": "风险样本", "value": latest["risk_count"] if latest else 0, "icon": "WarningFilled"},
         {"label": "高风险样本", "value": latest["high_count"] if latest else 0, "icon": "CircleCloseFilled"},
-        {"label": "待人工复核", "value": 0, "icon": "User"},
+        {"label": "待人工复核", "value": latest["pending_count"] if latest else 0, "icon": "User"},
     ]
-    records = [{"result_id": result["id"], "dataset_name": result["dataset_name"], "version_id": result["scope"]["version_id"], "valid_count": result["valid_count"], "risk_count": result["risk_count"], "finished_at": result["finished_at"]} for result in RISK_RESULTS.values()]
-    return success(data={"cards": cards, "definitions": ["仅统计本次会话中已完成的风险检测任务。"], "records": records}, message="风险识别概览查询成功")
+    records = [{"result_id": result["id"], "dataset_name": result["dataset_name"], "version_id": result["scope"]["version_id"], "valid_count": result["valid_count"], "risk_count": result["risk_count"], "finished_at": result["finished_at"]} for result in results]
+    return success(data={"cards": cards, "definitions": ["统计数据库中已完成的风险检测任务；服务重启后会恢复历史累计值。"], "records": records}, message="风险识别概览查询成功")
 
 
 @router.get("/data-governance/risk-options")
@@ -714,21 +771,21 @@ def latest_risk_result(
     if kind != "governance-risk":
         raise ValueError("不支持的治理类型")
     scope = _risk_scope(dataset_id, version_id, language, scheme_id)
-    result = RISK_RESULTS.get(_risk_key(scope))
+    result = _saved_risk_result_for_scope(scope)
     return success(data={key: value for key, value in result.items() if key != "samples"} if result else None, message="风险结果查询成功")
 
 
 @router.get("/data-governance/risk-results/{result_id}")
 def risk_result(result_id: str):
-    for result in RISK_RESULTS.values():
-        if result["id"] == result_id:
-            return success(data={key: value for key, value in result.items() if key != "samples"}, message="风险结果查询成功")
+    result = _saved_risk_result(result_id)
+    if result:
+        return success(data={key: value for key, value in result.items() if key != "samples"}, message="风险结果查询成功")
     raise HTTPException(status_code=404, detail="风险结果不存在")
 
 
 @router.get("/data-governance/risk-results/{result_id}/samples")
 def risk_samples(result_id: str, page: int = 1, page_size: int = 5, keyword: str = "", level: str = "", status: str = ""):
-    result = next((item for item in RISK_RESULTS.values() if item["id"] == result_id), None)
+    result = _saved_risk_result(result_id)
     if not result:
         raise HTTPException(status_code=404, detail="风险结果不存在")
     rows = [row for row in result["samples"] if (not level or row["maximum_suggested_level"] == level) and (not status or row["status"] == status) and (not keyword or keyword.lower() in f"{row['id']} {row['text']} {row['primary_category']}".lower())]
@@ -738,7 +795,7 @@ def risk_samples(result_id: str, page: int = 1, page_size: int = 5, keyword: str
 
 @router.post("/data-governance/risk-results/{result_id}/export")
 def export_risk_samples(result_id: str, payload: dict = Body(default={} )):
-    result = next((item for item in RISK_RESULTS.values() if item["id"] == result_id), None)
+    result = _saved_risk_result(result_id)
     if not result:
         raise HTTPException(status_code=404, detail="风险结果不存在")
     keyword = str(payload.get("keyword", "")).lower()
@@ -750,7 +807,7 @@ def export_risk_samples(result_id: str, payload: dict = Body(default={} )):
 
 @router.get("/data-governance/risk-results/{result_id}/samples/{sample_id}")
 def risk_sample(result_id: str, sample_id: str):
-    result = next((item for item in RISK_RESULTS.values() if item["id"] == result_id), None)
+    result = _saved_risk_result(result_id)
     sample = next((row for row in result["samples"] if row["id"] == sample_id), None) if result else None
     if not sample:
         raise HTTPException(status_code=404, detail="风险样本不存在")
@@ -759,7 +816,7 @@ def risk_sample(result_id: str, sample_id: str):
 
 @router.post("/data-governance/risk-results/{result_id}/samples/{sample_id}/reviews")
 def review_risk_sample(result_id: str, sample_id: str, payload: dict = Body(...)):
-    result = next((item for item in RISK_RESULTS.values() if item["id"] == result_id), None)
+    result = _saved_risk_result(result_id)
     sample = next((row for row in result["samples"] if row["id"] == sample_id), None) if result else None
     if not sample:
         raise HTTPException(status_code=404, detail="风险样本不存在")
@@ -769,12 +826,13 @@ def review_risk_sample(result_id: str, sample_id: str, payload: dict = Body(...)
         raise HTTPException(status_code=400, detail="请填写复核意见")
     sample["status"] = "已复核"
     sample["review"] = {"id": sample.get("review", {}).get("id", f"review-{sample_id}"), "status": "已复核", "original_findings": sample["findings"], "opinion": opinion, "reviewer": input_data.get("reviewer", "当前复核人"), "decision": input_data.get("decision", "confirm"), "level": input_data.get("level", sample["maximum_suggested_level"]), "category": input_data.get("category", sample["primary_category"]), "updated_at": datetime.now().isoformat(), "actions": []}
+    _save_risk_result(result)
     return success(data=sample, message="风险样本复核已保存")
 
 
 @router.get("/risk-knowledge")
 def risk_knowledge(result_id: str, sample_id: str, keyword: str = ""):
-    result = next((item for item in RISK_RESULTS.values() if item["id"] == result_id), None)
+    result = _saved_risk_result(result_id)
     sample = next((row for row in result["samples"] if row["id"] == sample_id), None) if result else None
     if not sample:
         raise HTTPException(status_code=404, detail="风险样本不存在")
@@ -787,7 +845,7 @@ def risk_knowledge(result_id: str, sample_id: str, keyword: str = ""):
 @router.get("/data-governance/risk-results")
 def risk_history(dataset_id: int, version_id: str, language: str, scheme_id: str, kind: str = Query(default="governance-risk")):
     scope = _risk_scope(dataset_id, version_id, language, scheme_id)
-    result = RISK_RESULTS.get(_risk_key(scope))
+    result = _saved_risk_result_for_scope(scope)
     return success(data=[{key: value for key, value in result.items() if key != "samples"}] if result else [], message="风险历史查询成功")
 
 
@@ -820,6 +878,30 @@ def get_risk_task(task_id: str):
             RISK_TOTALS["valid_count"] += result["valid_count"]
             RISK_TOTALS["risk_count"] += result["risk_count"]
             RISK_TOTALS["high_count"] += result["high_count"]
+            with SessionLocal() as db:
+                dataset = db.get(Dataset, scope["dataset_id"])
+                db.add(Task(
+                    task_id=task_id,
+                    name=f"{dataset.name if dataset else result['dataset_name']}风险检测",
+                    capability_code="risk_detect",
+                    trace_id=f"trace_{task_id}",
+                    status="succeeded",
+                    source_name="内容风险识别",
+                    dataset_name=dataset.name if dataset else result["dataset_name"],
+                    storage_gb=0,
+                    progress=100,
+                    success_count=result["valid_count"],
+                    duplicate_count=0,
+                    anomaly_count=result["risk_count"],
+                    input_data=scope,
+                    config={"scheme_id": scope["scheme_id"]},
+                    result=result,
+                    dataset_version=scope["version_id"],
+                    model_version="risk-engine-v1",
+                    created_at=now_shanghai(),
+                    finished_at=now_shanghai(),
+                ))
+                db.commit()
             task.update({"status": "succeeded", "result_id": result_id})
     return success(data=task, message="风险任务查询成功")
 

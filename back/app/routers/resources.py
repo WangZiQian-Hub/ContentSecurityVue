@@ -22,7 +22,7 @@ from app.domain.schemas import (
 from sqlalchemy import func, select
 
 from app.core.database import SessionLocal
-from app.models.tables import Task
+from app.models.tables import Dataset, Task
 from app.core.response import success
 from app.repositories.audit_repository import add_log
 from app.repositories.resource_repository import (
@@ -380,6 +380,37 @@ def update_dataset_api(
         data=dataset,
         message="数据集更新成功",
     )
+
+
+@router.delete("/datasets/{dataset_id}")
+def delete_dataset_api(dataset_id: int):
+    """Physically remove a dataset after the UI's explicit confirmation.
+
+    Task and training history is intentionally retained for auditability.  Any
+    historical lineage that referenced the removed dataset will surface as a
+    missing source instead of silently rewriting history.
+    """
+    with SessionLocal() as db:
+        dataset = db.get(Dataset, dataset_id)
+        if dataset is None:
+            raise HTTPException(status_code=404, detail="数据集不存在或已删除")
+        deleted = {
+            "id": dataset.id,
+            "name": dataset.name,
+            "version": dataset.version,
+        }
+        db.delete(dataset)
+        add_log(
+            task_id=None,
+            event_type="dataset_deleted",
+            request_data={"dataset_id": dataset_id},
+            response_data=deleted,
+            endpoint=f"/datasets/{dataset_id}",
+            db=db,
+        )
+        db.commit()
+
+    return success(data=None, message="数据集已删除")
 
 @router.get("/users")
 def get_users(

@@ -221,6 +221,22 @@ def ensure_task_columns():
                 )
 
 
+def ensure_dataset_record_columns():
+    """为历史接入记录补齐内容哈希列，供后续接入去重统计。"""
+    inspector = inspect(engine)
+    if not inspector.has_table("dataset_records"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("dataset_records")}
+    if "content_hash" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text(
+                "ALTER TABLE dataset_records ADD COLUMN content_hash VARCHAR(64) NULL"
+            ))
+            connection.execute(text(
+                "CREATE INDEX ix_dataset_records_content_hash ON dataset_records (content_hash)"
+            ))
+
+
 def ensure_model_columns():
     """为已有 models 表补齐模型管理页所需的档案字段和首个版本记录。"""
     inspector = inspect(engine)
