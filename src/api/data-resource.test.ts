@@ -101,6 +101,7 @@ describe('数据资源接口与示例数据', () => {
     expect(backend.request).toHaveBeenCalledWith({
       url: '/data-resources/summary',
       params: { view: 'statistics', language: 'en', startDate: '2026-09-01' },
+      timeout: 8000,
     })
   })
   it('文件上传保留二进制，任务写入使用统一能力入口', async () => {

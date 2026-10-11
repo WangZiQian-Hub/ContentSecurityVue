@@ -38,4 +38,11 @@ describe('页面切换的异步请求', () => {
     expect(store.error).toContain('加载失败')
     expect(store.loading).toBe(false)
   })
+  it('读取超时时尽快结束加载并提示检查后端', async () => {
+    api.getSummary.mockRejectedValueOnce(new Error('timeout of 8000ms exceeded'))
+    const store = useDataResourceStore()
+    await store.loadSummary('overview')
+    expect(store.loading).toBe(false)
+    expect(store.error).toContain('超时')
+  })
 })

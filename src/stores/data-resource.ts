@@ -44,8 +44,13 @@ export const useDataResourceStore = defineStore('data-resource', () => {
         summary.value = data
         if (data.options) filterOptions.value = data.options
       }
-    } catch {
-      if (current === summaryRequest) error.value = '资源统计加载失败，请检查服务后重试。'
+    } catch (reason) {
+      if (current === summaryRequest) {
+        const message = reason instanceof Error ? reason.message.toLowerCase() : ''
+        error.value = message.includes('timeout') || message.includes('timed out')
+          ? '资源统计加载超时，请确认后端服务已启动后重试。'
+          : '资源统计加载失败，请检查服务后重试。'
+      }
     } finally {
       if (current === summaryRequest) loading.value = false
     }

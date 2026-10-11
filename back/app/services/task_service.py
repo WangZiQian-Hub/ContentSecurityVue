@@ -24,6 +24,7 @@ from app.services.resource_display import (
     task_version_default,
 )
 from app.services.database_ingest import read_mysql_rows, save_dataset_rows
+from app.services.file_ingest import read_uploaded_file_rows
 
 MAX_LOCAL_FILE_STORAGE_GB = 2.0
 
@@ -362,24 +363,31 @@ def run_mock_task(
             if request.capability_code == "data_ingest":
                 connector_type = input_data.get("connectorType") or input_data.get("connector_type")
                 database_rows: list[dict] = []
+                uploaded_rows: list[dict] = []
                 if connector_type == "database":
                     database_rows, source_bytes, source_kind = read_mysql_rows(input_data)
                     storage_gb = source_bytes / 1024**3
                     record_count = len(database_rows)
                     result["database_source"] = source_kind
+                elif connector_type == "file":
+                    # 每个文件保留完整正文，写入 dataset_records 的一条记录。
+                    uploaded_rows, source_bytes = read_uploaded_file_rows(input_data.get("files"))
+                    storage_gb = source_bytes / 1024**3
+                    record_count = len(uploaded_rows)
                 else:
                     record_count = _ingest_record_count(input_data, source_storage_gb)
-                # 模拟能力的固定 1,000 条不作为真实接入统计；以文件大小推导的
-                # 记录数为准，确保每次接入都能改变数据集记录总数。
+                # 文件按文件数、数据库来源按数据行数统计成功入库记录。
                 success_count = record_count
                 _, _, default_anomaly = task_ingest_statistics(
                     task_id,
                     storage_gb,
                 )
-                # 本地文件、API 等当前不会把内容解析成独立记录，不能用模拟值
-                # 冒充重复检测结果；数据库来源在写入时按内容哈希返回真实重复数。
+                # 有可解析记录的来源在写入时按内容哈希返回真实重复数。
                 duplicate_count = 0
-                anomaly_count = anomaly_count or default_anomaly
+                # 文件解析失败会使任务失败；正常文件不使用模拟异常数量。
+                anomaly_count = (
+                    0 if connector_type == "file" else anomaly_count or default_anomaly
+                )
                 result.update(
                     {
                         "record_count": record_count,
@@ -402,12 +410,16 @@ def run_mock_task(
                     record_count=success_count,
                 )
                 dataset_name = dataset.name
-                if connector_type == "database":
+                if connector_type in {"database", "file"}:
                     duplicate_count = save_dataset_rows(
                         db,
                         dataset_id=dataset.id,
                         task_id=task_id,
-                        rows=database_rows,
+                        rows=database_rows if connector_type == "database" else uploaded_rows,
+                        content_hashes=(
+                            [row["source_content_hash"] for row in uploaded_rows]
+                            if connector_type == "file" else None
+                        ),
                     )
                     result["duplicate_count"] = duplicate_count
                 result["dataset_id"] = dataset.id

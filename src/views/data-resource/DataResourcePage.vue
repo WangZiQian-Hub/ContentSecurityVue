@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { Loading } from '@element-plus/icons-vue'
 import KpiStrip from '../../components/KpiStrip.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import { useDataResourceStore } from '../../stores/data-resource'
@@ -61,6 +62,11 @@ watch(
       <el-button link type="primary" @click="store.loadSummary(view)">重新加载</el-button>
     </el-alert>
     <el-alert v-if="store.optionsError" :title="store.optionsError" type="error" :closable="false"><el-button link @click="store.loadOptions">重试</el-button></el-alert>
-    <div v-loading="store.loading" class="resource-page-body"><router-view /></div>
+    <div class="resource-page-body" :aria-busy="store.loading">
+      <div v-if="store.loading" class="resource-loading-hint" role="status" aria-live="polite">
+        <el-icon class="is-loading"><Loading /></el-icon>正在加载数据资源…
+      </div>
+      <router-view />
+    </div>
   </div>
 </template>

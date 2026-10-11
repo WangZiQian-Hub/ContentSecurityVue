@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.core.response import success
 from app.core.database import (
     Base,
+    close_database_connection,
     engine,
     test_database_connection,
 )
@@ -96,6 +97,7 @@ async def lifespan(app: FastAPI):
     print("MySQL 数据表初始化完成")
     yield
 
+    close_database_connection()
     print("后端服务已关闭")
 
 
@@ -103,7 +105,7 @@ async def lifespan(app: FastAPI):
 
 
 
-        
+
 app = FastAPI(
     title="内容安全治理平台",
     description="后端模拟接口学习项目",

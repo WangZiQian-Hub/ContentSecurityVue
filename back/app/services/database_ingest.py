@@ -103,13 +103,24 @@ def read_mysql_rows(input_data: dict[str, Any]) -> tuple[list[dict[str, Any]], i
     return rows, byte_count, source_kind
 
 
-def save_dataset_rows(db: Session, *, dataset_id: int, task_id: str, rows: list[dict[str, Any]]) -> int:
+def save_dataset_rows(
+    db: Session,
+    *,
+    dataset_id: int,
+    task_id: str,
+    rows: list[dict[str, Any]],
+    content_hashes: list[str] | None = None,
+) -> int:
     """Write every source row and return the number with an existing content hash.
 
     Duplicate data remains available to downstream users.  A duplicate is thus
     counted in both the successful-ingest total and the duplicate total.
+    File imports supply hashes of the original bytes so upload metadata does
+    not affect duplicate detection; database rows retain their JSON hashes.
     """
-    hashes = [record_hash(row) for row in rows]
+    if content_hashes is not None and len(content_hashes) != len(rows):
+        raise ValueError("内容指纹数量与接入记录数量不一致")
+    hashes = content_hashes if content_hashes is not None else [record_hash(row) for row in rows]
     existing_hashes = set(
         db.scalars(
             select(DatasetRecord.content_hash).where(

@@ -50,6 +50,23 @@
 }
 .resource-page-body {
   min-height: 450px;
+  position: relative;
+}
+.resource-loading-hint {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid #c9def8;
+  border-radius: 6px;
+  background: #f5faff;
+  color: #3f6eaa;
+  font-size: 13px;
+  pointer-events: none;
 }
 .resource-overview-top {
   display: grid;

@@ -10,16 +10,25 @@ import type {
   StatisticsQuery,
   ResourceFilterOptions,
 } from '../types/data-resource'
+
+// 汇总页会在路由切换时自动请求；后端不可达时不能让整页一直处于加载状态。
+// 写入/上传等可能耗时的操作仍沿用各自更长的超时配置。
+const resourceReadTimeout = 8000
+
 export async function getSummary(
   view: ResourceView,
   filters: StatisticsQuery = {},
 ): Promise<ResourceSummary> {
   if (isMock) return getResourceSummary(view, filters)
-  return request({ url: '/data-resources/summary', params: { view, ...filters } })
+  return request({
+    url: '/data-resources/summary',
+    params: { view, ...filters },
+    timeout: resourceReadTimeout,
+  })
 }
 export async function getResourceFilterOptions(): Promise<ResourceFilterOptions> {
   if (isMock) return (await import('../mock/resource-statistics')).resourceFilterOptions()
-  return request({ url: '/data-resources/options' })
+  return request({ url: '/data-resources/options', timeout: resourceReadTimeout })
 }
 export async function listDatasets(query: DatasetQuery): Promise<PageResult<ResourceDataset>> {
   if (!isMock) return request({ url: '/datasets', params: query })
