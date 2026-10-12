@@ -131,13 +131,15 @@ DATABASE_URL = URL.create(
 )
 
 
-# 创建数据库引擎
-engine = create_engine(
-    DATABASE_URL,
-    creator=ssh_mysql_connector.connect if ssh_mysql_connector else None,
-    pool_pre_ping=True,
-    echo=True,
-)
+# 创建数据库引擎。仅在启用 SSH 时传入自定义连接创建器。
+engine_options = {
+    "pool_pre_ping": True,
+    "echo": True,
+}
+if ssh_mysql_connector:
+    engine_options["creator"] = ssh_mysql_connector.connect
+
+engine = create_engine(DATABASE_URL, **engine_options)
 
 
 # 每次请求可以从这里创建数据库会话
