@@ -77,6 +77,10 @@ export interface Handoff {
   target: ComplianceTab
   subjectRef: SubjectRef | null
 }
+export interface IssueSummary {
+  gaps: Record<AuditErrorLayer, { expected: number; missing: number }>
+  errors: AuditError[]
+}
 export interface Overview {
   asOf: string
   scope: string

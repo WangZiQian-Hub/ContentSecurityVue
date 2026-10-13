@@ -22,7 +22,7 @@ from app.domain.schemas import (
 from sqlalchemy import func, select
 
 from app.core.database import SessionLocal
-from app.models.tables import Dataset, Task
+from app.models.tables import Dataset, Model, ModelVersion, Task
 from app.core.response import success
 from app.repositories.audit_repository import add_log
 from app.repositories.resource_repository import (
@@ -343,6 +343,11 @@ def get_model_detail(model_id: int):
             detail="模型不存在",
         )
 
+    with SessionLocal() as db:
+        db_model = db.get(Model, model_id)
+        versions = list(db.scalars(select(ModelVersion).where(ModelVersion.model_id == model_id).order_by(ModelVersion.created_at.desc())).all())
+    if db_model is not None:
+        model.update({"model_type": db_model.model_type, "source": db_model.source, "creator": db_model.creator, "service_url": db_model.service_url, "versions": [{"version": item.version, "created_at": item.created_at.isoformat(), "description": item.description, "task_id": item.task_id} for item in versions]})
     return success(
         data=model,
         message="模型详情查询成功",
@@ -449,3 +454,5 @@ def get_roles(
         data=result,
         message="角色权限列表查询成功",
     )
+
+

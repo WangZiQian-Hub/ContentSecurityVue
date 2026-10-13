@@ -38,17 +38,12 @@ export async function listProcessTasks(page = 1, pageSize = 3): Promise<PageResu
       pageSize,
       totalPages: Math.ceil(processTasks.length / pageSize),
     }
-  const result = await request<PageResult<ProcessTask>>({
+  // 后端列表接口返回的是"摘要"（不含 input / steps / comparisons）；
+  // 完整字段只在详情接口提供，因此列表不再做样本比对解析。
+  return request<PageResult<ProcessTask>>({
     url: '/tasks',
     params: { kind: PROCESS_KIND, page, pageSize },
   })
-  result.items = await Promise.all(
-    result.items.map(async (task) => ({
-      ...task,
-      comparisons: await resolveComparisons(task.input, task.comparisons),
-    })),
-  )
-  return result
 }
 export async function getProcessTask(taskId: string): Promise<ProcessTask> {
   if (isMock && taskId.startsWith('demo_')) {

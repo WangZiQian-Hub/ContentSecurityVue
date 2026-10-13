@@ -72,6 +72,21 @@ from sqlalchemy.orm import Session
 
 
 
+def task_summary_to_dict(task: Task) -> dict[str, Any]:
+    """Serialize fields needed by task tables without the task payload/result."""
+    result = task.result or {}
+    return {
+        "task_id": task.task_id, "name": task.name, "capability_code": task.capability_code,
+        "status": task.status, "source_name": task.source_name or "未填写来源",
+        "dataset_name": task.dataset_name or "未指定数据集", "storage_gb": float(task.storage_gb or 0),
+        "progress": 100 if task.progress is None or (task.progress == 0 and task.status == "succeeded") else task.progress,
+        "success_count": task.success_count or 0, "duplicate_count": task.duplicate_count or 0,
+        "anomaly_count": task.anomaly_count or 0, "processed_count": result.get("processed_count", task.success_count or 0), "total_count": result.get("total_count", task.success_count or 0), "output_version": result.get("output_version"), "rule_name": result.get("rule_name", "标准清洗流程"), "elapsed_ms": result.get("elapsed_ms"),
+        "dataset_version": task.dataset_version, "model_version": task.model_version, "trace_id": task.trace_id,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "finished_at": task.finished_at.isoformat() if task.finished_at else None,
+    }
+
 def task_to_dict(task: Task) -> dict[str, Any]:
     result = task.result or {}
     # 数据处理任务的领域字段保存在 result JSON 中，统一展开给工作台页面。
@@ -264,7 +279,7 @@ def list_all(
             ) or 0
 
         return {
-            "items": [task_to_dict(task) for task in tasks],
+            "items": [task_summary_to_dict(task) for task in tasks],
             "total": total or 0,
             "page": page,
             "page_size": page_size,

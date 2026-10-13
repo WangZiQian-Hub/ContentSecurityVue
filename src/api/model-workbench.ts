@@ -51,7 +51,7 @@ export async function registerModel(
       modelType: wireTypes[data.type],
       source: wireSources[data.source],
       version: data.version,
-      description: data.description || null,
+      description: data.description || "",
       status: 'pending',
       serviceUrl: null,
     },
@@ -101,3 +101,4 @@ export async function executeComparison(input: {
     },
   })
 }
+

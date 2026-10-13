@@ -21,6 +21,7 @@ from app.routers.compliance import (
     evidence_detail,
     error_comments,
     lineage,
+    issue_summary,
     overview,
     trace_detail,
 )
@@ -107,6 +108,12 @@ class ComplianceApiTest(unittest.TestCase):
         node_ids = {node["id"] for node in data["nodes"]}
         self.assertTrue(all(edge["from_id"] in node_ids and edge["to_id"] in node_ids for edge in data["edges"]))
 
+    def test_issue_summary_aggregates_gaps_and_errors_in_one_read(self):
+        response = issue_summary(self.db)
+        data = response["data"]
+        self.assertEqual(set(data["gaps"]), {"link", "task", "model"})
+        self.assertGreaterEqual(data["gaps"]["link"]["expected"], 1)
+        self.assertTrue(all(item["state"] == "open" for item in data["errors"]))
     def test_training_evidence_contains_five_traceability_fields(self):
         response = evidence_detail("evidence-training-TR-COMPLIANCE-001", self.db)
         fields = response["data"]["redacted_fields"]
