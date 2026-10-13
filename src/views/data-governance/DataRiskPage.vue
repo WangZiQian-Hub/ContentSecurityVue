@@ -2,6 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import RiskChart from './components/RiskChart.vue'
+import RiskWeightAccuracyCard from './components/RiskWeightAccuracyCard.vue'
 import { languageName } from '../../utils/governance-language'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
@@ -440,6 +441,7 @@ onBeforeUnmount(() => {
         <div>
           <span>风险占比</span><strong>{{ result.ratio.toFixed(1) }}<small>%</small></strong>
         </div>
+        <RiskWeightAccuracyCard variant="result" :result-id="result.id" />
       </div>
       <p v-if="result" class="risk-note">
         已复核 {{ result.reviewedCount }} · 无法判断 {{ result.unassessableCount }} · 检测失败
@@ -938,7 +940,7 @@ onBeforeUnmount(() => {
 }
 .risk-metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(250px, 1.2fr);
   gap: 12px;
   margin-top: 14px;
 }

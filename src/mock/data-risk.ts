@@ -8,6 +8,7 @@ import type {
   Query,
   Result,
   ReviewInput,
+  RiskWeightAccuracy,
   Rule,
   Sample,
   Scope,
@@ -87,7 +88,17 @@ export const riskOptions: Options = {
   ],
   reviewers: ['当前复核人（演示）'],
 }
-const records = new Map<string, { result: Result; samples: Sample[] }>()
+const records = new Map<
+  string,
+  { result: Result; samples: Sample[]; weightAccuracy: RiskWeightAccuracy }
+>()
+function accuracy(correctCount: number, totalCount: number): RiskWeightAccuracy {
+  return {
+    accuracyPercent: totalCount ? Math.round((correctCount / totalCount) * 1000) / 10 : null,
+    correctCount,
+    totalCount,
+  }
+}
 const tasks = new Map<string, Task>()
 const same = (a: Scope, b: Scope) =>
   a.datasetId === b.datasetId &&
@@ -213,7 +224,17 @@ function create(scope: Scope, taskId: string) {
     levels: [],
     actions: ['export', 'viewTask'],
   }
-  records.set(result.id, { result, samples })
+  // 演示专用：按样本 ID 固定模拟判别对错，不代表真实标注或人工复核结论。
+  // 总数来自完整批次，不能用风险候选列表或当前分页的样本数代替。
+  const correctCount = resources.filter((sample) => {
+    const hash = [...sample.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 0)
+    return hash % 13 !== 0
+  }).length
+  records.set(result.id, {
+    result,
+    samples,
+    weightAccuracy: accuracy(correctCount, resources.length),
+  })
   refresh(result.id)
   return result
 }
@@ -246,6 +267,22 @@ function matching(resultId: string, q: Query) {
 }
 export const riskMock = {
   options: () => copy(riskOptions),
+  resultWeightAccuracy: (resultId: string) => copy(record(resultId).weightAccuracy),
+  weightAccuracyOverview: (): RiskWeightAccuracy => {
+    // 每个数据集、固定版本、分级方案仅纳入最新全语种批次，重复检测不累加。
+    const seen = new Set<string>()
+    let correctCount = 0
+    let totalCount = 0
+    for (const { result, weightAccuracy } of [...records.values()].reverse()) {
+      const { datasetId, versionId, schemeId, language } = result.scope
+      const key = JSON.stringify([datasetId, versionId, schemeId])
+      if (language !== 'all' || seen.has(key)) continue
+      seen.add(key)
+      correctCount += weightAccuracy.correctCount
+      totalCount += weightAccuracy.totalCount
+    }
+    return accuracy(correctCount, totalCount)
+  },
   latest: (scope: Scope) =>
     copy([...records.values()].reverse().find((r) => same(r.result.scope, scope))?.result || null),
   result: (resultId: string) => copy(refresh(resultId)),

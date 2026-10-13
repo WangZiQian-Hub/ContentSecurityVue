@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { getRiskOverview } from '../../../api/data-risk'
 import type { Overview } from '../../../types/data-risk'
 import AppIcon from '../../../components/AppIcon.vue'
+import RiskWeightAccuracyCard from './RiskWeightAccuracyCard.vue'
 const data = ref<Overview>(),
   open = ref(false),
   error = ref('')
@@ -33,6 +34,7 @@ onMounted(async () => {
           <i v-for="bar in 5" :key="bar" :style="{ height: `${bar * 6 + 6}px` }"></i>
         </div>
       </button>
+      <RiskWeightAccuracyCard variant="overview" />
     </div>
     <el-drawer v-model="open" title="总体统计口径与纳入记录" size="min(780px, 95vw)">
       <p v-for="line in data?.definitions" :key="line">{{ line }}</p>
@@ -48,7 +50,8 @@ onMounted(async () => {
 </template>
 <style scoped>
 .risk-overview {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* App.vue 已按固定画布统一缩放，保持五列，不再按浏览器视口切成两列。 */
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(270px, 1.25fr);
 }
 .risk-overview button {
   text-align: left;
@@ -60,10 +63,5 @@ onMounted(async () => {
   margin: 8px 0 0;
   font-size: 12px;
   color: #7d91b0;
-}
-@media (max-width: 1100px) {
-  .risk-overview {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 </style>

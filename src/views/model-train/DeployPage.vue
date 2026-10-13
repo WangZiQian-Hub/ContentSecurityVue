@@ -235,7 +235,7 @@ async function check() {
           <b>{{ m.name }}</b>
           <p>{{ m.version }} · 尚未关联服务</p>
         </div>
-        <el-button type="primary" @click="open(m.id)">登记服务</el-button>
+        <el-button class="mw-pending-btn" type="primary" @click="open(m.id)">登记服务</el-button>
       </div>
       <el-empty
         v-if="!pending.length"

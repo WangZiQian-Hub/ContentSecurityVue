@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 const backend = vi.hoisted(() => ({ isMock: true, request: vi.fn() }))
 vi.mock('./request', () => backend)
+vi.mock('./governance-llm', () => ({ isGovernanceLlm: false, llmRequest: vi.fn() }))
+vi.mock('./governance-llm', () => ({ isGovernanceLlm: false, llmRequest: vi.fn() }))
 import * as api from './data-risk'
 import { getResourceSamples } from './data-resource'
 import { getLatestValueResult, listValueSamples } from './data-value'
@@ -164,6 +166,57 @@ describe('风险识别：资源一致性与保存结果契约', () => {
       url: '/data-governance/risk-results/result/samples/sample/reviews',
       method: 'POST',
       data: { inputSampleRevisionId: 'revision', reviewId: 'review', ...input },
+    })
+  })
+  it('准确率 Mock 按完整批次统计、按样本数汇总，重复检测不重复累计', async () => {
+    const overview = await api.getRiskOverview()
+    const metrics = await Promise.all(
+      overview.records.map((r) => api.getRiskResultWeightAccuracy(r.resultId)),
+    )
+    for (const [index, metric] of metrics.entries()) {
+      expect(metric.totalCount).toBe(overview.records[index]!.validCount)
+      expect(metric.correctCount).toBeLessThanOrEqual(metric.totalCount)
+      expect(metric.accuracyPercent).toBe(
+        Math.round((metric.correctCount / metric.totalCount) * 1000) / 10,
+      )
+    }
+    const overall = await api.getRiskWeightAccuracyOverview()
+    const correct = metrics.reduce((n, m) => n + m.correctCount, 0)
+    const total = metrics.reduce((n, m) => n + m.totalCount, 0)
+    expect(overall).toEqual({
+      correctCount: correct,
+      totalCount: total,
+      accuracyPercent: Math.round((correct / total) * 1000) / 10,
+    })
+    const previous = (await api.getLatestRisk(scope))!
+    const previousAccuracy = await api.getRiskResultWeightAccuracy(previous.id)
+    const task = await api.startRisk(scope)
+    const done = await api.getRiskTask(task.id)
+    expect(await api.getRiskResultWeightAccuracy(done.resultId!)).toEqual(previousAccuracy)
+    expect(await api.getRiskResultWeightAccuracy(previous.id)).toEqual(previousAccuracy)
+    expect(await api.getRiskWeightAccuracyOverview()).toEqual(overall)
+    // 单语种检测可查询批次准确率，但不能与全语种结果重复纳入总体。
+    const localized = await api.startRisk({ ...scope, language: 'en' })
+    const localizedDone = await api.getRiskTask(localized.id)
+    const localizedResult = await api.getRiskResult(localizedDone.resultId!)
+    expect((await api.getRiskResultWeightAccuracy(localizedResult.id)).totalCount).toBe(
+      localizedResult.validCount,
+    )
+    expect(await api.getRiskWeightAccuracyOverview()).toEqual(overall)
+    await expect(api.getRiskResultWeightAccuracy('missing')).rejects.toThrow('风险结果不存在')
+  })
+  it('准确率使用两个独立查询路径，总体携带 kind，批次 ID 安全编码', async () => {
+    backend.isMock = false
+    const metric = { accuracyPercent: 92.3, correctCount: 923, totalCount: 1000 }
+    backend.request.mockResolvedValue(metric)
+    expect(await api.getRiskWeightAccuracyOverview()).toEqual(metric)
+    expect(backend.request).toHaveBeenLastCalledWith({
+      url: '/data-governance/risk-weight-accuracy/overview',
+      params: { kind: 'governance-risk' },
+    })
+    expect(await api.getRiskResultWeightAccuracy('result/a b')).toEqual(metric)
+    expect(backend.request).toHaveBeenLastCalledWith({
+      url: '/data-governance/risk-results/result%2Fa%20b/weight-accuracy',
     })
   })
 })

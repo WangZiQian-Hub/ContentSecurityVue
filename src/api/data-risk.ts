@@ -8,6 +8,7 @@ import type {
   Query,
   Result,
   ReviewInput,
+  RiskWeightAccuracy,
   Rule,
   Sample,
   Scope,
@@ -17,7 +18,10 @@ const kind = 'governance-risk'
 const base = '/data-governance/risk-results'
 const useMock = () => businessMock && !isGovernanceLlm
 const request: typeof businessRequest = isGovernanceLlm ? llmRequest : businessRequest
-const modelScope = (scope: Scope): Scope => ({ ...scope, language: isGovernanceLlm ? 'all' : scope.language })
+const modelScope = (scope: Scope): Scope => ({
+  ...scope,
+  language: isGovernanceLlm ? 'all' : scope.language,
+})
 const path = (id: string) => `${base}/${encodeURIComponent(id)}`
 const samplePath = (id: string, sample: string) =>
   `${path(id)}/samples/${encodeURIComponent(sample)}`
@@ -41,9 +45,11 @@ export async function getRiskOptions(): Promise<Options> {
       ...options.defaultScope,
       datasetId: dataset.id,
       versionId: version.id,
-      language: isGovernanceLlm ? 'all' : version.languages.some((l) => l.code === options.defaultScope.language)
-        ? options.defaultScope.language
-        : 'all',
+      language: isGovernanceLlm
+        ? 'all'
+        : version.languages.some((l) => l.code === options.defaultScope.language)
+          ? options.defaultScope.language
+          : 'all',
     },
     datasets: datasets.map((d) => ({
       ...d,
@@ -55,6 +61,19 @@ export async function getRiskOverview(): Promise<Overview> {
   return useMock()
     ? (await mock()).overview()
     : request({ url: '/data-governance/risk-overview', params: { kind } })
+}
+export async function getRiskWeightAccuracyOverview(): Promise<RiskWeightAccuracy> {
+  return useMock()
+    ? (await mock()).weightAccuracyOverview()
+    : request({
+        url: '/data-governance/risk-weight-accuracy/overview',
+        params: { kind },
+      })
+}
+export async function getRiskResultWeightAccuracy(resultId: string): Promise<RiskWeightAccuracy> {
+  return useMock()
+    ? (await mock()).resultWeightAccuracy(resultId)
+    : request({ url: `${path(resultId)}/weight-accuracy` })
 }
 export async function getLatestRisk(scope: Scope): Promise<Result | null> {
   return useMock()
@@ -73,7 +92,9 @@ export async function getRiskSample(id: string, sample: string): Promise<Sample>
   return useMock() ? (await mock()).detail(id, sample) : request({ url: samplePath(id, sample) })
 }
 export async function getRiskHistory(scope: Scope): Promise<Result[]> {
-  return useMock() ? (await mock()).history(scope) : request({ url: base, params: { kind, ...modelScope(scope) } })
+  return useMock()
+    ? (await mock()).history(scope)
+    : request({ url: base, params: { kind, ...modelScope(scope) } })
 }
 export async function startRisk(scope: Scope): Promise<Task> {
   if (useMock()) return (await mock()).start(scope)

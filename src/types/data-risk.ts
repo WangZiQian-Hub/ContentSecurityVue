@@ -2,6 +2,12 @@ import type { ResourceSample } from './data-resource'
 export type Level = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOTICE'
 export type RiskSortField = 'maximumSuggestedLevel' | 'status'
 export type SortOrder = 'asc' | 'desc'
+/** 数据权重判别准确率；百分比使用 0～100，无可评估样本时为 null。 */
+export interface RiskWeightAccuracy {
+  accuracyPercent: number | null
+  correctCount: number
+  totalCount: number
+}
 export interface Scope {
   datasetId: number
   versionId: string
