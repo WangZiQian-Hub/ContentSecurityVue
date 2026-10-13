@@ -8,6 +8,7 @@ import { useModelWorkbench } from '../../stores/model-workbench'
 import { formatModelTime, trainingMethods, trainingStates } from '../../types/model-workbench'
 import WorkbenchKpis from './WorkbenchKpis.vue'
 import WorkbenchChart from './WorkbenchChart.vue'
+import ComplianceEventMonitor from './ComplianceEventMonitor.vue'
 import { isMock } from '../../api/request'
 const store = useModelWorkbench()
 const keyword = ref('')
@@ -196,19 +197,10 @@ async function submit() {
         ><span v-else>完成后登记模型产物</span>
       </div></PanelCard
     >
-    <PanelCard title="任务关联" icon="Link"
-      ><el-descriptions :column="1" border
-        ><el-descriptions-item label="任务编号">{{ selected.id }}</el-descriptions-item
-        ><el-descriptions-item label="数据版本">{{ selected.datasetVersion }}</el-descriptions-item
-        ><el-descriptions-item label="基础版本">{{
-          selected.baseVersion
-        }}</el-descriptions-item></el-descriptions
-      ><router-link
-        class="mw-link"
-        :to="{ path: '/compliance/model-internal', query: { trainingTaskId: selected.id } }"
-        >查看模型内部审计 →</router-link
-      ></PanelCard
-    >
+    <ComplianceEventMonitor
+      :training-task-id="selected.id"
+      :running="selected.status === 'running'"
+    />
   </div>
   <el-dialog v-model="dialog" title="新建训练任务" width="560px" class="mw-dialog"
     ><el-form label-width="100px" @submit.prevent="submit"
