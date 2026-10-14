@@ -7,6 +7,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import TaskTable from '../../components/TaskTable.vue'
 import ScenarioResult from '../../components/scenario/ScenarioResult.vue'
 import ScenarioRecords from '../../components/scenario/ScenarioRecords.vue'
+import GovernanceTokenCapsule from '../../components/GovernanceTokenCapsule.vue'
 import { llmTokenConfigured } from '../../api/governance-llm'
 import {
   describeModels,
@@ -181,6 +182,11 @@ onMounted(loadModelsIfPossible)
 watch(llmTokenConfigured, loadModelsIfPossible)
 </script>
 <template>
+  <!-- 令牌状态胶囊渲染到二级页签条右侧（AppLayout 的 .page-tabs 里预留了容器），
+       组件代码留在本页，不进入全局布局。保存新令牌后重新加载模型目录。 -->
+  <Teleport to="#page-tabs-extra">
+    <GovernanceTokenCapsule @saved="loadModelsIfPossible" />
+  </Teleport>
   <KpiStrip kind="governance" />
   <div class="scenario-banner">
     <span>SCENARIO APPLICATION</span>
