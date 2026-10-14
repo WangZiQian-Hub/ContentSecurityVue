@@ -16,7 +16,6 @@ import type { GovernanceResource } from '../../types/governance-resources'
 import {
   fetchMultilingualResult,
   fetchMultilingualResultHistory,
-  fetchMultilingualSamples,
   fetchMultilingualTask,
   fetchLatestMultilingualResult,
   startMultilingualAnalysis,
@@ -29,7 +28,6 @@ import {
   type MultilingualAnalysisMode,
   type MultilingualResult,
   type MultilingualRiskLevel,
-  type MultilingualSample,
   type MultilingualScope,
 } from '../../types/ethnic-multilingual'
 
@@ -273,25 +271,23 @@ function formatDateTime(iso: string): string {
   )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-/* ---------------- 弹窗 ---------------- */
+/* ---------------- 记录联动与弹窗 ---------------- */
 
 const evidenceDialogOpen = ref(false)
-const detailOpen = ref(false)
-const detailLoading = ref(false)
-const detailTitle = ref('')
-const detailSamples = ref<MultilingualSample[]>([])
 
-async function openDetail(row: MultilingualResult) {
-  detailTitle.value = row.id
-  detailSamples.value = []
-  detailOpen.value = true
-  detailLoading.value = true
-  try {
-    const page = await fetchMultilingualSamples(row.id, 1, 200)
-    detailSamples.value = page.items
-  } finally {
-    detailLoading.value = false
+/** 页面滚动容器：桌面画布下为 .main-content，否则回落到窗口。 */
+function scrollToTop() {
+  const container = document.querySelector<HTMLElement>('.main-content')
+  if (container && container.scrollHeight > container.clientHeight) {
+    container.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+/** 点击「查看详情」：把该记录填入上方结果区（分析结果/权重分布/判定依据）并滚到页面顶部。 */
+function openDetail(row: MultilingualResult) {
+  result.value = row
+  scrollToTop()
 }
 
 async function removeRecord(row: MultilingualResult) {
@@ -726,55 +722,6 @@ onMounted(async () => {
             >
               {{ multilingualRiskLevels[row.riskLevel as MultilingualRiskLevel] }}
             </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <!-- 逐条样本明细 -->
-    <el-dialog v-model="detailOpen" :title="`逐条样本明细 · ${detailTitle}`" width="900px">
-      <el-table v-loading="detailLoading" :data="detailSamples" size="small" max-height="480">
-        <el-table-column label="记录ID" prop="id" width="80" />
-        <el-table-column label="语种" width="78">
-          <template #default="{ row }">{{ languageName(row.language) }}</template>
-        </el-table-column>
-        <el-table-column label="文本（遮蔽后）" prop="text" min-width="220" show-overflow-tooltip />
-        <el-table-column label="安全/中性/风险" width="160">
-          <template #default="{ row }">
-            <template v-if="row.semanticWeights">
-              {{ row.semanticWeights.safe.toFixed(2) }} /
-              {{ row.semanticWeights.neutral.toFixed(2) }} /
-              {{ row.semanticWeights.risk.toFixed(2) }}
-            </template>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="风险分" width="74">
-          <template #default="{ row }">
-            {{ row.riskScore === null ? '—' : row.riskScore.toFixed(2) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="预测档位" width="84">
-          <template #default="{ row }">
-            <el-tag
-              :type="riskLevelTagType[row.riskLevel as MultilingualRiskLevel]"
-              size="small"
-            >
-              {{ multilingualRiskLevels[row.riskLevel as MultilingualRiskLevel] }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="标准档位" width="84">
-          <template #default="{ row }">
-            <el-tag
-              v-if="row.referenceRiskLevel"
-              :type="riskLevelTagType[row.referenceRiskLevel as MultilingualRiskLevel]"
-              size="small"
-              effect="plain"
-            >
-              {{ multilingualRiskLevels[row.referenceRiskLevel as MultilingualRiskLevel] }}
-            </el-tag>
-            <span v-else>—</span>
           </template>
         </el-table-column>
       </el-table>
