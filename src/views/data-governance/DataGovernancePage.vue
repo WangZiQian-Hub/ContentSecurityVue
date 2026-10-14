@@ -10,16 +10,24 @@ import AnomalyOverview from './components/AnomalyOverview.vue'
 import RiskOverview from './components/RiskOverview.vue'
 import ProcessOverview from './components/ProcessOverview.vue'
 import ValueOverview from './components/ValueOverview.vue'
-import GovernanceTokenBar from '../../components/GovernanceTokenBar.vue'
+import GovernanceTokenCapsule from '../../components/GovernanceTokenCapsule.vue'
 const riskRevision = ref(0)
 const anomalyRevision = ref(0)
 const route = useRoute()
 const tabs = navigation.find((item) => item.path === '/data-governance')!.tabs
 const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
+/** 令牌更新后重新取数：依赖模型服务的概览卡片与页签需要重挂载。
+ *  数据处理页走业务后端（不依赖令牌），因此不重挂载它，避免丢失表单里已填的内容。 */
+const tabRevision = ref(0)
+function reloadAfterTokenChange() {
+  anomalyRevision.value++
+  riskRevision.value++
+  if (['governance-value', 'governance-anomaly', 'governance-risk'].includes(String(route.name)))
+    tabRevision.value++
+}
 </script>
 <template>
   <div class="governance-workspace">
-    <GovernanceTokenBar />
     <AnomalyOverview v-if="route.name === 'governance-anomaly'" :key="anomalyRevision" />
     <RiskOverview v-else-if="route.name === 'governance-risk'" :key="riskRevision" />
     <ProcessOverview v-else-if="route.name === 'governance-process'" />
@@ -60,7 +68,13 @@ const icons = ['Coin', 'TrendCharts', 'Shield', 'WarningFilled', 'PieChart']
           <AppIcon :name="icons[index]" />{{ tab.title }}
         </button>
       </template>
+      <!-- 令牌状态胶囊贴在页签行右侧：常态只有状态，点击才弹出输入框 -->
+      <GovernanceTokenCapsule class="governance-tabs-extra" @saved="reloadAfterTokenChange" />
     </nav>
-    <router-view @anomaly-updated="anomalyRevision++" @risk-updated="riskRevision++" />
+    <router-view
+      :key="tabRevision"
+      @anomaly-updated="anomalyRevision++"
+      @risk-updated="riskRevision++"
+    />
   </div>
 </template>

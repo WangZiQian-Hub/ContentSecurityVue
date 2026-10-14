@@ -13,15 +13,32 @@ const detail = ref<IngestTask>()
 let pollTimer: ReturnType<typeof setTimeout> | undefined
 let polling = false
 const terminalStatuses = new Set(['succeeded', 'failed', 'cancelled'])
-async function load() {
-  loading.value = true
-  error.value = false
+// 轮询间隔：数据处理不是秒级操作，5 秒足够，也避免把后端和界面刷得太频繁。
+const POLL_INTERVAL_MS = 5000
+// 只轮询最近 1 天内创建的任务：更早的任务不可能还在正常处理（多为中断遗留的僵尸任务），
+// 否则它们会让轮询永久续期。
+const POLL_MAX_AGE_MS = 24 * 60 * 60 * 1000
+/**
+ * 只有「未到终态 + 创建于最近 1 天内」的任务才需要轮询。
+ * 创建时间无法解析时按“不轮询”处理，避免脏数据导致无限刷新。
+ */
+function isPollable(task: IngestTask) {
+  if (terminalStatuses.has(task.status)) return false
+  const createdAt = new Date(task.createdAt).getTime()
+  return Number.isFinite(createdAt) && Date.now() - createdAt <= POLL_MAX_AGE_MS
+}
+async function load(silent = false) {
+  // 轮询走静默刷新：不动 loading，表格就不会每隔 5 秒闪一次转圈
+  if (!silent) {
+    loading.value = true
+    error.value = false
+  }
   try {
     await store.loadTasks(query)
   } catch {
-    error.value = true
+    if (!silent) error.value = true
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 function stopPolling() {
@@ -33,11 +50,11 @@ function stopPolling() {
 }
 async function pollRunningTasks() {
   if (!polling) return
-  await load()
+  await load(true)
   if (!polling) return
-  const hasRunningTask = store.tasks.some((task) => !terminalStatuses.has(task.status))
-  if (hasRunningTask) {
-    pollTimer = setTimeout(() => void pollRunningTasks(), 2000)
+  // 只认最近 1 天内的非终态任务；更早的僵尸任务不再让轮询续期
+  if (store.tasks.some(isPollable)) {
+    pollTimer = setTimeout(() => void pollRunningTasks(), POLL_INTERVAL_MS)
   } else {
     stopPolling()
   }
@@ -57,7 +74,7 @@ function select(task: IngestTask) {
 }
 onMounted(async () => {
   await load()
-  if (store.tasks.some((task) => !terminalStatuses.has(task.status))) startPolling()
+  if (store.tasks.some(isPollable)) startPolling()
 })
 onUnmounted(stopPolling)
 </script>
@@ -78,10 +95,10 @@ onUnmounted(stopPolling)
       @change="search"
       ><el-option v-for="(item, key) in TASK_STATUS" :key="key" :value="key" :label="item.label"
     /></el-select>
-    <el-button @click="load">刷新记录</el-button>
+    <el-button @click="load()">刷新记录</el-button>
   </div>
   <el-alert v-if="error" title="任务记录加载失败" type="error" :closable="false"
-    ><el-button link @click="load">重试</el-button></el-alert
+    ><el-button link @click="load()">重试</el-button></el-alert
   >
   <el-table
     v-loading="loading"
@@ -124,7 +141,7 @@ onUnmounted(stopPolling)
     :page-size="query.pageSize"
     :total="store.taskTotal"
     layout="total, prev, pager, next"
-    @current-change="load"
+    @current-change="() => load()"
   />
   <el-dialog :model-value="!!detail" title="接入任务详情" width="600px" @close="detail = undefined" class="ingest-task-detail">
     <el-descriptions v-if="detail" :column="1" border

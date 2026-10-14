@@ -11,11 +11,11 @@ const props = defineProps<{ task?: ProcessTask }>()
 const standardStageNames = ['读取数据', '规范化', '去重', '字段校验', '生成版本']
 const displaySteps = computed(() => {
   const task = props.task
-  if (!task || task.steps.length !== 3) return task?.steps ?? []
+  if (!task || task.steps?.length !== 3) return task?.steps ?? []
 
   // 兼容已保存的旧演示任务：它们只有三个按规则命名的步骤。
   // 页面统一展示为与新任务一致的五阶段处理流程。
-  const finalStatus = task.steps[2]?.status ?? 'pending'
+  const finalStatus = task.steps?.[2]?.status ?? 'pending'
   const statuses: TaskStatus[] =
     finalStatus === 'succeeded'
       ? standardStageNames.map(() => 'succeeded')
@@ -34,7 +34,7 @@ const displaySteps = computed(() => {
       </div></template
     >
     <template v-if="task">
-      <p class="process-info">
+      <p v-if="task.input" class="process-info">
         当前查看任务：{{ task.datasetName }} · 输入版本 {{ task.input.datasetVersionId }} ·
         {{
           task.input.scope === 'all'
@@ -68,7 +68,7 @@ const displaySteps = computed(() => {
         ><span
           >{{ task.processedCount.toLocaleString() }} /
           {{ task.totalCount.toLocaleString() }} 条</span
-        ><span v-if="task.status === 'running' && task.remainingSeconds !== null"
+        ><span v-if="task.status === 'running' && task.remainingSeconds != null"
           >预计剩余 {{ Math.ceil(task.remainingSeconds / 60) }} 分钟</span
         >
       </div>
@@ -78,7 +78,7 @@ const displaySteps = computed(() => {
         type="error"
         :closable="false"
       />
-      <ProcessComparisonTable title="处理前后对比" :items="task.comparisons" />
+      <ProcessComparisonTable title="处理前后对比" :items="task.comparisons ?? []" />
     </template>
     <el-empty v-else description="暂无处理任务，请选择数据集创建任务" />
   </PanelCard>

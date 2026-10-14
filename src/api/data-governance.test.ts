@@ -79,4 +79,35 @@ describe('数据处理接口契约', () => {
     expect((await listProcessTasks(5, 10)).items).toEqual([])
     await expect(getProcessTask('demo_missing')).rejects.toThrow('任务不存在')
   })
+  it('列表接口瘦身后（摘要项缺 input/comparisons）仍能正常返回', async () => {
+    backend.isMock = false
+    backend.request.mockResolvedValueOnce({
+      items: [
+        {
+          taskId: 'tsk_summary_1',
+          name: '数据清洗任务',
+          datasetName: '社交媒体中文语料库',
+          ruleName: '标准清洗流程',
+          outputVersion: null,
+          status: 'running',
+          progress: 40,
+          processedCount: 4,
+          totalCount: 10,
+          createdAt: '2026-10-13T20:00:00',
+          finishedAt: null,
+          traceId: 'trace-summary',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 3,
+      totalPages: 1,
+    })
+    const result = await listProcessTasks()
+    expect(result.items).toHaveLength(1)
+    // 摘要项没有 input / steps / comparisons，不能再按完整任务去解析
+    expect(result.items[0]!.comparisons).toBeUndefined()
+    // 列表不得为了解析对比再补发样本请求
+    expect(backend.request).toHaveBeenCalledTimes(1)
+  })
 })

@@ -17,5 +17,7 @@ export function validateOutputVersionName(
 }
 
 export function processOutputVersionLabel(task: ProcessTask) {
-  return task.input.outputVersionName?.trim() || task.outputVersion || '—'
+  // 列表接口返回的是摘要（不含 input），此时退回服务端版本号或占位符，
+  // 避免在表格单元格渲染时抛异常导致整行错位。
+  return task.input?.outputVersionName?.trim() || task.outputVersion || '—'
 }

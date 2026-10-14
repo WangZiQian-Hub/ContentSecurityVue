@@ -6,6 +6,8 @@ const id = (value: C.EntityId) => encodeURIComponent(String(value))
 export const complianceApi = {
   overview: (params: C.OverviewQuery, signal?: AbortSignal) =>
     request<C.Overview>({ url: '/compliance/overview', params, signal }),
+  issueSummary: (signal?: AbortSignal) =>
+    request<C.IssueSummary>({ url: '/compliance/issue-summary', signal }),
   lineage: (params: C.LineageQuery, signal?: AbortSignal) =>
     request<C.Lineage>({ url: '/compliance/lineage', params, signal }),
   contexts: (params: C.ContextQuery, signal?: AbortSignal) =>

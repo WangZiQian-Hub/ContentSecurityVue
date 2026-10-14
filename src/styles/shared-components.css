@@ -105,6 +105,13 @@
   margin-bottom: 13px;
   overflow: auto;
 }
+/* 页签行右侧的附加内容（令牌状态胶囊的挂载点）：顶到最右边，不参与页签排布。 */
+.page-tabs-extra {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+}
 .page-tabs a {
   padding: 14px 23px;
   white-space: nowrap;

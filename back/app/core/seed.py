@@ -46,6 +46,9 @@ def ensure_evaluation_metric_columns():
         "issues": "JSON NULL",
     }
     with engine.begin() as connection:
+        # 旧版指标表的 updated_at 没有默认值，新 ORM 已不再维护它，需放宽约束。
+        if "updated_at" in columns:
+            connection.execute(text("ALTER TABLE evaluation_metrics MODIFY COLUMN updated_at DATETIME NULL"))
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE evaluation_metrics ADD COLUMN {name} {definition}"))
@@ -62,6 +65,11 @@ def ensure_evaluation_metric_columns():
         "name": "VARCHAR(255) NULL",
         "category": "VARCHAR(80) NULL",
         "definition": "JSON NULL",
+        "revision_no": "INT NOT NULL DEFAULT 1",
+        "expected_revision": "INT NOT NULL DEFAULT 1",
+        "configuration_status": "VARCHAR(30) NOT NULL DEFAULT 'draft'",
+        "created_at": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "published_at": "DATETIME NULL",
     }
     with engine.begin() as connection:
         for name, definition in revision_additions.items():
@@ -69,6 +77,8 @@ def ensure_evaluation_metric_columns():
                 connection.execute(text(f"ALTER TABLE evaluation_metric_revisions ADD COLUMN {name} {definition}"))
         if "definition_json" in revision_columns:
             connection.execute(text("UPDATE evaluation_metric_revisions SET definition = definition_json WHERE definition IS NULL"))
+            connection.execute(text("ALTER TABLE evaluation_metric_revisions MODIFY COLUMN definition_json JSON NULL"))
+        connection.execute(text("UPDATE evaluation_metric_revisions SET definition = JSON_OBJECT() WHERE definition IS NULL"))
         connection.execute(text("""
             UPDATE evaluation_metric_revisions r
             JOIN evaluation_metrics m ON m.metric_id = r.metric_id
@@ -272,10 +282,15 @@ def ensure_model_columns():
                     model_id=model.id, version=model.version,
                     description="初始注册版本", created_at=model.created_at,
                 ))
-            service = db.scalar(select(ModelService).where(ModelService.model_id == str(model.id)))
+            service_id = f"svc_model_{model.id}"
+            # 历史库可能已有同一固定主键但 model_id 未规范化；优先按主键
+            # 查找，避免启动迁移重复插入而中断整个服务。
+            service = db.get(ModelService, service_id) or db.scalar(
+                select(ModelService).where(ModelService.model_id == str(model.id))
+            )
             if service is None:
                 db.add(ModelService(
-                    id=f"svc_model_{model.id}", name=f"{model.name}推理服务",
+                    id=service_id, name=f"{model.name}推理服务",
                     model_id=str(model.id), version=model.version, service_type="local",
                     status="running", endpoint="local://content-safety-model",
                     healthy=True,

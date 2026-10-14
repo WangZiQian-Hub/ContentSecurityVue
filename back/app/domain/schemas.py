@@ -76,11 +76,16 @@ class CreateModelRequest(BaseModel):
 
     name: str
 
+    model_type: str = "text_classification"
+    source: str = "self_developed"
+    status: str = "pending"
+    service_url: str | None = None
+
     category: str = "内容审核"
 
     version: str = "v1.0.0"
 
-    description: str = ""
+    description: str | None = ""
 
     metadata: dict[str, Any] = Field(
         default_factory=dict
@@ -125,3 +130,8 @@ class RegisterModelServiceRequest(BaseModel):
         if not value.startswith(("http://", "https://")):
             raise ValueError("服务地址必须使用 HTTP 或 HTTPS 协议")
         return value
+
+
+
+
+

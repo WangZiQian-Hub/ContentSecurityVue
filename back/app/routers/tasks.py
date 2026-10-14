@@ -127,6 +127,18 @@ class CreateProcessTaskRequest(BaseModel):
     config: dict = {}
 
 
+def _process_task_summary(task: dict) -> dict:
+    """Keep processing history rows small; fetch /tasks/{task_id} for full details."""
+    return {
+        "task_id": task["task_id"], "name": task["name"],
+        "dataset_name": task.get("dataset_name") or "未指定数据集",
+        "rule_name": task.get("rule_name") or "数据处理",
+        "output_version": task.get("output_version"), "status": task["status"],
+        "progress": task.get("progress", 0), "processed_count": task.get("processed_count", 0),
+        "total_count": task.get("total_count", 0), "created_at": task.get("created_at"),
+        "finished_at": task.get("finished_at"), "trace_id": task.get("trace_id"),
+    }
+
 def _process_task(task: dict) -> dict:
     input_data = task.get("input") or {}
     result = task.get("result") or {}
@@ -295,7 +307,7 @@ def get_tasks(
     )
 
     if kind == PROCESS_KIND:
-        tasks["items"] = [_process_task(task) for task in tasks["items"]]
+        tasks["items"] = [_process_task_summary(task) for task in tasks["items"]]
     return success(
         data=tasks,
         message="任务列表查询成功",

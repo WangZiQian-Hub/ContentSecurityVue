@@ -122,7 +122,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.core.database import SessionLocal
-from app.models.tables import Dataset, Metric, Model, Resource
+from app.models.tables import Dataset, Metric, Model, ModelVersion, Resource
 from app.services.resource_display import dataset_display_defaults, model_version_default
 
 
@@ -367,16 +367,19 @@ def create_model(data: dict[str, Any]):
     requested_version = data.get("version")
     model = Model(
         name=data["name"],
+        model_type=data.get("model_type", "text_classification"),
+        source=data.get("source", "self_developed"),
         category=data.get(
             "category",
             "内容审核",
         ),
         version=requested_version or "v1.0.0",
-        status="ready",
+        status=data.get("status", "pending"),
         description=data.get(
             "description",
             "",
         ),
+        service_url=data.get("service_url"),
         metadata_json=data.get(
             "metadata",
             {},
@@ -389,10 +392,11 @@ def create_model(data: dict[str, Any]):
         # 前端表单默认值为 v1.0.0 时，自动改为该模型独有的语义化版本。
         if not requested_version or requested_version == "v1.0.0":
             model.version = model_version_default(model.id, model.name)
+        db.add(ModelVersion(model_id=model.id, version=model.version, description=model.description or "registered model", task_id=None))
         db.commit()
         db.refresh(model)
-
-        return resource_to_dict(model)
+        version = db.scalar(select(ModelVersion).where(ModelVersion.model_id == model.id).order_by(ModelVersion.created_at.desc()))
+        return {"id": model.id, "name": model.name, "model_type": model.model_type, "source": model.source, "version": model.version, "description": model.description, "creator": model.creator, "updated_at": model.updated_at.isoformat() if model.updated_at else model.created_at.isoformat(), "dataset": (model.metadata_json or {}).get("dataset"), "versions": [{"version": version.version, "created_at": version.created_at.isoformat(), "description": version.description, "task_id": version.task_id}]}
 
 def update_dataset(dataset_id: int, data: dict[str, Any]):
     with SessionLocal() as db:
@@ -435,3 +439,9 @@ def update_dataset(dataset_id: int, data: dict[str, Any]):
         db.refresh(dataset)
 
         return resource_to_dict(dataset)
+
+
+
+
+
+

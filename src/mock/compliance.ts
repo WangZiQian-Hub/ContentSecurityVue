@@ -1018,6 +1018,22 @@ export function createComplianceDemo(): ComplianceApi {
         }
       return clone(demoOverview)
     },
+    async issueSummary() {
+      const layers: C.AuditErrorLayer[] = ['link', 'task', 'model']
+      const gaps = Object.fromEntries(
+        layers.map((layer) => {
+          const items = demoAuditErrors.filter((item) => item.layer === layer)
+          return [
+            layer,
+            {
+              expected: items.length,
+              missing: items.filter((item) => item.state === 'open').length,
+            },
+          ]
+        }),
+      ) as C.IssueSummary['gaps']
+      return { gaps, errors: clone(demoAuditErrors) }
+    },
     async lineage(query) {
       const graph = lineageGraph()
       const root = graph.nodes.find(
@@ -1364,3 +1380,4 @@ export function createComplianceDemo(): ComplianceApi {
     },
   }
 }
+

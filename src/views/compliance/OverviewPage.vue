@@ -3,9 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useComplianceStore } from '../../stores/compliance'
 import PanelCard from '../../components/PanelCard.vue'
 import { formatCount, formatTime } from './presentation'
-import { request } from '../../api/request'
 import { complianceApi } from '../../api/compliance'
-import { getModelWorkbench } from '../../api/model-workbench'
 /** 三层缺口的统计口径：链路层看引用、任务层看执行状态、模型层看检查点与内部激活。 */
 type Layer = 'link' | 'task' | 'model'
 interface GapStat {
@@ -124,7 +122,7 @@ function gapOf(target: Layer): GapStat {
   if (store.demo) return demoGaps[target]
   return gaps.value?.[target] ?? { expected: null, missing: null }
 }
-// 三层缺口要逐个查询谱系，聚合期间用省略号表示"正在统计"，避免误显示成"未知"。
+// 三层缺口由服务端一次聚合，加载期间用省略号表示"正在统计"，避免误显示成"未知"。
 const gapsLoading = ref(false)
 /** 卡片上的数字文案：统计中显示省略号，取不到才显示"未知"。 */
 function gapText(target: Layer, key: keyof GapStat): string {
@@ -154,70 +152,7 @@ async function loadLayerGaps() {
   }
   gapsLoading.value = true
   try {
-    // 1. 取可查询的根节点：数据集（含被引用但未登记的）与模型。
-    const [datasetContext, modelContext] = await Promise.all([
-      complianceApi.contexts({ sourceKind: 'dataset' }),
-      complianceApi.contexts({ sourceKind: 'model' }),
-    ])
-    const datasetIds = [...new Set(datasetContext.candidates.map((item) => String(item.sourceId)))]
-    const modelIds = [...new Set(modelContext.candidates.map((item) => String(item.sourceId)))]
-    // 2. 逐个根节点查询谱系，再按边 id 去重：同一条边会被多个起点重复返回。
-    const graphs = await Promise.all([
-      ...datasetIds.map((id) =>
-        complianceApi.lineage({ entityType: 'dataset', entityId: id, direction: 'both' }),
-      ),
-      ...modelIds.map((id) =>
-        complianceApi.lineage({ entityType: 'model', entityId: id, direction: 'both' }),
-      ),
-    ])
-    const edges = new Map<string, (typeof graphs)[number]['edges'][number]>()
-    graphs.forEach((graph) => graph.edges.forEach((edge) => edges.set(edge.id, edge)))
-    // 3. 只统计清单里列出的 3 类谱系关系。
-    const countedRelations = new Set(['输入数据引用', '训练数据绑定', '训练产物登记'])
-    let linkExpected = 0,
-      linkMissing = 0
-    edges.forEach((edge) => {
-      if (!countedRelations.has(edge.relation)) return
-      linkExpected += 1
-      if (edge.verificationState === 'missing') linkMissing += 1
-    })
-    // 4. 链路层第 4 类 + 模型层的检查点数据，都来自模型工作台聚合接口。
-    const workbench = await getModelWorkbench()
-    const registered = new Set<string>()
-    workbench.models.forEach((model) => {
-      registered.add(`${model.id}::${model.version}`)
-      model.versions.forEach((version) => registered.add(`${model.id}::${version.version}`))
-    })
-    linkExpected += workbench.calls.length
-    linkMissing += workbench.calls.filter(
-      (call) => !registered.has(`${call.modelId}::${call.version}`),
-    ).length
-    // 5. 模型层：按训练配置推算应有检查点数，与实际保存数比较。
-    let checkpointExpected = 0,
-      checkpointMissing = 0
-    workbench.training.forEach((task) => {
-      const interval = Math.max(1, Math.floor((task.epochs || 1) / 3))
-      let shouldHave = 0
-      for (let index = 1; index <= (task.epoch || 0); index += 1)
-        if (index === task.epoch || index % interval === 0) shouldHave += 1
-      const actual = (task.checkpoints ?? []).length
-      checkpointExpected += shouldHave
-      checkpointMissing += Math.max(0, shouldHave - actual)
-    })
-    // 6. 任务层：执行失败的任务。进行中 / 等待中还没有结论，不算缺项。
-    const taskPage = await request<{ items: { status: string }[]; total: number }>({
-      url: '/tasks',
-      params: { page: 1, pageSize: 100 },
-    })
-    const taskItems = taskPage.items ?? []
-    gaps.value = {
-      link: { expected: linkExpected, missing: linkMissing },
-      task: {
-        expected: taskPage.total ?? taskItems.length,
-        missing: taskItems.filter((item) => item.status === 'failed').length,
-      },
-      model: { expected: checkpointExpected, missing: checkpointMissing },
-    }
+    gaps.value = (await complianceApi.issueSummary()).gaps
   } catch {
     // 取不到就显示"未知"，不编造数字。
     gaps.value = null

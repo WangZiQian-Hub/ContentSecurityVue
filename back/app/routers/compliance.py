@@ -177,6 +177,87 @@ def _graph(db: Session) -> tuple[list[dict], list[dict]]:
     return list(nodes.values()), edges
 
 
+def _issue_summary(db: Session) -> dict:
+    """Aggregate cross-domain compliance gaps without client-side N+1 lineage queries."""
+    ensure_compliance_data(db)
+    nodes, edges = _graph(db)
+    labels = {node["id"]: node["label"] for node in nodes}
+    errors: list[dict] = []
+    counted_relations = {"输入数据引用", "训练数据绑定", "训练产物登记"}
+    link_expected = 0
+    link_missing = 0
+    for edge in edges:
+        if edge["relation"] not in counted_relations:
+            continue
+        link_expected += 1
+        if edge["verification_state"] != "missing":
+            continue
+        link_missing += 1
+        errors.append({
+            "id": f"link:{edge['relation']}:{edge['id']}", "source": "system", "layer": "link",
+            "title": f"{labels.get(edge['from_id'], edge['from_id'])} -> {labels.get(edge['to_id'], edge['to_id'])}",
+            "detail": edge["missing_reason"] or "引用未登记", "state": "open",
+            "target": "/compliance/lineage", "comment_count": 0,
+        })
+
+    models = list(db.scalars(select(Model)).all())
+    versions = list(db.scalars(select(ModelVersion)).all())
+    registered = {(str(model.id), model.version) for model in models}
+    registered.update((str(version.model_id), version.version) for version in versions)
+    calls = list(db.scalars(select(ModelCall)).all())
+    link_expected += len(calls)
+    for call in calls:
+        if (str(call.model_id), call.version) in registered:
+            continue
+        link_missing += 1
+        errors.append({
+            "id": f"link:模型版本引用:{call.id}", "source": "system", "layer": "link",
+            "title": f"调用记录 {call.id}", "detail": f"引用的模型版本 {call.version} 未在登记表里",
+            "state": "open", "target": "/compliance/lineage", "comment_count": 0,
+        })
+
+    model_expected = 0
+    model_missing = 0
+    for task in db.scalars(select(TrainingTask)).all():
+        interval = max(1, (task.epochs or 1) // 3)
+        saved = {item.get("epoch") for item in (task.checkpoints or [])}
+        for epoch in range(1, (task.epoch or 0) + 1):
+            if epoch != task.epoch and epoch % interval:
+                continue
+            model_expected += 1
+            if epoch in saved:
+                continue
+            model_missing += 1
+            errors.append({
+                "id": f"model:{task.id}:checkpoint:{epoch}", "source": "system", "layer": "model",
+                "title": f"训练任务 {task.id}", "detail": f"应有第 {epoch} 轮的检查点，实际未保存",
+                "state": "open", "target": "/compliance/model-internal", "comment_count": 0,
+            })
+
+    tasks = list(db.scalars(select(Task)).all())
+    failed_tasks = [task for task in tasks if task.status == "failed"]
+    for task in failed_tasks:
+        result = task.result or {}
+        errors.append({
+            "id": f"task:{task.task_id}:failed", "source": "system", "layer": "task",
+            "title": f"{task.name}（{task.task_id}）", "detail": result.get("error_message") or "任务执行失败",
+            "state": "open", "target": "/compliance/full-chain", "comment_count": 0,
+        })
+
+    return {
+        "gaps": {
+            "link": {"expected": link_expected, "missing": link_missing},
+            "task": {"expected": len(tasks), "missing": len(failed_tasks)},
+            "model": {"expected": model_expected, "missing": model_missing},
+        },
+        "errors": errors,
+    }
+
+
+@router.get("/compliance/issue-summary")
+def issue_summary(db: Session = Depends(get_db)):
+    return success(data=_issue_summary(db), message="合规问题汇总查询成功")
+
 @router.get("/compliance/overview")
 def overview(from_: str = Query(alias="from"), to: str = Query(), scope: str = Query(default="all"), db: Session = Depends(get_db)):
     ensure_compliance_data(db)

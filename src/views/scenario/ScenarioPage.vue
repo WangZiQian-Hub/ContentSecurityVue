@@ -8,6 +8,7 @@ import TaskTable from '../../components/TaskTable.vue'
 import ScenarioResult from '../../components/scenario/ScenarioResult.vue'
 import ScenarioRecords from '../../components/scenario/ScenarioRecords.vue'
 import EthnicMultilingualWorkbench from './EthnicMultilingualWorkbench.vue'
+import GovernanceTokenCapsule from '../../components/GovernanceTokenCapsule.vue'
 import { llmTokenConfigured } from '../../api/governance-llm'
 import {
   describeModels,
@@ -182,6 +183,13 @@ onMounted(loadModelsIfPossible)
 watch(llmTokenConfigured, loadModelsIfPossible)
 </script>
 <template>
+  <!-- 令牌状态胶囊渲染到二级页签条右侧（AppLayout 的 .page-tabs 里预留了容器），
+       组件代码留在本页，不进入全局布局。保存新令牌后重新加载模型目录。
+       多语言工作台同样需要令牌，因此胶囊在所有页签都渲染，放在分支之前。 -->
+  <Teleport to="#page-tabs-extra">
+    <GovernanceTokenCapsule @saved="loadModelsIfPossible" />
+  </Teleport>
+
   <!-- 多语言语义权重（GN21）：独立工作台，不沿用通用表单/结果/横幅布局。 -->
   <EthnicMultilingualWorkbench v-if="activeCode === 'ethnic_governance'" />
   <template v-else>

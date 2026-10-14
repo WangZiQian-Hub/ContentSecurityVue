@@ -2,8 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import { complianceApi } from '../../api/compliance'
-import { request } from '../../api/request'
-import { getModelWorkbench } from '../../api/model-workbench'
 import { useComplianceStore } from '../../stores/compliance'
 import { demoAuditErrors } from '../../mock/compliance'
 import { formatCount, formatTime } from './presentation'
@@ -22,8 +20,7 @@ const COMMENT_BACKEND = false
 const ARCHIVE_KEY = 'compliance:audit-error-archive'
 /** 评论（本机暂存，仅当 COMMENT_BACKEND 为 false 时使用）。 */
 const COMMENT_KEY = 'compliance:error-comments'
-/** 计入链路层的 3 类谱系关系；第 4 类「模型版本 → 推理输出」由调用记录与模型版本比对得出。 */
-const COUNTED_RELATIONS = new Set(['输入数据引用', '训练数据绑定', '训练产物登记'])
+
 const LAYER_LABEL: Record<AuditErrorLayer, string> = {
   link: '链路层',
   task: '任务层',
@@ -114,103 +111,11 @@ async function loadErrors() {
   loading.value = true
   loadError.value = ''
   try {
-    // 演示模式没有谱系 / 任务 / 模型工作台这些数据源，直接用写好的演示清单。
-    if (store.demo) {
-      items.value = withCommentCount(demoAuditErrors.map((item) => ({ ...item })))
-      return
-    }
-    const list: AuditError[] = []
-    // 1. 链路层：逐个根节点查询谱系，按边 id 去重后取「待补证」的边。
-    const [datasetContext, modelContext] = await Promise.all([
-      complianceApi.contexts({ sourceKind: 'dataset' }),
-      complianceApi.contexts({ sourceKind: 'model' }),
-    ])
-    const datasetIds = [...new Set(datasetContext.candidates.map((item) => String(item.sourceId)))]
-    const modelIds = [...new Set(modelContext.candidates.map((item) => String(item.sourceId)))]
-    const graphs = await Promise.all([
-      ...datasetIds.map((id) =>
-        complianceApi.lineage({ entityType: 'dataset', entityId: id, direction: 'both' }),
-      ),
-      ...modelIds.map((id) =>
-        complianceApi.lineage({ entityType: 'model', entityId: id, direction: 'both' }),
-      ),
-    ])
-    const labels = new Map<string, string>()
-    const edges = new Map<string, (typeof graphs)[number]['edges'][number]>()
-    graphs.forEach((graph) => {
-      graph.nodes.forEach((node) => labels.set(node.id, node.label))
-      graph.edges.forEach((edge) => edges.set(edge.id, edge))
-    })
-    edges.forEach((edge) => {
-      if (!COUNTED_RELATIONS.has(edge.relation) || edge.verificationState !== 'missing') return
-      list.push({
-        id: `link:${edge.relation}:${edge.id}`,
-        source: 'system',
-        layer: 'link',
-        title: `${labels.get(edge.fromId) ?? edge.fromId} → ${labels.get(edge.toId) ?? edge.toId}`,
-        detail: edge.missingReason ?? '引用未登记',
-        state: 'open',
-        target: '/compliance/lineage',
-        commentCount: 0,
-      })
-    })
-    // 2. 模型工作台：链路层第 4 类（调用引用的模型版本）+ 模型层的检查点缺口。
-    const workbench = await getModelWorkbench()
-    const registered = new Set<string>()
-    workbench.models.forEach((model) => {
-      registered.add(`${model.id}::${model.version}`)
-      model.versions.forEach((version) => registered.add(`${model.id}::${version.version}`))
-    })
-    workbench.calls.forEach((call) => {
-      if (registered.has(`${call.modelId}::${call.version}`)) return
-      list.push({
-        id: `link:模型版本引用:${call.id}`,
-        source: 'system',
-        layer: 'link',
-        title: `调用记录 ${call.id}`,
-        detail: `引用的模型版本 ${call.version} 未在登记表里`,
-        state: 'open',
-        target: '/compliance/lineage',
-        commentCount: 0,
-      })
-    })
-    workbench.training.forEach((task) => {
-      const interval = Math.max(1, Math.floor((task.epochs || 1) / 3))
-      const saved = new Set((task.checkpoints ?? []).map((checkpoint) => checkpoint.epoch))
-      for (let index = 1; index <= (task.epoch || 0); index += 1) {
-        if (index !== task.epoch && index % interval !== 0) continue
-        if (saved.has(index)) continue
-        list.push({
-          id: `model:${task.id}:checkpoint:${index}`,
-          source: 'system',
-          layer: 'model',
-          title: `训练任务 ${task.id}`,
-          detail: `应有第 ${index} 轮的检查点，实际未保存`,
-          state: 'open',
-          target: '/compliance/model-internal',
-          commentCount: 0,
-        })
-      }
-    })
-    // 3. 任务层：执行失败的任务。
-    const taskPage = await request<{
-      items: { taskId: string; name: string; status: string; errorMessage?: string }[]
-    }>({ url: '/tasks', params: { page: 1, pageSize: 100 } })
-    ;(taskPage.items ?? [])
-      .filter((task) => task.status === 'failed')
-      .forEach((task) => {
-        list.push({
-          id: `task:${task.taskId}:failed`,
-          source: 'system',
-          layer: 'task',
-          title: `${task.name}（${task.taskId}）`,
-          detail: task.errorMessage || '任务执行失败',
-          state: 'open',
-          target: '/compliance/full-chain',
-          commentCount: 0,
-        })
-      })
-    items.value = withCommentCount(reconcile(list))
+    // 演示模式没有后端聚合数据，直接用写好的演示清单。
+    const current = store.demo
+      ? demoAuditErrors.map((item) => ({ ...item }))
+      : (await complianceApi.issueSummary()).errors
+    items.value = withCommentCount(reconcile(current))
   } catch (exception) {
     loadError.value = exception instanceof Error ? exception.message : '错误清单加载失败'
     items.value = []

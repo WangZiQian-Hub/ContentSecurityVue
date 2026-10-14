@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>蜥蜴骑行 · SVG 2D 动画</title>
+    <style>
+      :root { color-scheme: light; font-family: "Microsoft YaHei", system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #dff5ff;
+        color: #16324a;
+      }
+      .scene {
+        width: min(100vw, 1180px);
+        aspect-ratio: 16 / 9;
+        position: relative;
+        overflow: hidden;
+        border: 3px solid #16324a;
+        border-radius: 18px;
+        background: #9edfff;
+        box-shadow: 0 18px 50px rgb(22 50 74 / 18%);
+      }
+      svg { width: 100%; height: 100%; display: block; }
+      .title {
+        position: absolute;
+        left: 4%;
+        top: 5%;
+        margin: 0;
+        font-size: clamp(18px, 2.3vw, 32px);
+        letter-spacing: .08em;
+        font-weight: 800;
+      }
+      .hint {
+        position: absolute;
+        right: 4%;
+        top: 5.5%;
+        padding: .45em .8em;
+        border: 2px solid #16324a;
+        border-radius: 999px;
+        background: #fff8df;
+        font-size: clamp(11px, 1.2vw, 16px);
+        font-weight: 700;
+      }
+      .wheel { transform-box: fill-box; transform-origin: center; animation: roll .8s linear infinite; }
+      .pedal { transform-box: fill-box; transform-origin: center; animation: pedal .8s linear infinite; }
+      .lizard-body { transform-box: fill-box; transform-origin: center bottom; animation: bob .8s ease-in-out infinite; }
+      .tail { transform-box: fill-box; transform-origin: 0 50%; animation: tail .8s ease-in-out infinite alternate; }
+      .leg-front { transform-box: fill-box; transform-origin: 50% 0; animation: legFront .8s ease-in-out infinite; }
+      .leg-back { transform-box: fill-box; transform-origin: 50% 0; animation: legBack .8s ease-in-out infinite; }
+      .cloud { animation: drift 18s linear infinite; }
+      .cloud.two { animation-delay: -9s; animation-duration: 24s; }
+      .ground-detail { animation: ground 2.2s linear infinite; }
+      @keyframes roll { to { transform: rotate(360deg); } }
+      @keyframes pedal { to { transform: rotate(360deg); } }
+      @keyframes bob { 50% { transform: translateY(-5px) rotate(-1deg); } }
+      @keyframes tail { to { transform: rotate(7deg); } }
+      @keyframes legFront { 50% { transform: rotate(19deg); } }
+      @keyframes legBack { 50% { transform: rotate(-18deg); } }
+      @keyframes drift { from { transform: translateX(-180px); } to { transform: translateX(1180px); } }
+      @keyframes ground { from { transform: translateX(0); } to { transform: translateX(-180px); } }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-play-state: paused !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="scene" aria-label="蜥蜴骑自行车的 SVG 二维动画">
+      <h1 class="title">蜥蜴的春日骑行</h1>
+      <div class="hint">SVG · 2D LOOP</div>
+      <svg viewBox="0 0 1200 675" role="img" aria-labelledby="svgTitle svgDesc">
+        <title id="svgTitle">一只绿色蜥蜴骑着红色自行车</title>
+        <desc id="svgDesc">蜥蜴踩踏板前进，车轮和道路细节持续滚动。</desc>
+        <rect width="1200" height="675" fill="#9edfff" />
+        <circle cx="1015" cy="125" r="55" fill="#fff4b5" opacity=".9" />
+        <g class="cloud" fill="#fff" opacity=".82">
+          <path d="M75 145c16-26 55-23 66 6 18-18 53-6 54 22H55c-3-14 5-25 20-28Z" />
+          <path d="M-50 245c16-26 55-23 66 6 18-18 53-6 54 22h-140c-3-14 5-25 20-28Z" />
+        </g>
+        <g class="cloud two" fill="#fff" opacity=".68">
+          <path d="M420 100c16-26 55-23 66 6 18-18 53-6 54 22H400c-3-14 5-25 20-28Z" />
+        </g>
+        <path d="M0 410 Q210 340 420 410 T840 400 T1200 420 V675 H0Z" fill="#80d18a" />
+        <path d="M0 480 Q270 430 560 480 T1200 470 V675 H0Z" fill="#58b96f" />
+        <path d="M0 555 Q300 520 610 555 T1200 550 V675 H0Z" fill="#e7c77f" />
+        <g class="ground-detail" stroke="#c59f5d" stroke-width="6" stroke-linecap="round" opacity=".7">
+          <path d="M30 586h45m55 14h50m95-17h53m82 25h62m85-24h50m95 17h60m96-15h47m88 22h66m85-18h47" />
+          <path d="M-60 632h48m100 12h60m88-14h48m99 15h58m98-13h52m99 15h58m100-13h46m96 16h58" />
+        </g>
+        <g transform="translate(420 350)">
+          <g stroke="#16324a" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle class="wheel" cx="120" cy="205" r="88" fill="#f9d86c" />
+            <circle class="wheel" cx="480" cy="205" r="88" fill="#f9d86c" />
+            <path d="M120 205 255 115l110 90H120Zm135-90 90 0 110 90" />
+            <path d="M255 115 292 62h53m-10 0 18 30" />
+            <path d="M365 205 340 96m-48 19-32 90" />
+          </g>
+          <g class="pedal" stroke="#16324a" stroke-width="8" stroke-linecap="round">
+            <circle cx="255" cy="205" r="17" fill="#f47c59" />
+            <path d="M255 205l44 23m-44-23-36 25" />
+            <path d="M294 228h27m-68 2h-28" />
+          </g>
+          <g class="lizard-body">
+            <path class="tail" d="M218 44c-64-58-119-28-134 10-9 23-31 27-57 12" fill="none" stroke="#2f7f52" stroke-width="24" stroke-linecap="round" />
+            <path d="M205 63c-3-47 29-80 83-83 66-4 95 37 81 81-13 40-72 52-118 35Z" fill="#63bf68" stroke="#16324a" stroke-width="9" />
+            <path d="M286 5c22-40 67-51 99-28 25 18 25 52 6 70-17 16-45 17-65 3l-25-19Z" fill="#75d477" stroke="#16324a" stroke-width="9" />
+            <circle cx="347" cy="-3" r="9" fill="#16324a" />
+            <circle cx="350" cy="-6" r="3" fill="#fff" />
+            <path d="M390 24q22 8 34-4" fill="none" stroke="#16324a" stroke-width="6" stroke-linecap="round" />
+            <path d="M305 18 328 5m-16 37 29-12" stroke="#3d9d59" stroke-width="9" stroke-linecap="round" />
+            <path class="leg-front" d="M310 81l22 93-26 31" fill="none" stroke="#2f7f52" stroke-width="20" stroke-linecap="round" />
+            <path class="leg-back" d="M244 90l15 83-27 34" fill="none" stroke="#2f7f52" stroke-width="20" stroke-linecap="round" />
+            <path d="M306 205h-18m-49 2h-18" stroke="#16324a" stroke-width="8" stroke-linecap="round" />
+            <path d="M275 66c-18 10-30 25-37 48" fill="none" stroke="#16324a" stroke-width="7" stroke-linecap="round" />
+            <path d="M309 48c-19 12-34 18-53 21" fill="none" stroke="#16324a" stroke-width="6" stroke-linecap="round" />
+          </g>
+          <path d="M332 62h32" stroke="#d94d42" stroke-width="9" stroke-linecap="round" />
+          <path d="M355 62v-28" stroke="#16324a" stroke-width="8" stroke-linecap="round" />
+        </g>
+        <g transform="translate(112 520)" fill="#2f7f52" stroke="#16324a" stroke-width="5">
+          <path d="M0 68c18-42 20-63 5-78 34 11 44 37 32 78Zm88 0c-3-38 3-61 25-77 9 32-1 54-25 77Z" />
+          <path d="M44 70V0" fill="none" />
+        </g>
+      </svg>
+    </main>
+  </body>
+</html>

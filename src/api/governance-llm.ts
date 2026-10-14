@@ -18,9 +18,20 @@ export function getLlmToken() {
  *  sessionStorage 本身不是响应式的，而令牌栏现在挂在全局布局里，
  *  需要随令牌变化重新取数的页面（例如场景应用的模型目录）靠这个标记感知。 */
 export const llmTokenConfigured = ref(!!getLlmToken())
+/** 令牌是否已失效：模型服务返回 401/403 时置位，保存新令牌时复位。
+ *  令牌状态胶囊据此标红，提示需要重新填写。 */
+export const llmTokenInvalid = ref(false)
+/* ── 演示专用：令牌写死在这里，模块加载时即视为“已配置”，打开页面无需任何人手填。
+   正式版（用户登录后由后端签发令牌并入库）请删除本段，改为登录成功后调用 saveLlmToken()。
+   以后若改用构建注入，只需把 DEMO_LLM_TOKEN 的值换成
+   import.meta.env.VITE_LLM_ACCESS_TOKEN?.trim()，其余逻辑不用动。
+   注意：此值会出现在前端产物与 git 历史中，演示结束后请让模型服务同学轮换该令牌。── */
+const DEMO_LLM_TOKEN = 'qbMA-UZQY912ZKG-MLFhNdzLyclXfgQGiCoRKiv3oaI'
+if (DEMO_LLM_TOKEN && !getLlmToken()) saveLlmToken(DEMO_LLM_TOKEN)
 export function saveLlmToken(token: string) {
   if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LLM_TOKEN_KEY, token.trim())
   llmTokenConfigured.value = true
+  llmTokenInvalid.value = false
 }
 export function clearLlmToken() {
   if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(LLM_TOKEN_KEY)
@@ -74,6 +85,7 @@ export async function llmRequest<T>(
     if (axios.isCancel(error)) throw error
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
     if (status === 401 || status === 403) {
+      llmTokenInvalid.value = true
       const message = '模型服务访问令牌无效或已失效，请重新填写。'
       await showError(message)
       throw new Error(message)

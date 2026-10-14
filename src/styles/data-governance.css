@@ -87,6 +87,13 @@
   padding: 0 15px;
   margin-bottom: 10px;
 }
+/* 令牌状态胶囊贴在页签行右侧：常态只显示状态，点击才弹出输入框。 */
+.governance-tabs > .governance-tabs-extra {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
 .governance-tabs > a,
 .governance-tabs > button {
   display: flex;

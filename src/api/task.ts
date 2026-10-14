@@ -15,6 +15,14 @@ export async function listTasks(): Promise<PageResult<Task>> {
     })),
   }
 }
+export function getTask(taskId: string): Promise<Task> {
+  if (isMock) {
+    const task = tasks.find((item) => item.taskId === taskId)
+    if (!task) return Promise.reject(new Error('任务不存在'))
+    return Promise.resolve(structuredClone(task))
+  }
+  return request<Task>({ url: '/tasks/' + encodeURIComponent(taskId) })
+}
 export async function executeTask(data: ExecuteTaskReq): Promise<Task> {
   if (isMock) {
     await new Promise((resolve) => setTimeout(resolve, 650))

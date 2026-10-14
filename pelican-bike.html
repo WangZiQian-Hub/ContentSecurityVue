@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>鹈鹕骑自行车 · SVG 2D 动画</title>
+  <style>
+    :root { font-family: "Microsoft YaHei", system-ui, sans-serif; color: #18334a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; overflow: hidden; background: #dff5fb; }
+    .scene { width: min(100vw, 1180px); aspect-ratio: 16 / 9; overflow: hidden; position: relative; border: 3px solid #18334a; border-radius: 18px; background: #9bdcf0; box-shadow: 0 18px 50px #18334a2b; }
+    svg { width: 100%; height: 100%; display: block; }
+    h1 { position: absolute; z-index: 2; left: 4%; top: 4%; margin: 0; font-size: clamp(19px, 2.5vw, 34px); letter-spacing: .08em; }
+    .badge { position: absolute; z-index: 2; right: 4%; top: 5%; padding: .45em .8em; border: 2px solid #18334a; border-radius: 999px; background: #fff8d7; font-size: clamp(11px, 1.2vw, 16px); font-weight: 700; }
+    .wheel { transform-box: fill-box; transform-origin: center; animation: spin .8s linear infinite; }
+    .pedal { transform-box: fill-box; transform-origin: center; animation: spin .8s linear infinite; }
+    .bird { transform-box: fill-box; transform-origin: center bottom; animation: bounce .8s ease-in-out infinite; }
+    .wing { transform-box: fill-box; transform-origin: 80% 20%; animation: flap .8s ease-in-out infinite alternate; }
+    .leg-a { transform-box: fill-box; transform-origin: 50% 0; animation: leg-a .8s ease-in-out infinite; }
+    .leg-b { transform-box: fill-box; transform-origin: 50% 0; animation: leg-b .8s ease-in-out infinite; }
+    .cloud { animation: drift 20s linear infinite; }
+    .cloud.alt { animation-delay: -10s; animation-duration: 27s; }
+    .road { animation: road 2s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes bounce { 50% { transform: translateY(-5px) rotate(-1deg); } }
+    @keyframes flap { to { transform: rotate(-9deg); } }
+    @keyframes leg-a { 50% { transform: rotate(18deg); } }
+    @keyframes leg-b { 50% { transform: rotate(-18deg); } }
+    @keyframes drift { from { transform: translateX(-230px); } to { transform: translateX(1230px); } }
+    @keyframes road { from { transform: translateX(0); } to { transform: translateX(-180px); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-play-state: paused !important; } }
+  </style>
+</head>
+<body>
+  <main class="scene" aria-label="鹈鹕骑自行车的 SVG 二维动画">
+    <h1>鹈鹕的海风骑行</h1>
+    <div class="badge">SVG · 2D LOOP</div>
+    <svg viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+      <title id="title">一只鹈鹕骑着自行车</title>
+      <desc id="desc">鹈鹕踩着红色自行车前进，车轮、翅膀、云朵与道路持续运动。</desc>
+      <rect width="1200" height="675" fill="#9bdcf0"/>
+      <circle cx="1000" cy="126" r="57" fill="#fff0a8" opacity=".9"/>
+      <g class="cloud" fill="#fff" opacity=".82"><path d="M55 145c15-29 57-27 68 5 21-19 56-4 55 24H32c-2-14 7-25 23-29Z"/></g>
+      <g class="cloud alt" fill="#fff" opacity=".7"><path d="M400 102c16-27 55-23 66 6 18-18 53-6 54 22H380c-3-14 5-25 20-28Z"/></g>
+      <path d="M0 410Q220 340 440 410T850 400T1200 420V675H0Z" fill="#82d38c"/>
+      <path d="M0 482Q280 432 570 480T1200 470V675H0Z" fill="#56b870"/>
+      <path d="M0 554Q300 520 610 555T1200 550V675H0Z" fill="#e7c77f"/>
+      <g class="road" stroke="#bf9859" stroke-width="6" stroke-linecap="round" opacity=".7">
+        <path d="M20 588h50m52 14h55m90-18h52m82 25h63m83-24h50m94 17h61m94-15h48m89 22h68m84-18h49"/>
+        <path d="M-70 632h52m100 13h60m89-15h48m99 15h58m98-13h52m100 15h58m100-13h46m96 16h58"/>
+      </g>
+      <g transform="translate(415 350)">
+        <g fill="none" stroke="#18334a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+          <circle class="wheel" cx="120" cy="205" r="88" fill="#f9d86c"/><circle class="wheel" cx="480" cy="205" r="88" fill="#f9d86c"/>
+          <path d="M120 205 255 115l110 90H120Zm135-90h90l110 90M255 115l37-53h53m-10 0 18 30M365 205 340 96m-48 19-32 90"/>
+        </g>
+        <g class="pedal" fill="none" stroke="#18334a" stroke-width="8" stroke-linecap="round"><circle cx="255" cy="205" r="17" fill="#ee6853"/><path d="m255 205 44 23m-44-23-36 25m80-2h27m-68 2h-28"/></g>
+        <g class="bird">
+          <!-- body and long neck -->
+          <ellipse cx="270" cy="82" rx="78" ry="62" fill="#f4f0dd" stroke="#18334a" stroke-width="9"/>
+          <path d="M292 67c-17-55-7-103 32-125 27-15 61 1 68 31 7 30-14 59-43 70l-16 58Z" fill="#f4f0dd" stroke="#18334a" stroke-width="9"/>
+          <!-- head, beak and throat pouch -->
+          <ellipse cx="356" cy="-45" rx="51" ry="41" fill="#fff9e8" stroke="#18334a" stroke-width="9"/>
+          <path d="M390-45c74-7 105 8 108 24-26 24-72 28-113 8Z" fill="#f39a55" stroke="#18334a" stroke-width="8"/>
+          <path d="M391-28c38 23 72 22 104 7-6 42-54 52-87 24Z" fill="#ef8b5a" stroke="#18334a" stroke-width="7"/>
+          <circle cx="370" cy="-54" r="9" fill="#18334a"/><circle cx="373" cy="-57" r="3" fill="#fff"/>
+          <path d="M341-79q19-20 37-5" fill="none" stroke="#18334a" stroke-width="6" stroke-linecap="round"/>
+          <!-- wing -->
+          <path class="wing" d="M257 54c-53-30-78-3-72 38 6 38 47 50 88 24l40-32Z" fill="#d6d5c5" stroke="#18334a" stroke-width="9"/>
+          <path d="M211 62q34 12 62 45" fill="none" stroke="#aaa99c" stroke-width="7" stroke-linecap="round"/>
+          <!-- legs -->
+          <path class="leg-a" d="M248 122l20 63-25 24" fill="none" stroke="#ef8b5a" stroke-width="17" stroke-linecap="round"/>
+          <path class="leg-b" d="M307 124l14 61-25 24" fill="none" stroke="#ef8b5a" stroke-width="17" stroke-linecap="round"/>
+          <path d="M243 210h-19m68-1h-19" stroke="#18334a" stroke-width="8" stroke-linecap="round"/>
+        </g>
+        <path d="M332 62h32M355 62v-28" stroke="#18334a" stroke-width="8" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(110 523)" fill="#2f7f52" stroke="#18334a" stroke-width="5"><path d="M0 66c18-42 20-63 5-78 34 11 44 37 32 78Zm88 0c-3-38 3-61 25-77 9 32-1 54-25 77Z"/><path d="M44 70V0" fill="none"/></g>
+    </svg>
+  </main>
+</body>
+</html>

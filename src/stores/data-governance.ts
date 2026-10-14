@@ -42,6 +42,18 @@ export const useDataGovernanceStore = defineStore('data-governance', () => {
     tasks.value = result.items
     total.value = result.total
   }
+  /** 列表接口返回的是摘要（不含 steps / comparisons / errorMessage），
+   *  而「当前处理任务」面板需要完整字段，因此按 id 再取一次详情；
+   *  详情请求失败、或返回空值时都退回摘要项，避免因为一次详情请求
+   *  把整个工作台判为加载失败或让面板变空。 */
+  async function loadPanelTask(summary?: ProcessTask) {
+    if (!summary) return undefined
+    try {
+      return (await api.getProcessTask(summary.taskId)) || summary
+    } catch {
+      return summary
+    }
+  }
   async function initialize() {
     const requestId = ++initialization
     loading.value = true
@@ -56,7 +68,7 @@ export const useDataGovernanceStore = defineStore('data-governance', () => {
       options.value = config
       tasks.value = result.items
       total.value = result.total
-      currentTask.value = tasks.value[0]
+      currentTask.value = await loadPanelTask(tasks.value[0])
     } catch {
       if (requestId === initialization) error.value = '数据处理工作台加载失败，请检查服务后重试。'
     } finally {

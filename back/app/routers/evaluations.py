@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.core.database import SessionLocal
 from app.core.response import success
 from app.core.time import now_shanghai
@@ -135,13 +136,33 @@ class MetricInput(BaseModel):
 @router.post("/metrics")
 def create_metric(payload: MetricInput):
     with SessionLocal() as db:
-        if db.scalar(select(EvaluationMetric).where(EvaluationMetric.code == payload.code)):
-            raise HTTPException(409, "此指标编码已存在")
-        metric_id = f"metric-{uuid4().hex[:16]}"
-        metric = EvaluationMetric(metric_id=metric_id, **payload.model_dump(), configuration_status="draft", issues=[])
-        definition = {"formulaCode":"needs_definition","formulaVersion":"1.0","formula":"待补齐业务定义","denominatorDefinition":"","positiveClass":"","unit":"ratio","testMethod":"automatic","applicableObjects":"","parameters":[],"thresholds":[],"inputRequirements":[],"requiredEvidence":[],"sourceDocumentRefs":[]}
-        db.add(metric); db.add(EvaluationMetricRevision(revision_id=f"revision-{uuid4().hex[:16]}", metric_id=metric_id, metric_code=payload.code, name=payload.name, category=payload.category, definition=definition, configuration_status="draft")); db.commit(); db.refresh(metric)
-        return success(metric_dict(db, metric), "指标草稿创建成功")
+        try:
+            if db.scalar(select(EvaluationMetric).where(EvaluationMetric.code == payload.code)):
+                raise HTTPException(409, "此指标编码已存在")
+            metric_id = f"metric-{uuid4().hex[:16]}"
+            metric = EvaluationMetric(metric_id=metric_id, **payload.model_dump(), configuration_status="draft", issues=[])
+            definition = {"formulaCode":"needs_definition","formulaVersion":"1.0","formula":"待补齐业务定义","denominatorDefinition":"","positiveClass":"","unit":"ratio","testMethod":"automatic","applicableObjects":"","parameters":[],"thresholds":[],"inputRequirements":[],"requiredEvidence":[],"sourceDocumentRefs":[]}
+            db.add(metric)
+            db.add(EvaluationMetricRevision(
+                revision_id=f"revision-{uuid4().hex[:16]}", metric_id=metric_id,
+                metric_code=payload.code, name=payload.name, category=payload.category,
+                definition=definition, configuration_status="draft",
+            ))
+            db.commit()
+            db.refresh(metric)
+            return success(metric_dict(db, metric), "指标草稿创建成功")
+        except HTTPException:
+            db.rollback()
+            raise
+        except IntegrityError as error:
+            db.rollback()
+            if "code" in str(error.orig).lower():
+                raise HTTPException(409, "此指标编码已存在") from None
+            raise HTTPException(400, "指标草稿保存失败，请检查输入后重试") from None
+        except SQLAlchemyError as error:
+            db.rollback()
+            print(f"创建指标草稿失败: {error!r}")
+            raise HTTPException(500, "指标草稿保存失败，请检查数据库表结构和后端日志") from None
 
 @router.patch("/metrics/{metric_id}")
 def update_metric(metric_id: str, payload: dict[str, Any]):
