@@ -94,9 +94,9 @@ export const navigation: NavItem[] = [
         'smart-government',
         'cyber-security',
       ],
-      ['舆情分析', '热点事件跟踪', '跨文化交流', '多民族社会治理', '智能政务', '网络空间安防'],
+      ['舆情分析', '热点事件跟踪', '跨文化交流', '多语言语义权重', '智能政务', '网络空间安防'],
       /* 与“综合态势”页场景入口卡片保持同一套图标 */
-      ['ChatDotRound', 'Sunrise', 'Football', 'UserFilled', 'OfficeBuilding', 'Checked'],
+      ['ChatDotRound', 'Sunrise', 'Football', 'Connection', 'OfficeBuilding', 'Checked'],
     ),
   },
   {

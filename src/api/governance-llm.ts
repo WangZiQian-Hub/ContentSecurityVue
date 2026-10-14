@@ -43,11 +43,20 @@ async function showError(message: string) {
   ElMessage.error(message)
 }
 
-export async function llmRequest<T>(config: AxiosRequestConfig): Promise<T> {
+/** 调用选项：silent=true 时除鉴权失效外的错误不弹全局提示，由调用方自行处理。
+ *  用于“接口可能尚未实现、需要静默回落模拟数据”的场景。 */
+export interface LlmRequestOptions {
+  silent?: boolean
+}
+
+export async function llmRequest<T>(
+  config: AxiosRequestConfig,
+  options: LlmRequestOptions = {},
+): Promise<T> {
   const token = getLlmToken()
   if (!token) {
     const message = '尚未填写模型服务访问令牌，请先填写令牌后重试。'
-    await showError(message)
+    if (!options.silent) await showError(message)
     throw new Error(message)
   }
   try {
@@ -74,7 +83,7 @@ export async function llmRequest<T>(config: AxiosRequestConfig): Promise<T> {
       : error instanceof Error
         ? error.message
         : '网络异常'
-    await showError(String(message))
+    if (!options.silent) await showError(String(message))
     throw error
   }
 }

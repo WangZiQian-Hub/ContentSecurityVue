@@ -7,6 +7,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import TaskTable from '../../components/TaskTable.vue'
 import ScenarioResult from '../../components/scenario/ScenarioResult.vue'
 import ScenarioRecords from '../../components/scenario/ScenarioRecords.vue'
+import EthnicMultilingualWorkbench from './EthnicMultilingualWorkbench.vue'
 import { llmTokenConfigured } from '../../api/governance-llm'
 import {
   describeModels,
@@ -181,6 +182,9 @@ onMounted(loadModelsIfPossible)
 watch(llmTokenConfigured, loadModelsIfPossible)
 </script>
 <template>
+  <!-- 多语言语义权重（GN21）：独立工作台，不沿用通用表单/结果/横幅布局。 -->
+  <EthnicMultilingualWorkbench v-if="activeCode === 'ethnic_governance'" />
+  <template v-else>
   <KpiStrip kind="governance" />
   <div class="scenario-banner">
     <span>SCENARIO APPLICATION</span>
@@ -314,6 +318,7 @@ watch(llmTokenConfigured, loadModelsIfPossible)
   <PanelCard v-else class="scenario-records" title="场景治理任务" icon="Tickets">
     <TaskTable />
   </PanelCard>
+  </template>
 </template>
 <style scoped>
 .scenario-layout {

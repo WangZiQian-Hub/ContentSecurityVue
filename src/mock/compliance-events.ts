@@ -39,9 +39,12 @@ export function createComplianceEvents(): ComplianceEvent[] {
   ]
 }
 
-/** 监控面板概览。
- * 说明：汇总口径由后端计算（“已处置”包含已拦截、已处置等终态）；
- * 样例中使用固定汇总值，与效果图保持一致，接入后端以后端返回为准。
+/** 监控面板概览（固定样例，与效果图一致）。
+ * 建议后端统计口径（前端不做计算，直接展示后端返回值）：
+ * - total：训练任务下全部事件数；
+ * - highRisk：高风险且尚未处置（status=recorded）的事件数；
+ * - handled：已闭环事件数，即 status 为 blocked/handled/ignored，
+ *   以及低风险记录即自动结案（level=low 且 status=recorded）的事件。
  */
 export function createComplianceEventOverview(): ComplianceEventOverview {
   const events = createComplianceEvents()
