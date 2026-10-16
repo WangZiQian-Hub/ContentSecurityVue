@@ -136,10 +136,18 @@ function selectDataset(value: number | 'new') {
   selectedDataset.value =
     typeof value === 'number' ? datasetOptions.value.find((item) => item.id === value) : undefined
 }
+const newestTask = computed(() => {
+  // store.tasks 按创建时间倒序加载，这里再显式排一次序，保证换接口/换排序后仍然取最新任务。
+  return [...store.tasks].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )[0]
+})
 const activeTask = computed(() => {
   // 左侧任务列表轮询刷新后，使用同一 taskId 的最新对象，右侧进度随之同步变化。
   if (current.value) return store.tasks.find((task) => task.taskId === current.value?.taskId) ?? current.value
-  return store.tasks.find((task) => task.status === 'running') ?? store.tasks[0]
+  // 未手动选中时展示最新一条任务：刚提交的任务排在最前，刷新后也不会被历史遗留的
+  // running 僵尸任务顶掉（僵尸任务的 created_at 更早，不会占住这个位置）。
+  return newestTask.value
 })
 const stage = computed(() =>
   !activeTask.value
@@ -419,18 +427,21 @@ onMounted(async () => {
       </div>
       <el-empty v-else description="暂无接入任务" :image-size="80" />
       <p class="resource-task-name">{{ activeTask?.name }}</p>
-      <h4>接入结果统计</h4>
-      <div class="resource-result-grid">
-        <div>
-          <span>成功</span><b>{{ store.succeededTaskTotal.toLocaleString() }}</b>
+      <template v-if="activeTask">
+        <h4>接入结果统计</h4>
+        <div class="resource-result-grid">
+          <div>
+            <span>成功</span><b>{{ store.succeededTaskTotal.toLocaleString() }}</b>
+          </div>
+          <div>
+            <span>重复</span><b>{{ activeTask.duplicateCount.toLocaleString() }}</b>
+          </div>
+          <div>
+            <span>异常</span><b>{{ activeTask.anomalyCount.toLocaleString() }}</b>
+          </div>
         </div>
-        <div>
-          <span>重复</span><b>{{ activeTask?.duplicateCount.toLocaleString() ?? '—' }}</b>
-        </div>
-        <div>
-          <span>异常</span><b>{{ activeTask?.anomalyCount.toLocaleString() ?? '—' }}</b>
-        </div>
-      </div></PanelCard
+      </template>
+    </PanelCard
     >
   </div>
   <PanelCard title="接入任务记录" icon="List"
