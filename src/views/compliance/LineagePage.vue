@@ -19,75 +19,41 @@ const edge = computed(() => store.lineage?.edges.find((e) => e.id === selected.v
 const layout = computed(() => {
   const nodes = store.lineage?.nodes || []
   const edges = store.lineage?.edges || []
-  const root = nodes.find(
-    (node) =>
-      node.entityType === entityType.value &&
-      String(node.entityId) === entityId.value &&
-      (!version.value || node.versionId === version.value || node.entityType === 'training_task'),
-  )
-  const distances = new Map<string, number>()
-  if (root) {
-    distances.set(root.id, 0)
-    const forward = [root.id]
-    for (let index = 0; index < forward.length; index += 1) {
-      const current = forward[index]!
-      const distance = distances.get(current)!
-      for (const relation of edges.filter((item) => item.fromId === current)) {
-        if (!distances.has(relation.toId) || distances.get(relation.toId)! > distance + 1) {
-          distances.set(relation.toId, distance + 1)
-          forward.push(relation.toId)
-        }
+  // 按账目先后分层：没有任何来源指向的记录排最左，其余记录排在所有来源记录的右边，
+  // 保证每条连线只向右跨一列，不会出现横穿画面、贴着无关记录擦过的长线。
+  const depth = new Map<string, number>(nodes.map((node) => [node.id, 0]))
+  for (let pass = 0; pass < nodes.length; pass += 1) {
+    let moved = false
+    for (const relation of edges) {
+      const from = depth.get(relation.fromId)
+      const to = depth.get(relation.toId)
+      if (from === undefined || to === undefined) continue
+      if (to < from + 1) {
+        depth.set(relation.toId, from + 1)
+        moved = true
       }
     }
-    const backward = [root.id]
-    const upstreamDistances = new Map<string, number>([[root.id, 0]])
-    for (let index = 0; index < backward.length; index += 1) {
-      const current = backward[index]!
-      const distance = upstreamDistances.get(current)!
-      for (const relation of edges.filter((item) => item.toId === current)) {
-        if (!upstreamDistances.has(relation.fromId)) {
-          upstreamDistances.set(relation.fromId, distance - 1)
-          backward.push(relation.fromId)
-        }
-      }
-    }
-    for (const [id, distance] of upstreamDistances) distances.set(id, distance)
+    if (!moved) break
   }
-  const fallback = new Map(
-    nodes.map((node, index) => [
-      node.id,
-      { x: 110 + index * 260, y: 120 },
-    ]),
-  )
-  if (!root) return { positions: fallback, width: Math.max(520, 110 + nodes.length * 260), height: 280 }
-  const connected = nodes.filter((node) => distances.has(node.id))
-  const isolated = nodes.filter((node) => !distances.has(node.id))
-  const columns = [...new Set(connected.map((node) => distances.get(node.id)!))].sort(
-    (a, b) => a - b,
-  )
-  const columnIndex = new Map(columns.map((distance, index) => [distance, index]))
   const byColumn = new Map<number, typeof nodes>()
-  for (const node of connected) {
-    const index = columnIndex.get(distances.get(node.id)!)!
-    if (!byColumn.has(index)) byColumn.set(index, [])
-    byColumn.get(index)!.push(node)
+  for (const node of nodes) {
+    const column = depth.get(node.id) ?? 0
+    if (!byColumn.has(column)) byColumn.set(column, [])
+    byColumn.get(column)!.push(node)
   }
-  if (isolated.length) {
-    const index = columns.length
-    byColumn.set(index, isolated)
-  }
+  const columns = [...byColumn.keys()].sort((a, b) => a - b)
   const positions = new Map<string, { x: number; y: number }>()
   let maxRows = 1
-  for (const [column, columnNodes] of byColumn) {
+  columns.forEach((column, index) => {
+    const columnNodes = byColumn.get(column)!
     maxRows = Math.max(maxRows, columnNodes.length)
     columnNodes.forEach((node, row) => {
-      positions.set(node.id, { x: 110 + column * 260, y: 120 + row * 220 })
+      positions.set(node.id, { x: 110 + index * 260, y: 120 + row * 220 })
     })
-  }
-  const columnCount = Math.max(1, byColumn.size)
+  })
   return {
     positions,
-    width: 110 + (columnCount - 1) * 260 + 160,
+    width: 110 + Math.max(0, columns.length - 1) * 260 + 160,
     height: Math.max(280, 120 + (maxRows - 1) * 220 + 160),
   }
 })
@@ -169,7 +135,10 @@ onMounted(() => {
 })
 watch(() => route.query, inbound)
 function nodeLabel(id: string) {
-  return store.lineage?.nodes.find((n) => n.id === id)?.displayId || '未知节点'
+  const node = store.lineage?.nodes.find((n) => n.id === id)
+  if (!node) return '未知节点'
+  if (node.type === 'dataset' || node.type === 'model') return [node.label, node.versionId].filter(Boolean).join(' ')
+  return node.displayId
 }
 function rowClass({ row }: { row: { id: string } }) {
   return row.id === selected.value ? 'compliance-selected-row' : ''
@@ -302,7 +271,17 @@ function selectRow(row: { id: string }) {
                 <title>{{ node.label }}</title>
                 {{ shortNodeLabel(node.label) }}
               </text>
-              <text y="96" text-anchor="middle" fill="#7187a7" font-size="13">
+              <text
+                v-if="(node.type === 'dataset' || node.type === 'model') && node.versionId"
+                y="96"
+                text-anchor="middle"
+                fill="#9aa9c0"
+                font-size="12"
+              >
+                <title>{{ node.versionId }}</title>
+                {{ node.versionId.length > 14 ? `${node.versionId.slice(0, 14)}…` : node.versionId }}
+              </text>
+              <text v-else y="96" text-anchor="middle" fill="#7187a7" font-size="13">
                 {{ node.displayId }}
               </text>
             </g>
