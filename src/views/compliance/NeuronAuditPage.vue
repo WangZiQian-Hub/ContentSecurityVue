@@ -25,7 +25,7 @@ const store = useComplianceStore(),
   reviewOpen = ref(false),
   open = inject<(id: string) => void>('complianceEvidence')!
 const task = computed(() => trainings.value.find((item) => item.id === taskId.value) ?? null)
-/** 存档间隔，与后端 back/app/routers/training_tasks.py 的规则保持一致：max(1, epochs // 3)。 */
+/** 存档间隔，与后端 app/routers/training_tasks.py 的规则保持一致：max(1, epochs // 3)。 */
 const interval = computed(() => Math.max(1, Math.floor((task.value?.epochs || 1) / 3)))
 /** 规则要求保存的轮次：能被存档间隔整除的轮，以及最后一轮。 */
 const expectedEpochs = computed(() => {
@@ -43,20 +43,32 @@ const savedByEpoch = computed(
 const extraCheckpoints = computed(() =>
   (task.value?.checkpoints ?? []).filter((item) => !expectedEpochs.value.includes(item.epoch)),
 )
-/** 应存档的检查点核验行：损失值取自逐轮训练日志，缺失的轮次同样能显示数值。 */
-const checkpointRows = computed(() => {
+/**
+ * 真实后端的 loss_history 第 0 个元素是开训前初始损失，之后才是各轮结束后的损失；
+ * 演示数据则每轮一个值。长度比已完成轮次多 1 时按“含初始值”处理。
+ */
+const lossOffset = computed(() => {
   const current = task.value
-  return expectedEpochs.value.map((epoch) => {
+  return current && current.loss.length > (current.epoch || 0) ? 1 : 0
+})
+/** 第 N 轮结束后的训练损失。 */
+const lossAt = (epoch: number) => task.value?.loss?.[epoch - 1 + lossOffset.value]
+/** 第 N 轮结束后的验证损失。 */
+const validationAt = (epoch: number) =>
+  task.value?.validationLoss?.[epoch - 1 + lossOffset.value]
+/** 应存档的检查点核验行：损失值取自逐轮训练日志，缺失的轮次同样能显示数值。 */
+const checkpointRows = computed(() =>
+  expectedEpochs.value.map((epoch) => {
     const saved = savedByEpoch.value.get(epoch)
     return {
       epoch,
       name: saved?.name ?? null,
-      loss: current?.loss?.[epoch - 1] ?? saved?.loss ?? null,
-      validationLoss: current?.validationLoss?.[epoch - 1] ?? null,
+      loss: lossAt(epoch) ?? saved?.loss ?? null,
+      validationLoss: validationAt(epoch) ?? null,
       state: saved ? ('verified' as const) : ('missing' as const),
     }
-  })
-})
+  }),
+)
 const savedRows = computed(() => checkpointRows.value.filter((row) => row.state === 'verified'))
 const missingRows = computed(() => checkpointRows.value.filter((row) => row.state === 'missing'))
 /** 一句话结论：把「缺哪几轮」翻译成人话。 */
@@ -76,28 +88,31 @@ const conclusion = computed(() => {
   return `${head}${tail}${extra}`
 })
 /**
- * 训练损失曲线：把 task.loss 逐轮映射到 SVG 坐标，
+ * 训练损失曲线：把各轮结束后的训练损失映射到 SVG 坐标，
  * 并在曲线上标出「规则要求的检查点」——实心绿点=已保存，空心红圈=应有但缺失。
  */
 const chart = computed(() => {
   const current = task.value
   const values = current?.loss ?? []
   if (!current || values.length < 2) return null
+  // 只画各轮结束后的损失；真实后端的第 0 个初始值不占横轴轮次。
+  const series = values.slice(lossOffset.value)
+  if (!series.length) return null
   // 尺寸按「左半栏」定：viewBox 缩小后由 CSS 自适应填充左栏。
   const width = 520,
     height = 190,
     padX = 46,
     padTop = 18,
     padBottom = 34,
-    max = Math.max(...values),
-    min = Math.min(...values),
+    max = Math.max(...series),
+    min = Math.min(...series),
     span = max - min || 1
   /**
    * 横轴按「计划轮数」铺开，而不是按损失数组的长度：
    * 后端只记录了部分轮次的损失时，右半段留白本身就代表「这段没有训练日志」；
    * 检查点标记也才能落在各自正确的轮次上（按数组长度会把靠后的轮次挤到最右端重叠）。
    */
-  const axisMax = Math.max(current.epochs || 0, current.epoch || 0, values.length, 1)
+  const axisMax = Math.max(current.epochs || 0, current.epoch || 0, series.length, 1)
   const xOf = (epoch: number) =>
     padX +
     ((Math.min(Math.max(epoch, 1), axisMax) - 1) / Math.max(axisMax - 1, 1)) * (width - padX * 2)
@@ -110,12 +125,12 @@ const chart = computed(() => {
     height,
     padX,
     plotBottom: height - padBottom,
-    polyline: values.map((value, index) => `${xOf(index + 1)},${yOf(value)}`).join(' '),
-    points: values.map((value, index) => ({ cx: xOf(index + 1), cy: yOf(value) })),
+    polyline: series.map((value, index) => `${xOf(index + 1)},${yOf(value)}`).join(' '),
+    points: series.map((value, index) => ({ cx: xOf(index + 1), cy: yOf(value) })),
     // 检查点只画圆点、不写文字：文字在原尺寸下会互相重叠并被裁掉，轮次刻度统一放到横轴上。
     marks: expectedEpochs.value.map((epoch) => {
       const saved = savedByEpoch.value.get(epoch)
-      const value = saved?.loss ?? values[epoch - 1] ?? min
+      const value = series[epoch - 1] ?? saved?.loss ?? min
       return { epoch, saved: !!saved, cx: xOf(epoch), cy: yOf(value) }
     }),
     yTicks: [max, (max + min) / 2, min].map((value) => ({ text: value.toFixed(2), y: yOf(value) })),
