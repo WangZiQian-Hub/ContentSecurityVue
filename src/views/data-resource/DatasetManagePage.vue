@@ -32,6 +32,7 @@ const form = reactive({
   owner: '',
   sourceType: 'business' as ResourceDataset['sourceType'],
   languages: ['zh'],
+  purpose: 'training' as NonNullable<ResourceDataset['purpose']>,
 })
 const languageNames = computed<Record<string, string>>(() => Object.fromEntries(store.filterOptions.languages.map(l => [l.code, l.name])))
 const statusNames = { ready: '可用', processing: '处理中', uploading: '上传中', archived: '已归档' }
@@ -81,6 +82,7 @@ function openEditor(row: ResourceDataset) {
     owner: row.owner,
     sourceType: row.sourceType,
     languages: [...row.languages],
+    purpose: row.purpose ?? 'training',
   })
   editorOpen.value = true
 }
@@ -96,7 +98,12 @@ async function save() {
   }
   saving.value = true
   try {
-    const row = await store.saveDataset({ ...form, id: editId.value })
+    const row = await store.saveDataset({
+      ...form,
+      id: editId.value,
+      // 用途存进 metadata_json.purpose，模型训练/评估下拉据此筛选。
+      metadata: { purpose: form.purpose },
+    })
     selected.value = row
     editorOpen.value = false
     ElMessage.success('数据集已保存')
@@ -202,7 +209,14 @@ onMounted(load)
         }
       "
     >
-      <el-table-column prop="name" label="数据集名称" min-width="210" />
+      <el-table-column prop="name" label="数据集名称" min-width="210"
+        ><template #default="{ row }"
+          ><span>{{ row.name }}</span
+          ><el-tag v-if="row.purpose === 'evaluation'" size="small" type="success" effect="plain" class="dataset-purpose-tag"
+            >测试集</el-tag
+          ></template
+        ></el-table-column
+      >
       <el-table-column label="数据类型" min-width="110"
         ><template #default="{ row }">{{ row.modalities.join(' / ') }}</template></el-table-column
       >
@@ -305,6 +319,14 @@ onMounted(load)
             value="internet" /><el-option label="行业数据" value="industry" /><el-option
             label="合成数据"
             value="synthetic" /></el-select></el-form-item
+      ><el-form-item label="数据集用途"
+        ><el-select v-model="form.purpose"
+          ><el-option label="训练集（供模型训练选择）" value="training" /><el-option
+            label="测试集（供模型评估选择）"
+            value="evaluation" /></el-select
+        ><span class="dataset-purpose-hint"
+          >用途决定该数据集出现在模型训练还是模型评估的下拉里，默认训练集。</span
+        ></el-form-item
       ><el-form-item label="描述"
         ><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item
     ></el-form>
@@ -314,3 +336,13 @@ onMounted(load)
     >
   </el-dialog>
 </template>
+<style scoped>
+.dataset-purpose-tag {
+  margin-left: 8px;
+}
+.dataset-purpose-hint {
+  margin-left: 12px;
+  color: #7b8fac;
+  font-size: 13px;
+}
+</style>

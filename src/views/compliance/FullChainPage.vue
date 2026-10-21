@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import PanelCard from '../../components/PanelCard.vue'
 import StateBadge from './components/StateBadge.vue'
 import { complianceApi } from '../../api/compliance'
@@ -45,6 +46,7 @@ const evidenceIdOf = (task: TaskItem) =>
     ? `evidence-process-${task.taskId}`
     : `evidence-task-${task.taskId}`
 const store = useComplianceStore()
+const route = useRoute()
 const tasks = ref<TaskItem[]>([]),
   category = ref(''),
   taskId = ref(''),
@@ -141,7 +143,21 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(loadTasks)
+/** 深链：从模型调用等页面带 ?taskId= 跳转进来时，自动选中该任务并直接查询五要素。 */
+async function applyTaskDeepLink() {
+  const wanted = typeof route.query.taskId === 'string' ? route.query.taskId : ''
+  if (!wanted) return
+  const task = tasks.value.find((item) => item.taskId === wanted)
+  if (!task) return
+  category.value = categoryOf(task.capabilityCode)
+  taskId.value = task.taskId
+  await load()
+}
+onMounted(async () => {
+  await loadTasks()
+  await applyTaskDeepLink()
+})
+watch(() => route.query.taskId, applyTaskDeepLink)
 </script>
 <template>
   <div class="compliance-filter">

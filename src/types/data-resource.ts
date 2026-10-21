@@ -21,6 +21,8 @@ export interface ResourceDataset {
   versionId: string
   owner: string
   description: string
+  purpose?: 'training' | 'evaluation'
+  metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
   statistics?: {

@@ -22,6 +22,29 @@ const filters = reactive({
 })
 const hasExport = (row: { exports?: { state: string; kind: string }[] }) =>
   row.exports?.some((job) => job.kind === 'report' && job.state === 'succeeded')
+/** 测试集展示：优先「名字 版本」，回落原版本串，再回落未记录。 */
+function datasetCell(snapshot: Record<string, string> | undefined) {
+  const s = snapshot || {}
+  if (s.datasetName && s.datasetVersion) return `${s.datasetName} ${s.datasetVersion}`
+  return s.datasetName || s.datasetVersion || '未记录'
+}
+/** 模型版本展示：桥接记录显「模型名 基线 → 编辑后」，其余回落 modelVersion。 */
+function modelCell(snapshot: Record<string, string> | undefined) {
+  const s = snapshot || {}
+  if (s.baselineVersion && s.editedVersion) {
+    const name = s.modelName ? `${s.modelName} ` : ''
+    return `${name}${s.baselineVersion} → ${s.editedVersion}`
+  }
+  return s.modelName ? `${s.modelName} ${s.modelVersion || ''}`.trim() : s.modelVersion || '不适用'
+}
+/** 任务编号：桥接记录取来源能力任务 tsk_xxx，工作区任务取自身 eval_task_xxx。 */
+function taskCell(row: { config?: Record<string, string>; taskId?: string }) {
+  return row.config?.capabilityTaskId || row.taskId || '—'
+}
+/** 桥接记录带来源模型 ID，可回跳模型训推评估页复现现场。 */
+function sourceModelId(row: { config?: Record<string, string>; snapshot?: Record<string, string> }) {
+  return row.config?.source === 'model-train/evaluation' ? row.snapshot?.modelId || '' : ''
+}
 const resolutionLabels = {
   not_found: '未找到此来源记录，未选择其他运行。',
   ambiguous: '此来源记录关联多个运行，请明确选择。',
@@ -137,27 +160,44 @@ onMounted(load)
       /><el-button @click="loadList()">查询</el-button>
     </div>
     <el-table v-loading="store.loading" :data="store.runs?.items || []" empty-text="暂无已归档运行"
-      ><el-table-column label="测试名称" min-width="230"
+      ><el-table-column label="测试名称" min-width="190" show-overflow-tooltip
         ><template #default="{ row }"
           ><b>{{ row.name }}</b></template
         ></el-table-column
-      ><el-table-column label="数据 / 模型版本" min-width="170"
+      ><el-table-column label="任务编号" min-width="160"
         ><template #default="{ row }"
-          >{{ row.snapshot.datasetVersion }} / {{ row.snapshot.modelVersion || '不适用' }}</template
+          ><span class="ev-task-id">{{ taskCell(row) }}</span>
+          <el-button
+            v-if="sourceModelId(row)"
+            link
+            type="primary"
+            size="small"
+            @click="
+              router.push({
+                path: '/model-train/evaluation',
+                query: { modelId: sourceModelId(row), recordId: row.recordId },
+              })
+            "
+            >回跳</el-button
+          ></template
         ></el-table-column
-      ><el-table-column label="验收结论" width="120"
+      ><el-table-column label="测试集" min-width="180" show-overflow-tooltip
+        ><template #default="{ row }">{{ datasetCell(row.snapshot) }}</template></el-table-column
+      ><el-table-column label="模型版本" min-width="220" show-overflow-tooltip
+        ><template #default="{ row }">{{ modelCell(row.snapshot) }}</template></el-table-column
+      ><el-table-column label="验收结论" width="100"
         ><template #default="{ row }"
           ><EvaluationStatus :value="row.judgmentStatus" judgment /></template></el-table-column
-      ><el-table-column label="留痕状态" width="110"
+      ><el-table-column label="留痕状态" width="100"
         ><template #default="{ row }"
           ><EvaluationStatus :value="row.integrityState" /></template></el-table-column
-      ><el-table-column label="报告状态" min-width="110"
+      ><el-table-column label="报告状态" width="100"
         ><template #default="{ row }">{{
           hasExport(row) ? '已生成' : '尚未生成'
         }}</template></el-table-column
-      ><el-table-column label="归档时间" min-width="170"
+      ><el-table-column label="归档时间" width="165"
         ><template #default="{ row }">{{ time(row.finishedAt) }}</template></el-table-column
-      ><el-table-column label="操作" width="90" fixed="right"
+      ><el-table-column label="操作" width="80" fixed="right"
         ><template #default="{ row }"
           ><el-button
             link
@@ -226,3 +266,10 @@ onMounted(load)
     </div>
   </EvaluationPanel>
 </template>
+<style scoped>
+.ev-task-id {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  color: #476590;
+}
+</style>
