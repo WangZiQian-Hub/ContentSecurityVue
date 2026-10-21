@@ -69,6 +69,15 @@ export function registerModelService(
 export function checkModelService(id: string): Promise<ModelService> {
   return request({ url: `/model-services/${encodeURIComponent(id)}/check`, method: 'POST' })
 }
+export function upgradeModelService(id: string, version: string): Promise<ModelService> {
+  return request({ url: `/model-services/${encodeURIComponent(id)}`, method: 'PATCH', data: { version } })
+}
+export function stopModelService(id: string): Promise<ModelService> {
+  return request({ url: `/model-services/${encodeURIComponent(id)}/stop`, method: 'POST' })
+}
+export function deleteModelService(id: string): Promise<{ id: string; name: string }> {
+  return request({ url: `/model-services/${encodeURIComponent(id)}`, method: 'DELETE' })
+}
 export function executeModelTask(data: ExecuteTaskReq): Promise<Task> {
   if (isMock) throw new Error('演示任务由模型工作台本地适配器处理')
   return request({ url: '/tasks/execute', method: 'POST', data, timeout: 300000 })

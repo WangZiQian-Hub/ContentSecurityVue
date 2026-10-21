@@ -68,7 +68,8 @@ function showComplianceRecords() {
 
 onMounted(() => {
   disposed = false
-  if (!store.loaded) void store.load()
+  // 每次进入都重新拉取：数据集用途等改动发生在数据资源页，本页面缓存不会自动失效。
+  void store.load()
 })
 onUnmounted(() => {
   disposed = true

@@ -156,6 +156,56 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       Object.assign(service, checked)
     })
   }
+  async function upgradeService(id: string, version: string) {
+    return run(async () => {
+      const service = data.value.services.find((s) => s.id === id)!
+      const upgraded = isMock
+        ? {
+            ...service,
+            version,
+            status: 'deployed' as const,
+            checkedAt: null,
+            latencyMs: null,
+            healthy: null,
+          }
+        : await api.upgradeModelService(id, version)
+      Object.assign(service, upgraded)
+      data.value.changes.unshift({
+        id: crypto.randomUUID(),
+        serviceName: service.name,
+        description: `升级绑定版本至 ${version}，等待连接检查`,
+        createdAt: new Date().toISOString(),
+      })
+    })
+  }
+  async function stopService(id: string) {
+    return run(async () => {
+      const service = data.value.services.find((s) => s.id === id)!
+      const stopped = isMock
+        ? { ...service, status: 'offline' as const, checkedAt: null, latencyMs: null, healthy: null }
+        : await api.stopModelService(id)
+      Object.assign(service, stopped)
+      data.value.changes.unshift({
+        id: crypto.randomUUID(),
+        serviceName: service.name,
+        description: `停止服务（${service.version}），模型调用页不再可选`,
+        createdAt: new Date().toISOString(),
+      })
+    })
+  }
+  async function removeService(id: string) {
+    return run(async () => {
+      const service = data.value.services.find((s) => s.id === id)!
+      if (!isMock) await api.deleteModelService(id)
+      data.value.services = data.value.services.filter((s) => s.id !== id)
+      data.value.changes.unshift({
+        id: crypto.randomUUID(),
+        serviceName: service.name,
+        description: `删除服务登记（${service.version}），历史调用记录保留`,
+        createdAt: new Date().toISOString(),
+      })
+    })
+  }
   async function invoke(input: {
     modelId: string
     serviceId: string
@@ -310,6 +360,9 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
     addTraining,
     addService,
     checkService,
+    upgradeService,
+    stopService,
+    removeService,
     invoke,
     editKnowledge,
     assess,

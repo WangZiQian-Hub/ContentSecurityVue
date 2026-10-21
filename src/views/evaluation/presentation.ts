@@ -5,6 +5,7 @@ export const categories = {
   risk_detect: '风险识别',
   compliance: '合规治理',
   model_capability: '模型能力',
+  edit_evaluation: '编辑评估',
 }
 export const labels: Record<string, string> = {
   calculating: '指标计算',

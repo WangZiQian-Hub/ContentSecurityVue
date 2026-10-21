@@ -28,10 +28,10 @@ const kpis = computed(() => [
 ])
 const dataset = computed(() => store.data.datasets.find((d) => d.id === selected.value?.datasetId))
 const model = computed(() => store.data.models.find((m) => m.id === selected.value?.modelId))
-const trainingDatasets = computed(() => {
-  const marked = store.data.datasets.filter((d) => d.purpose === 'training')
-  return marked.length ? marked : store.data.datasets
-})
+// 只列训练集；全部被标为测试集时下拉为空并由提交校验拦截，不再回退显示全部。
+const trainingDatasets = computed(() =>
+  store.data.datasets.filter((d) => d.purpose === 'training'),
+)
 const chart = computed<EChartsOption>(() => ({
   color: ['#087bff', '#9555ff'],
   tooltip: { trigger: 'axis' },
@@ -58,6 +58,10 @@ const form = reactive({
   method: trainingMethods[0] as string,
 })
 const baseModel = computed(() => store.data.models.find((m) => m.id === form.modelId))
+// 后台刷新后原选中数据集可能被标成测试集而掉出选项，自动回退到当前首项，避免表单残留失效 ID。
+watch(trainingDatasets, (list) => {
+  if (!list.some((d) => d.id === form.datasetId)) form.datasetId = list[0]?.id || ''
+})
 watch(
   baseModel,
   (m) => {
@@ -72,7 +76,8 @@ async function submit() {
     )
   )
     return void ElMessage.warning('请填写有效的训练轮次、批次大小和学习率')
-  const ds = store.data.datasets.find((d) => d.id === form.datasetId)
+  // 只接受训练集下拉里的数据集，防止把已标为测试集的数据集提交成训练输入。
+  const ds = trainingDatasets.value.find((d) => d.id === form.datasetId)
   if (!form.name.trim() || !ds || !baseModel.value || !/^v?\d+\.\d+\.\d+$/.test(form.targetVersion))
     return void ElMessage.warning('请填写任务名称、数据集和有效的目标版本，如 v2.2.0')
   if (

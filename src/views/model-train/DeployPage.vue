@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Connection } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Connection, Top, SwitchButton, Delete } from '@element-plus/icons-vue'
 import PanelCard from '../../components/PanelCard.vue'
 import WorkbenchKpis from './WorkbenchKpis.vue'
 import { useModelWorkbench } from '../../stores/model-workbench'
@@ -106,10 +106,13 @@ async function submit() {
   if (
     store.data.services.some(
       (service) =>
-        service.name === form.name.trim() || service.endpoint.toLowerCase() === url.toString().toLowerCase(),
+        service.name === form.name.trim() ||
+        (service.endpoint.toLowerCase() === url.toString().toLowerCase() &&
+          service.modelId === form.modelId &&
+          service.version === form.version),
     )
   )
-    return void ElMessage.warning('服务名称或服务地址已登记')
+    return void ElMessage.warning('服务名称已存在，或该模型的这个版本已登记过相同地址的服务')
   try {
     const service = await store.addService({ ...form, name: form.name.trim() })
     selectedId.value = service.id
@@ -127,6 +130,68 @@ async function check() {
     ElMessage.success(isMock ? '模拟连接检查完成' : '连接检查完成')
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '检查失败')
+  }
+}
+const upgradeDialog = ref(false)
+const upgradeVersion = ref('')
+const upgradeChoices = computed(
+  () =>
+    store.data.models
+      .find((m) => m.id === selected.value?.modelId)
+      ?.versions.filter((v) => v.version !== selected.value?.version) || [],
+)
+function openUpgrade() {
+  if (!selected.value) return
+  upgradeVersion.value = ''
+  upgradeDialog.value = true
+}
+async function confirmUpgrade() {
+  if (!selected.value || !upgradeVersion.value) return void ElMessage.warning('请选择目标版本')
+  try {
+    await store.upgradeService(selected.value.id, upgradeVersion.value)
+    upgradeDialog.value = false
+    ElMessage.success('版本已切换，服务需重新检查连接后才能调用')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '升级失败')
+  }
+}
+async function stop() {
+  if (!selected.value) return
+  try {
+    await ElMessageBox.confirm(
+      `停止后「${selected.value.name}」进入离线状态，模型调用页将无法选择该服务；重新检查连接即可恢复运行。`,
+      '停止服务',
+      { type: 'warning', confirmButtonText: '停止', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  try {
+    await store.stopService(selected.value.id)
+    ElMessage.success('服务已停止')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '停止失败')
+  }
+}
+async function remove() {
+  if (!selected.value) return
+  if (selected.value.status === 'running')
+    return void ElMessage.warning('服务正在运行，请先停止后再删除')
+  try {
+    await ElMessageBox.confirm(
+      `删除后「${selected.value.name}」的登记将从平台移除，历史调用记录保留；如需恢复服务，重新登记即可。`,
+      '删除服务',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  try {
+    await store.removeService(selected.value.id)
+    selectedId.value = undefined
+    ElMessage.success('服务已删除')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '删除失败')
   }
 }
 </script>
@@ -214,7 +279,26 @@ async function check() {
           }}</el-descriptions-item></el-descriptions
         >
         <div class="mw-actions">
-          <el-button :icon="Connection" :loading="store.busy" @click="check">检查连接</el-button
+          <el-button :icon="Connection" :loading="store.busy" @click="check">{{
+            selected.status === 'offline' ? '重新检查连接' : '检查连接'
+          }}</el-button
+          ><el-button :icon="Top" :disabled="!upgradeChoices.length" @click="openUpgrade"
+            >升级版本</el-button
+          ><el-button
+            v-if="selected.status === 'running'"
+            :icon="SwitchButton"
+            type="warning"
+            plain
+            :loading="store.busy"
+            @click="stop"
+            >停止服务</el-button
+          ><el-button
+            :icon="Delete"
+            type="danger"
+            plain
+            :loading="store.busy"
+            @click="remove"
+            >删除服务</el-button
           ><router-link
             :to="{
               path: '/model-train/invoke',
@@ -280,6 +364,26 @@ async function check() {
       ><el-button @click="dialog = false">取消</el-button
       ><el-button type="primary" :loading="store.busy" @click="submit"
         >登记服务</el-button
+      ></template
+    ></el-dialog
+  >
+  <el-dialog v-model="upgradeDialog" title="升级服务绑定版本" width="460px" class="mw-dialog"
+    ><el-form label-width="100px" @submit.prevent="confirmUpgrade"
+      ><el-form-item label="服务">{{ selected?.name }}</el-form-item
+      ><el-form-item label="当前版本">{{ selected?.version }}</el-form-item
+      ><el-form-item label="目标版本" required
+        ><el-select v-model="upgradeVersion" placeholder="选择要切换到的模型版本"
+          ><el-option
+            v-for="v in upgradeChoices"
+            :key="v.version"
+            :label="v.version"
+            :value="v.version" /></el-select></el-form-item
+    ></el-form>
+    <p>升级后服务回到「已部署 · 待检查」，需重新检查连接后才可在模型调用页选择。</p
+    ><template #footer
+      ><el-button @click="upgradeDialog = false">取消</el-button
+      ><el-button type="primary" :loading="store.busy" @click="confirmUpgrade"
+        >确认升级</el-button
       ></template
     ></el-dialog
   >
