@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -12,8 +12,13 @@ import {
   formatModelTime,
   type ModelAsset,
 } from '../../types/model-workbench'
+import { isMock } from '../../api/request'
 const store = useModelWorkbench()
 const route = useRoute()
+onMounted(() => {
+  // 模块内切页不会重建父容器；已加载过时重新拉取，拿到训练完成登记的新版本。
+  if (!isMock && store.loaded) void store.load()
+})
 const keyword = ref(''),
   type = ref(''),
   source = ref('')
