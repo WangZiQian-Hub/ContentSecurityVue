@@ -28,14 +28,21 @@ const datasetId = ref(
 )
 const model = computed(() => store.data.models.find((m) => m.id === modelId.value))
 const dataset = computed(() => store.data.datasets.find((d) => d.id === datasetId.value))
+// 本页对比的是“同一基线经风险知识编辑前后台效果”，编辑后版本只能是该基线的编辑产物
+// （后端按 {基线}-edit 命名登记）；训练等后训练版本与编辑无关，列出来会误导成版本横评。
+const editCandidates = computed(() =>
+  (model.value?.versions || []).filter((v) => v.version.startsWith(`${baseline.value}-edit`)),
+)
 watch(
   model,
   (m) => {
     baseline.value = m?.version || ''
-    edited.value = m?.versions.find((v) => v.version !== baseline.value)?.version || ''
   },
   { immediate: true },
 )
+watch(editCandidates, (list) => {
+  if (!list.some((v) => v.version === edited.value)) edited.value = list[0]?.version || ''
+})
 const result = computed(() => {
   const r = store.data.assessment
   return r &&
@@ -123,7 +130,7 @@ async function assess() {
     baseline.value === edited.value ||
     !dataset.value
   )
-    return void ElMessage.warning('请选择不同的模型版本和固定测试集')
+    return void ElMessage.warning('请先为该基线版本生成编辑后版本，并选择固定测试集')
   try {
     ElMessage.success(
       await store.assess({
@@ -166,12 +173,11 @@ function submitEdit() {
           :key="v.version"
           :value="v.version" /></el-select></label
     ><label
-      >编辑后版本<el-select v-model="edited" aria-label="编辑后版本"
+      >编辑后版本<el-select v-model="edited" aria-label="编辑后版本" placeholder="该基线版本尚无编辑产物"
         ><el-option
-          v-for="v in model?.versions"
+          v-for="v in editCandidates"
           :key="v.version"
-          :value="v.version"
-          :disabled="v.version === baseline" /></el-select></label
+          :value="v.version" /></el-select></label
     ><label
       >测试集<el-select v-model="datasetId" aria-label="测试集"
         ><el-option
