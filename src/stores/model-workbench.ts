@@ -75,7 +75,14 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
             updatedAt: now,
             dataset: null,
             versions: [
-              { version: input.version, createdAt: now, description: '注册模型', taskId: null },
+              {
+                version: input.version,
+                createdAt: now,
+                description: '注册模型',
+                taskId: null,
+                editKnowledge: null,
+                editStatus: null,
+              },
             ],
           }
         : await api.registerModel(input)

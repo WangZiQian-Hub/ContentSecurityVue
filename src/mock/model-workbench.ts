@@ -39,6 +39,8 @@ export function createModelDemo(): ModelWorkbench {
         createdAt: date,
         description: '当前稳定版本',
         taskId: i === 0 ? 'TR-0924-008' : null,
+        editKnowledge: null,
+        editStatus: null,
       },
     ],
   }))
@@ -48,6 +50,8 @@ export function createModelDemo(): ModelWorkbench {
       createdAt: `2026-09-${20 - i * 5}T10:03:00+08:00`,
       description: i ? '初始基线' : '分类边界修正',
       taskId: `TR-0920-00${i + 1}`,
+      editKnowledge: null,
+      editStatus: null,
     })),
   )
   models[1]!.versions.unshift({
@@ -55,6 +59,8 @@ export function createModelDemo(): ModelWorkbench {
     createdAt: date,
     description: '隐私风险知识编辑版本',
     taskId: 'KE-0925-003',
+    editKnowledge: '未经授权的个人信息披露',
+    editStatus: 'succeeded',
   })
   const training: ModelWorkbench['training'] = [
     {

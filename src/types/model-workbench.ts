@@ -5,6 +5,9 @@ export interface ModelVersion {
   createdAt: string
   description: string
   taskId: string | null
+  /** 编辑产物行携带产出它的知识编辑任务信息；非编辑版本为 null。 */
+  editKnowledge: string | null
+  editStatus: string | null
 }
 export interface ModelAsset {
   id: string

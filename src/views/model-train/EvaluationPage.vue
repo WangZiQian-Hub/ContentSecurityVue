@@ -115,6 +115,10 @@ const result = computed(() => {
 const latestEditTask = computed(() =>
   store.editTasks.find((task) => task.modelId === modelId.value),
 )
+// 选中的编辑后版本行自带产出它的编辑任务信息，左侧卡片据此展示该轮编辑的知识内容。
+const selectedEditVersion = computed(() =>
+  (model.value?.versions || []).find((v) => v.version === edited.value),
+)
 const kpis = computed(() => {
   const r = result.value
   return [
@@ -255,22 +259,43 @@ function submitEdit() {
     <PanelCard title="风险知识编辑" icon="Setting"
       ><el-descriptions :column="1" border
         ><el-descriptions-item label="任务编号">{{
-          latestEditTask?.id || result?.taskId || '暂无关联任务'
+          selectedEditVersion?.taskId || latestEditTask?.id || result?.taskId || '暂无关联任务'
         }}</el-descriptions-item
         ><el-descriptions-item label="目标知识">{{
-          latestEditTask?.knowledge || result?.knowledge || '尚未编辑'
+          selectedEditVersion?.editKnowledge || latestEditTask?.knowledge || result?.knowledge || '尚未编辑'
         }}</el-descriptions-item
         ><el-descriptions-item label="编辑方式">定向抑制</el-descriptions-item
         ><el-descriptions-item label="状态"
-          ><el-tag :type="latestEditTask ? 'warning' : result ? 'success' : 'info'">{{
-            latestEditTask
-              ? latestEditTask.status
-              : result
-                ? isMock
-                  ? '已完成（模拟）'
-                  : '已有评估结果'
-                : '待评估'
-          }}</el-tag></el-descriptions-item
+          ><el-tag
+            :type="
+              selectedEditVersion
+                ? selectedEditVersion.editStatus === 'succeeded'
+                  ? 'success'
+                  : selectedEditVersion.editStatus === 'failed'
+                    ? 'danger'
+                    : 'warning'
+                : latestEditTask
+                  ? 'warning'
+                  : result
+                    ? 'success'
+                    : 'info'
+            "
+            >{{
+              selectedEditVersion
+                ? selectedEditVersion.editStatus === 'succeeded'
+                  ? '编辑完成'
+                  : selectedEditVersion.editStatus === 'failed'
+                    ? '编辑失败'
+                    : '编辑中'
+                : latestEditTask
+                  ? latestEditTask.status
+                  : result
+                    ? isMock
+                      ? '已完成（模拟）'
+                      : '已有评估结果'
+                    : '待评估'
+            }}</el-tag
+          ></el-descriptions-item
         ></el-descriptions
       >
       <p class="mw-paragraph">降低输出个人联系方式的倾向，保持普通问答能力。</p>
