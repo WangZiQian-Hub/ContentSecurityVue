@@ -175,7 +175,13 @@ onMounted(load)
             @click="
               router.push({
                 path: '/model-train/evaluation',
-                query: { modelId: sourceModelId(row), recordId: row.recordId },
+                query: {
+                  modelId: sourceModelId(row),
+                  recordId: row.recordId,
+                  baseline: row.snapshot?.baselineVersion || undefined,
+                  edited: row.snapshot?.editedVersion || undefined,
+                  datasetId: row.snapshot?.datasetId || undefined,
+                },
               })
             "
             >回跳</el-button

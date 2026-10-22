@@ -3,6 +3,7 @@ import type { ExecuteTaskReq, Task, PageResult } from '../types'
 import type {
   ModelWorkbench,
   ModelAsset,
+  ModelAssessment,
   TrainingTask,
   ModelService,
 } from '../types/model-workbench'
@@ -39,6 +40,21 @@ export async function getModelWorkbench(): Promise<ModelWorkbench> {
     url: '/model-workbenches/current',
   })
   return { ...data, models: data.models.map(normalizeModel) }
+}
+/** 查询“模型+基线+编辑后+测试集”组合的最新评估结果；无结果为 null。 */
+export function getModelAssessment(input: {
+  modelId: string
+  baseline: string
+  edited: string
+  datasetId: string
+  datasetVersion: string
+}): Promise<ModelAssessment | null> {
+  if (isMock) return Promise.resolve(null)
+  return request<ModelAssessment | null>({
+    url: '/model-workbenches/assessment',
+    params: input,
+    silent: true,
+  })
 }
 export async function registerModel(
   data: Pick<ModelAsset, 'name' | 'type' | 'source' | 'version' | 'description'>,

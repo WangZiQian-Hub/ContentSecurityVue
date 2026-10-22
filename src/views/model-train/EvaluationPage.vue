@@ -8,7 +8,8 @@ import PanelCard from '../../components/PanelCard.vue'
 import WorkbenchKpis from './WorkbenchKpis.vue'
 import WorkbenchChart from './WorkbenchChart.vue'
 import { useModelWorkbench } from '../../stores/model-workbench'
-import { percent } from '../../types/model-workbench'
+import { percent, type ModelAssessment } from '../../types/model-workbench'
+import { getModelAssessment } from '../../api/model-workbench'
 import { isMock } from '../../api/request'
 const store = useModelWorkbench(),
   route = useRoute()
@@ -19,10 +20,12 @@ onMounted(() => {
 const modelId = ref(
   String(route.query.modelId || store.data.assessment?.modelId || store.data.models[0]?.id || ''),
 )
-const baseline = ref(''),
-  edited = ref('')
+// 测试记录页“回跳”会带上当时的基线/编辑后/测试集，从 query 恢复选择现场。
+const baseline = ref(String(route.query.baseline || '')),
+  edited = ref(String(route.query.edited || ''))
 const datasetId = ref(
-  store.data.assessment?.datasetId ||
+  String(route.query.datasetId || '') ||
+    store.data.assessment?.datasetId ||
     store.data.datasets.find((d) => d.purpose === 'evaluation')?.id ||
     '',
 )
@@ -33,26 +36,81 @@ const dataset = computed(() => store.data.datasets.find((d) => d.id === datasetI
 const editCandidates = computed(() =>
   (model.value?.versions || []).filter((v) => v.version.startsWith(`${baseline.value}-edit`)),
 )
+// 工作台数据刷新（如提交评估后的 load）不能动用户的选择；只有切换评估模型才重置基线。
+const appliedModelId = ref('')
 watch(
   model,
   (m) => {
-    baseline.value = m?.version || ''
+    if (!m) return
+    if (appliedModelId.value !== m.id) {
+      const firstResolve = appliedModelId.value === ''
+      appliedModelId.value = m.id
+      if (!firstResolve) baseline.value = m.version || ''
+    }
+    if (!m.versions.some((v) => v.version === baseline.value)) baseline.value = m.version || ''
   },
   { immediate: true },
 )
 watch(editCandidates, (list) => {
   if (!list.some((v) => v.version === edited.value)) edited.value = list[0]?.version || ''
 })
-const result = computed(() => {
-  const r = store.data.assessment
-  return r &&
+// 聚合接口只携带全局最新一条评估，切换测试集再切回来时旧结果看似被覆盖；
+// 这里按五要素单独取“当前组合”的最新结果。
+const combinationResult = ref<ModelAssessment | null>(null)
+let combinationGeneration = 0
+async function refreshCombinationResult() {
+  const generation = ++combinationGeneration
+  const datasetVersion = dataset.value?.version || ''
+  if (
+    isMock ||
+    !modelId.value ||
+    !baseline.value ||
+    !edited.value ||
+    !datasetId.value ||
+    !datasetVersion
+  ) {
+    combinationResult.value = null
+    return
+  }
+  try {
+    const r = await getModelAssessment({
+      modelId: modelId.value,
+      baseline: baseline.value,
+      edited: edited.value,
+      datasetId: datasetId.value,
+      datasetVersion,
+    })
+    if (generation === combinationGeneration) combinationResult.value = r
+  } catch {
+    if (generation === combinationGeneration) combinationResult.value = null
+  }
+}
+watch(
+  [
+    modelId,
+    baseline,
+    edited,
+    datasetId,
+    () => dataset.value?.version,
+    () => store.data.assessment?.id,
+  ],
+  () => void refreshCombinationResult(),
+  { immediate: true },
+)
+function matchesCurrent(r: ModelAssessment) {
+  return (
     r.modelId === modelId.value &&
     r.baseline === baseline.value &&
     r.edited === edited.value &&
     r.datasetId === datasetId.value &&
     r.datasetVersion === dataset.value?.version
-    ? r
-    : null
+  )
+}
+const result = computed(() => {
+  const combination = combinationResult.value
+  if (combination && matchesCurrent(combination)) return combination
+  const latest = store.data.assessment
+  return latest && matchesCurrent(latest) ? latest : null
 })
 const latestEditTask = computed(() =>
   store.editTasks.find((task) => task.modelId === modelId.value),
@@ -141,6 +199,8 @@ async function assess() {
         datasetVersion: dataset.value.version,
       }),
     )
+    // store.assess 内部会整包刷新工作台；这里再按当前组合回读一次，保证结果立即展示。
+    void refreshCombinationResult()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '评估失败')
   }
