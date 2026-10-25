@@ -7,6 +7,8 @@ export interface RiskWeightAccuracy {
   accuracyPercent: number | null
   correctCount: number
   totalCount: number
+  // 双口径分母：totalCount 为有标准档位标注的样本数，validCount 为本批次有效检测总数。
+  validCount?: number | null
 }
 export interface Scope {
   datasetId: number
@@ -63,6 +65,9 @@ export interface Sample extends ResourceSample {
   revisionId: string
   primaryCategory: string
   maximumSuggestedLevel: Level
+  // 逐样本比对明细：标准档位与模型预测是否一致；旧结果或无标注样本为 null。
+  referenceRiskLevel?: string | null
+  predictionCorrect?: boolean | null
   status: string
   findings: Finding[]
   evidence: { id: string; quote: string; feature: string }[]

@@ -91,6 +91,10 @@ onBeforeUnmount(() => {
           正确判别：{{ data!.correctCount.toLocaleString() }} /
           {{ data!.totalCount.toLocaleString() }}
         </p>
+        <p v-if="data!.validCount != null && data!.validCount !== data!.totalCount" class="weight-accuracy-scope">
+          分母为有标准档位标注的 {{ data!.totalCount.toLocaleString() }} 条 · 本范围有效检测共
+          {{ data!.validCount.toLocaleString() }} 条
+        </p>
       </div>
     </div>
   </article>
@@ -181,6 +185,13 @@ onBeforeUnmount(() => {
   color: #6680a7;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.weight-accuracy .weight-accuracy-scope {
+  margin: 2px 0 0;
+  color: #8aa0bf;
+  font-size: 12px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
