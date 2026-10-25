@@ -41,6 +41,8 @@ docs/              对接说明与页面验证资料
 
 默认无需后端。`src/api/task.ts` 的 `executeTask()`、`listTasks()` 均有显式 `return`，`src/api/capability.ts` 注册全部 20 项能力。真实请求统一发送到 `/api/v1`，由环境变量切换；详见 [后端对接与范围说明](docs/integration.md)。
 
+> **后端位置（2026-10 起）**：业务后端以独立仓库 `Content_Safety_Backend`（uvicorn，端口 8000）为准，本仓库曾内置的 `back/` 目录已移除；模型服务在独立仓库 `content-security-llm`（端口 8001）。
+
 当前是前端原型：图表和 KPI 为样例，模拟任务保存在内存中，未实现真实模型训练、后台权限、数据库和审计落库。九份文档中涉及这些内容的要求已记录为后续实施范围。
 
 设计依据、模块拆分原因与实现取舍见 [设计与实现说明](docs/设计与实现说明.md)。
