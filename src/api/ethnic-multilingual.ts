@@ -21,22 +21,23 @@ import type {
 } from '../types/ethnic-multilingual'
 
 /** 多语种语义权重与风险分层接口（GN21），归属模型服务（8001）。
- * 路由前缀 /api/v1/analysis/ethnic-multilingual，数据展示策略与合规事件一致：
- *   1. isMock=true（VITE_USE_MOCK=true）：直接使用固定样例；
- *   2. isMock=false 且接口就绪：展示后端返回数据；
- *   3. isMock=false 但接口未实现（404）：静默回落固定样例，页面不报错；
+ * 路由前缀 /api/v1/analysis/ethnic-multilingual，数据展示策略：
+ *   1. isMock=true、治理后端不是模型服务、或未填令牌：使用固定样例支撑本地演示；
+ *   2. 令牌已填即真实请求模型服务，展示后端返回数据；
+ *   3. 接口返回 404 说明代理未指向模型服务或服务版本不对——
+ *      抛出明确错误，不再静默回落样例（缺失不得伪装成分析结果）。
  *   4. 其他错误（401/500/网络）：正常提示并向上抛出。
  */
 
 const BASE = '/analysis/ethnic-multilingual'
 
-/** 真实请求 + 未接入/404 静默回落。
- *  以下情况视为“尚未与模型服务联通”，直接展示固定模拟数据，不报错：
+/** 真实请求 + 未联通时的显式错误。
+ *  以下情况视为“尚未与模型服务联通”，展示固定模拟数据并在页面标注：
  *    - 全局 mock 开关打开；
  *    - 治理后端不是模型服务；
- *    - 尚未填写访问令牌；
- *    - 接口返回 404（后端尚未实现该端点）。
- *  令牌无效（401/403）、5xx 或网络错误属于真实故障，仍提示并向上抛出。 */
+ *    - 尚未填写访问令牌。
+ *  已填令牌后的 404 属于接线故障（代理或版本问题），必须报错而非回落；
+ *  令牌无效（401/403）、5xx 或网络错误属于真实故障，提示并向上抛出。 */
 async function withFallback<T>(
   real: Parameters<typeof llmRequest>[0],
   fallback: () => T,
@@ -48,7 +49,7 @@ async function withFallback<T>(
     return await llmRequest<T>(real, { silent: true })
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
-      return fallback()
+      throw new Error('多语言分析接口返回 404：当前请求地址未指向模型服务（8001），请检查 /llm-api 代理配置或服务版本。')
     }
     const message = axios.isAxiosError(error)
       ? error.response?.data?.message || error.message

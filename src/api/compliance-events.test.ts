@@ -1,5 +1,5 @@
 /** 训练中合规事件监控接口契约（GN18-19）。
- * 重点锁定 withFallback 的四条分支：Mock 直出、后端成功、404 静默回落、
+ * 重点锁定四条分支：Mock 直出、后端成功、404 显式报错（不再回落样例）、
  * 其他错误提示后抛出；同时防止样例数据的汇总口径与事件明细脱节。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -105,12 +105,13 @@ describe('合规事件监控：后端契约与降级策略', () => {
     })
   })
 
-  it('后端 404 时静默回落样例，不弹提示也不中断页面', async () => {
+  it('后端 404 时显式报错，不再静默回落样例伪装成监控数据', async () => {
     backend.isMock = false
     backend.request.mockRejectedValueOnce(axiosError(404, 'Not Found'))
-    expect((await getComplianceEventOverview('task-1')).summary.total).toBe(3)
+    await expect(getComplianceEventOverview('task-1')).rejects.toThrow('合规事件接口尚未由后端提供')
     backend.request.mockRejectedValueOnce(axiosError(404, 'Not Found'))
-    expect((await listComplianceEvents(1, 10)).total).toBe(3)
+    await expect(listComplianceEvents(1, 10)).rejects.toThrow('合规事件接口尚未由后端提供')
+    // 404 不弹全局提示：面板每 5 秒轮询，静默交给面板内联告警。
     expect(backend.error).not.toHaveBeenCalled()
   })
 

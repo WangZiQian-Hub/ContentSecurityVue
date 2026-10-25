@@ -95,6 +95,14 @@ onUnmounted(stopPolling)
       v-loading="store.loading"
       :class="['ce-monitor', { highlight: highlighted }]"
     >
+      <el-alert
+        v-if="store.error"
+        class="ce-error"
+        type="warning"
+        show-icon
+        :closable="false"
+        :title="store.error"
+      />
       <div v-if="store.overview" class="ce-stat-row">
         <div class="ce-stat blue">
           <el-icon class="ce-icon"><AppIcon name="Tickets" /></el-icon>
@@ -123,7 +131,7 @@ onUnmounted(stopPolling)
       <el-table
         :data="store.overview?.recentEvents ?? []"
         border
-        empty-text="暂无合规事件"
+        :empty-text="store.error ? '未能加载合规事件' : '暂无合规事件'"
       >
         <el-table-column label="时间" width="95">
           <template #default="{ row }">{{ formatEventTime(row.time) }}</template>
@@ -201,6 +209,9 @@ onUnmounted(stopPolling)
 .ce-monitor.highlight {
   background: #eef6ff;
   border-color: #9dbcf5;
+}
+.ce-error {
+  margin-bottom: 10px;
 }
 .ce-stat-row {
   display: flex;

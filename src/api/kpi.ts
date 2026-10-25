@@ -1,4 +1,5 @@
 import { getMockKpis } from '../mock/kpis'
+import { isGovernanceLlm, llmRequest } from './governance-llm'
 import type { Kpi } from '../types'
 import { isMock, request } from './request'
 
@@ -10,6 +11,16 @@ import { isMock, request } from './request'
  */
 export async function getKpis(kind = 'dashboard'): Promise<Kpi[]> {
   if (isMock) return getMockKpis(kind)
+
+  if (isGovernanceLlm && kind === 'governance-value') {
+    // LLM 模式下价值任务只写 llm_governance_* 表，业务后端的 tasks 聚合恒为零；
+    // 改由模型服务按逐样本结果加权统计（GET /llm-api/v1/kpis?kind=governance-value）。
+    return llmRequest<Kpi[]>({
+      url: '/kpis',
+      method: 'GET',
+      params: { kind },
+    })
+  }
 
   return request<Kpi[]>({
     url: '/kpis',

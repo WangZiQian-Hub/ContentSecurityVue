@@ -21,13 +21,12 @@ export const llmTokenConfigured = ref(!!getLlmToken())
 /** 令牌是否已失效：模型服务返回 401/403 时置位，保存新令牌时复位。
  *  令牌状态胶囊据此标红，提示需要重新填写。 */
 export const llmTokenInvalid = ref(false)
-/* ── 演示专用：令牌写死在这里，模块加载时即视为“已配置”，打开页面无需任何人手填。
+/* ── 开发便利：本地令牌由未跟踪的 .env.local 注入（VITE_LLM_ACCESS_TOKEN），
+   打开页面无需手填；令牌值不进 git 提交与前端构建产物（.env.local 已被忽略）。
    正式版（用户登录后由后端签发令牌并入库）请删除本段，改为登录成功后调用 saveLlmToken()。
-   以后若改用构建注入，只需把 DEMO_LLM_TOKEN 的值换成
-   import.meta.env.VITE_LLM_ACCESS_TOKEN?.trim()，其余逻辑不用动。
-   注意：此值会出现在前端产物与 git 历史中，演示结束后请让模型服务同学轮换该令牌。── */
-const DEMO_LLM_TOKEN = 'qbMA-UZQY912ZKG-MLFhNdzLyclXfgQGiCoRKiv3oaI'
-if (DEMO_LLM_TOKEN && !getLlmToken()) saveLlmToken(DEMO_LLM_TOKEN)
+   对外部署/公开演示前请轮换该令牌。── */
+const DEV_LLM_TOKEN = import.meta.env.VITE_LLM_ACCESS_TOKEN?.trim() || ''
+if (DEV_LLM_TOKEN && !getLlmToken()) saveLlmToken(DEV_LLM_TOKEN)
 export function saveLlmToken(token: string) {
   if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LLM_TOKEN_KEY, token.trim())
   llmTokenConfigured.value = true
