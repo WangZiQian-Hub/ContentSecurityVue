@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { EChartsOption } from 'echarts'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -10,7 +10,19 @@ import WorkbenchKpis from './WorkbenchKpis.vue'
 import WorkbenchChart from './WorkbenchChart.vue'
 import ComplianceEventMonitor from './ComplianceEventMonitor.vue'
 import { isMock } from '../../api/request'
+import { isGovernanceLlm } from '../../api/governance-llm'
+import {
+  createRealTraining,
+  downloadRealArtifact,
+  fetchRealTrainingMetrics,
+  fetchRealTrainingTask,
+  listRealArtifacts,
+  syncRealTraining,
+  type RealArtifact,
+} from '../../api/model-workbench'
 const store = useModelWorkbench()
+/** 真实训练任务用模型服务的 UUID 做主键；旧的演示台账是 TR-xxxxxxxx 短号。 */
+const isRealId = (id?: string) => !!id && id.length >= 20
 const keyword = ref('')
 const selectedId = ref(store.data.training[0]?.id)
 const selected = computed(() => store.data.training.find((t) => t.id === selectedId.value))
@@ -87,6 +99,24 @@ async function submit() {
   )
     return void ElMessage.warning('目标版本已存在，请使用新版本号')
   try {
+    if (isGovernanceLlm && !isMock) {
+      await createRealTraining({
+        name: form.name.trim(),
+        modelId: form.modelId,
+        baseVersion: form.baseVersion,
+        datasetId: form.datasetId,
+        datasetVersion: ds.version,
+        epochs: form.epochs,
+        learningRate: form.learningRate,
+        batchSize: form.batchSize,
+        targetVersion: form.targetVersion,
+        method: form.method || trainingMethods[0],
+      })
+      dialog.value = false
+      ElMessage.success('真实训练任务已创建，等待模型服务执行')
+      await store.load()
+      return
+    }
     const trainingInput = {
       ...form,
       name: form.name.trim(),
@@ -99,6 +129,118 @@ async function submit() {
     ElMessage.success('训练任务已登记，等待启动')
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '创建失败')
+  }
+}
+
+/** 拉取全量指标事件并按轮聚合出真实曲线与检查点（任务事件量有限，直接翻页拉全）。 */
+async function collectRealCurves(taskId: string) {
+  const items: { phase?: string | null; epoch?: number | null; metrics?: Record<string, number> }[] = []
+  let after = 0
+  for (let guard = 0; guard < 20; guard += 1) {
+    const page = await fetchRealTrainingMetrics(taskId, after)
+    items.push(...(page.items || []))
+    if (!page.hasMore) break
+    after = page.nextAfterId
+  }
+  const trainLoss: Record<number, number> = {}
+  const validationLoss: Record<number, number> = {}
+  for (const item of items) {
+    const epoch = item.epoch
+    if (!epoch || !item.metrics) continue
+    if (item.phase === 'train' && typeof item.metrics.loss === 'number') trainLoss[epoch] = item.metrics.loss
+    if (item.phase === 'validation' && typeof item.metrics.loss === 'number')
+      validationLoss[epoch] = item.metrics.loss
+  }
+  const epochs = [...new Set([...Object.keys(trainLoss), ...Object.keys(validationLoss)])]
+    .map(Number)
+    .sort((a, b) => a - b)
+  return {
+    lossHistory: epochs.map((epoch) => trainLoss[epoch] ?? validationLoss[epoch] ?? 0),
+    validationLossHistory: epochs.map((epoch) => validationLoss[epoch] ?? trainLoss[epoch] ?? 0),
+    checkpoints: epochs
+      .filter((epoch) => validationLoss[epoch] !== undefined)
+      .map((epoch) => ({
+        name: `checkpoint-${String(epoch).padStart(2, '0')}`,
+        epoch,
+        loss: validationLoss[epoch],
+      })),
+  }
+}
+
+/** 把模型服务的真实状态同步进 8000 台账；有变化时刷新页面数据。 */
+async function syncRealTasks() {
+  const running = store.data.training.filter(
+    (t) => isRealId(t.id) && (t.status === 'pending' || t.status === 'running'),
+  )
+  if (!running.length) return
+  let changed = false
+  for (const task of running) {
+    try {
+      const detail = (await fetchRealTrainingTask(task.id)) as Record<string, unknown>
+      const curves = await collectRealCurves(task.id)
+      await syncRealTraining(task.id, {
+        status: String(detail.status || 'running'),
+        epoch: Number(detail.epoch || 0),
+        progress: Number(detail.progress || 0),
+        lossHistory: curves.lossHistory,
+        validationLossHistory: curves.validationLossHistory,
+        checkpoints: curves.checkpoints,
+        errorMessage: (detail.errorMessage as string) || null,
+      })
+      changed = true
+    } catch {
+      // 单个任务同步失败静默重试：下一轮 5 秒节拍会再次尝试，不打断页面。
+    }
+  }
+  if (changed) await store.load()
+}
+
+let syncTimer: ReturnType<typeof setInterval> | undefined
+function ensureSyncTimer() {
+  const active = store.data.training.some(
+    (t) => isRealId(t.id) && (t.status === 'pending' || t.status === 'running'),
+  )
+  if (active && !syncTimer) syncTimer = setInterval(() => void syncRealTasks(), 5000)
+  if (!active && syncTimer) {
+    clearInterval(syncTimer)
+    syncTimer = undefined
+  }
+}
+watch(() => store.data.training, ensureSyncTimer, { deep: true })
+onMounted(() => {
+  void syncRealTasks()
+  ensureSyncTimer()
+})
+onBeforeUnmount(() => {
+  if (syncTimer) clearInterval(syncTimer)
+})
+
+const artifacts = ref<RealArtifact[]>([])
+const artifactsBusy = ref(false)
+const artifactsError = ref('')
+watch(
+  selected,
+  async (task) => {
+    artifacts.value = []
+    artifactsError.value = ''
+    if (!task || !isRealId(task.id) || !isGovernanceLlm || isMock) return
+    artifactsBusy.value = true
+    try {
+      artifacts.value = await listRealArtifacts(task.id)
+    } catch (e) {
+      artifactsError.value = e instanceof Error ? e.message : '产物读取失败'
+    } finally {
+      artifactsBusy.value = false
+    }
+  },
+  { immediate: true },
+)
+async function saveArtifact(row: RealArtifact) {
+  if (!selected.value) return
+  try {
+    await downloadRealArtifact(selected.value.id, row.id, row.filename)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '产物下载失败')
   }
 }
 </script>
@@ -136,7 +278,10 @@ async function submit() {
       </div>
     </PanelCard>
     <PanelCard :title="selected?.name || '训练进度'" icon="TrendCharts"
-      ><template #extra><el-tag v-if="isMock">训练过程模拟</el-tag></template>
+      ><template #extra
+        ><el-tag v-if="isMock">训练过程模拟</el-tag
+        ><el-tag v-else-if="isRealId(selected?.id)" type="success">真实训练</el-tag></template
+      >
       <template v-if="selected"
         ><div class="mw-info-strip">
           已完成轮次 <b>{{ selected.epoch }} / {{ selected.epochs }}</b
@@ -201,6 +346,37 @@ async function submit() {
           >查看模型产物</router-link
         ><span v-else>完成后登记模型产物</span>
       </div></PanelCard
+    >
+    <PanelCard
+      v-if="isGovernanceLlm && isRealId(selected.id)"
+      title="模型服务产物（真实文件）"
+      icon="Download"
+      ><el-alert
+        v-if="artifactsError"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="artifactsError"
+      /><el-table
+        v-else
+        v-loading="artifactsBusy"
+        :data="artifacts"
+        border
+        empty-text="任务完成后即可下载产物"
+        ><el-table-column prop="filename" label="文件" min-width="180" /><el-table-column
+          prop="kind"
+          label="类型"
+          width="110"
+        /><el-table-column label="大小" width="100"
+          ><template #default="{ row }">{{ (row.size / 1024).toFixed(1) }} KB</template></el-table-column
+        ><el-table-column label="SHA-256" width="130"
+          ><template #default="{ row }">{{ row.sha256.slice(0, 12) }}…</template></el-table-column
+        ><el-table-column label="操作" width="90"
+          ><template #default="{ row }"
+            ><el-button link type="primary" @click="saveArtifact(row)">下载</el-button></template
+          ></el-table-column
+        ></el-table
+      ></PanelCard
     >
     <ComplianceEventMonitor
       :training-task-id="selected.id"

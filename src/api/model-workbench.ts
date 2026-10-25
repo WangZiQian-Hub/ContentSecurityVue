@@ -1,5 +1,5 @@
 import { isMock, request } from './request'
-import { llmRequest } from './governance-llm'
+import { getLlmToken, llmRequest } from './governance-llm'
 import type { ExecuteTaskReq, Task, PageResult } from '../types'
 import type {
   ModelWorkbench,
@@ -176,5 +176,85 @@ export async function realModelInvoke(
 /** 真实调用成功后把留痕回写业务后端 model_calls（风险命中同时生成合规事件）。 */
 export function recordModelCall(data: Record<string, unknown>): Promise<{ id: string }> {
   return request<{ id: string }>({ url: '/model-calls', method: 'POST', data })
+}
+
+/** 真实训练：业务后端代理 8001 建单并登记同款台账（令牌透传，任务按令牌隔离）。 */
+export function createRealTraining(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>({
+    url: '/training-tasks/real',
+    method: 'POST',
+    data,
+    headers: { Authorization: 'Bearer ' + (getLlmToken() || '') },
+  })
+}
+
+/** 把模型服务的真实训练进度同步进业务台账（轮次/检查点/终态生成合规事件）。 */
+export function syncRealTraining(taskId: string, data: Record<string, unknown>) {
+  return request({
+    url: `/training-tasks/${encodeURIComponent(taskId)}/sync`,
+    method: 'POST',
+    data,
+  })
+}
+
+export function fetchRealTrainingTask(taskId: string): Promise<Record<string, unknown>> {
+  return llmRequest<Record<string, unknown>>({
+    url: `/training/tasks/${encodeURIComponent(taskId)}`,
+  })
+}
+
+export interface MetricEvent {
+  id: number
+  phase?: string | null
+  epoch?: number | null
+  step?: number | null
+  metrics: Record<string, number>
+}
+
+export function fetchRealTrainingMetrics(
+  taskId: string,
+  afterId: number,
+): Promise<{ items: MetricEvent[]; nextAfterId: number; hasMore: boolean }> {
+  return llmRequest({
+    url: `/training/tasks/${encodeURIComponent(taskId)}/metrics`,
+    params: { afterId, limit: 1000 },
+  })
+}
+
+export interface RealArtifact {
+  id: string
+  filename: string
+  kind: string
+  size: number
+  sha256: string
+  epoch?: number | null
+  loss?: number | null
+}
+
+export function listRealArtifacts(taskId: string): Promise<RealArtifact[]> {
+  return llmRequest<RealArtifact[]>({
+    url: `/training/tasks/${encodeURIComponent(taskId)}/artifacts`,
+  })
+}
+
+/** 产物下载需要原始字节流，绕开信封解析，直接用模型服务令牌取回并触发保存。 */
+export async function downloadRealArtifact(
+  taskId: string,
+  artifactId: string,
+  filename: string,
+): Promise<void> {
+  const base = import.meta.env.VITE_LLM_API_BASE_URL || '/llm-api/v1'
+  const response = await fetch(
+    `${base}/training/tasks/${encodeURIComponent(taskId)}/artifacts/${encodeURIComponent(artifactId)}/download`,
+    { headers: { Authorization: 'Bearer ' + (getLlmToken() || '') } },
+  )
+  if (!response.ok) throw new Error(`产物下载失败（HTTP ${response.status}）`)
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename.split('/').pop() || 'artifact'
+  anchor.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
