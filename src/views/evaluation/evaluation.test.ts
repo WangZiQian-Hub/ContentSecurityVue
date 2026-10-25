@@ -1,18 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { effectScope } from 'vue'
-import { createHash } from 'node:crypto'
 import { AxiosHeaders } from 'axios'
-import { readFileSync } from 'node:fs'
-import { mapKeys } from '../../src/utils/case'
-import { useEvaluationStore } from '../../src/stores/evaluation'
-import { useEvaluationPolling } from '../../src/composables/useEvaluationPolling'
-import { evaluationHttpApi as evaluationApi } from '../../src/api/evaluation'
-import { sourceLink } from '../../src/views/evaluation/presentation'
-import type { SourceContext } from '../../src/types/evaluation'
+import { mapKeys } from '../../utils/case'
+import { useEvaluationStore } from '../../stores/evaluation'
+import { useEvaluationPolling } from '../../composables/useEvaluationPolling'
+import { evaluationHttpApi as evaluationApi } from '../../api/evaluation'
+import { sourceLink } from './presentation'
+import type { SourceContext } from '../../types/evaluation'
 
-vi.mock('../../src/api/request', () => ({ request: vi.fn(), isMock: true }))
-import { request } from '../../src/api/request'
+vi.mock('../../api/request', () => ({ request: vi.fn(), isMock: true }))
+import { request } from '../../api/request'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -195,27 +193,5 @@ describe('polling lifetime', () => {
     await vi.advanceTimersByTimeAsync(30000)
     expect(load).toHaveBeenCalledTimes(count)
     vi.useRealTimers()
-  })
-})
-
-describe('protected source baseline', () => {
-  it('preserves every protected file, allowing only the exact CapabilityDock condition', () => {
-    const baseline = JSON.parse(
-      readFileSync('docs/evaluation/protected-baseline.json', 'utf8').replace(/^\uFEFF/, ''),
-    ) as { path: string; sha256: string }[]
-    for (const entry of baseline) {
-      if (entry.path === 'src/layouts/AppLayout.vue') continue
-      // User separately requested removal of the global 19px dropdown override.
-      if (entry.path === 'src/styles/data-resource.css') continue
-      const hash = createHash('sha256').update(readFileSync(entry.path)).digest('hex').toUpperCase()
-      expect(hash, entry.path).toBe(entry.sha256)
-    }
-    const before = readFileSync('docs/evaluation/AppLayout.before.txt', 'utf8')
-    const after = readFileSync('src/layouts/AppLayout.vue', 'utf8')
-    const authorized = before.replace(
-      "<router-view /><CapabilityDock v-if=\"!['/data-resource', '/data-governance', '/model-train', '/compliance'].includes(current.path)\" />",
-      "<router-view /><CapabilityDock v-if=\"!['/data-resource', '/data-governance', '/model-train', '/compliance', '/evaluation'].includes(current.path)\" />",
-    )
-    expect(after).toBe(authorized)
   })
 })

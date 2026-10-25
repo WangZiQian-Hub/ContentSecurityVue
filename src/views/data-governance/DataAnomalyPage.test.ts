@@ -10,6 +10,9 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../../api/data-anomaly', () => api)
 vi.mock('../../api/request', () => ({ isMock: true }))
+// 本文件守护“业务后端/演示模式”下的异常页行为：固定 isGovernanceLlm=false，
+// 避免开发者本地 .env.local 的 VITE_GOVERNANCE_BACKEND=llm 改变页面取数路径。
+vi.mock('../../api/governance-llm', () => ({ isGovernanceLlm: false }))
 vi.mock('../../components/PanelCard.vue', () => ({ default: { render: () => null } }))
 import Page from './DataAnomalyPage.vue'
 import { anomalyMock } from '../../mock/data-anomaly'

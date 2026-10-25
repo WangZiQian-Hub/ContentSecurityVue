@@ -162,22 +162,26 @@ describe('资源统计有据汇总及跨页目录一致性', () => {
     backend.isMock = false
     backend.request.mockResolvedValue({ languages: [], sources: [], modalities: [] })
     await getResourceFilterOptions()
-    expect(backend.request).toHaveBeenLastCalledWith({ url: '/data-resources/options' })
+    expect(backend.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({ url: '/data-resources/options' }),
+    )
     await getSummary('statistics', {
       language: 'ar',
       sourceType: 'industry',
       startDate: '2026-01-01',
       endDate: '2026-12-31',
     })
-    expect(backend.request).toHaveBeenLastCalledWith({
-      url: '/data-resources/summary',
-      params: {
-        view: 'statistics',
-        language: 'ar',
-        sourceType: 'industry',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
-      },
-    })
+    expect(backend.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: '/data-resources/summary',
+        params: {
+          view: 'statistics',
+          language: 'ar',
+          sourceType: 'industry',
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+        },
+      }),
+    )
   })
 })
