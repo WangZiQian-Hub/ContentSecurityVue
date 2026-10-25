@@ -287,6 +287,40 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       return call
     })
   }
+  /** 真实调用：模型服务生成并治理输出，留痕回写业务后端后刷新列表。 */
+  async function realInvoke(input: {
+    modelId: string
+    serviceId: string
+    prompt: string
+    llmModelId: string
+  }) {
+    return run(async () => {
+      const service = data.value.services.find(
+        (s) => s.id === input.serviceId && s.modelId === input.modelId && s.status === 'running',
+      )
+      if (!service) throw new Error('请选择运行中的关联服务')
+      const outcome = await api.realModelInvoke(input.llmModelId, input.prompt)
+      if (!outcome.originalOutput && !outcome.governedOutput)
+        throw new Error('模型服务未返回输出内容')
+      const recorded = await api.recordModelCall({
+        modelId: input.modelId,
+        serviceId: service.id,
+        version: service.version,
+        prompt: input.prompt,
+        originalOutput: outcome.originalOutput,
+        governedOutput: outcome.governedOutput,
+        reason: outcome.reason,
+        riskLevel: outcome.riskLevel,
+        reconstruction: outcome.reconstruction,
+        elapsedMs: outcome.elapsedMs,
+        traceId: crypto.randomUUID(),
+      })
+      await load()
+      const call = data.value.calls.find((c) => c.id === recorded?.id) || null
+      if (!call) throw new Error('调用已完成但留痕读取失败，请刷新页面核对')
+      return call
+    })
+  }
   async function editKnowledge(modelId: string, targetKnowledge: string, modelVersion?: string) {
     return run(async () => {
       // 新任务提交后先进入空结果态；后台完成轻量编辑后，五秒自动读取新快照。
@@ -371,6 +405,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
     stopService,
     removeService,
     invoke,
+    realInvoke,
     editKnowledge,
     assess,
   }

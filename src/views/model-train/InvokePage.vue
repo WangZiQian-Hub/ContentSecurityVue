@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { VideoPlay, Delete, Document } from '@element-plus/icons-vue'
@@ -8,8 +8,24 @@ import WorkbenchKpis from './WorkbenchKpis.vue'
 import { useModelWorkbench } from '../../stores/model-workbench'
 import { percent, formatModelTime, type ModelCall } from '../../types/model-workbench'
 import { isMock } from '../../api/request'
+import { isGovernanceLlm } from '../../api/governance-llm'
+import { listRealModels, type RealModel } from '../../api/model-workbench'
 const store = useModelWorkbench(),
   route = useRoute()
+const llmModels = ref<RealModel[]>([])
+const llmModelId = ref('')
+const llmModelsHint = ref('')
+onMounted(async () => {
+  if (!isGovernanceLlm) return
+  try {
+    llmModels.value = await listRealModels()
+    llmModelId.value = llmModels.value[0]?.id || ''
+    if (!llmModels.value.length)
+      llmModelsHint.value = '模型服务目录为空：请先在模型服务中登记上游模型。'
+  } catch {
+    llmModelsHint.value = '模型服务目录读取失败：请确认模型服务（8001）在线且访问令牌有效。'
+  }
+})
 const modelId = ref(
   String(route.query.modelId || store.data.calls[0]?.modelId || store.data.models[0]?.id || ''),
 )
@@ -96,15 +112,24 @@ function clear() {
 async function invoke() {
   if (!prompt.value.trim() || !service.value)
     return void ElMessage.warning('请选择运行中的服务并填写输入内容')
+  if (isGovernanceLlm && !llmModelId.value)
+    return void ElMessage.warning(llmModelsHint.value || '请先选择真实模型')
   selected.value = null
   try {
-    selected.value = await store.invoke({
-      modelId: modelId.value,
-      serviceId: serviceId.value,
-      prompt: prompt.value.trim(),
-      temp: temp.value,
-      maxLen: maxLen.value,
-    })
+    selected.value = isGovernanceLlm
+      ? await store.realInvoke({
+          modelId: modelId.value,
+          serviceId: serviceId.value,
+          prompt: prompt.value.trim(),
+          llmModelId: llmModelId.value,
+        })
+      : await store.invoke({
+          modelId: modelId.value,
+          serviceId: serviceId.value,
+          prompt: prompt.value.trim(),
+          temp: temp.value,
+          maxLen: maxLen.value,
+        })
     page.value = 1
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '调用失败')
@@ -141,6 +166,18 @@ const governed = computed(
               :value="s.id"
               :label="`${s.name} ${s.version}`" /></el-select
         ></el-form-item>
+        <el-form-item v-if="isGovernanceLlm" label="真实模型（模型服务）"
+          ><el-select
+            v-model="llmModelId"
+            aria-label="真实模型"
+            :disabled="store.busy || !llmModels.length"
+            :no-data-text="llmModelsHint || '暂无可用模型'"
+            ><el-option
+              v-for="m in llmModels"
+              :key="m.id"
+              :value="m.id"
+              :label="m.name" /></el-select
+        ></el-form-item>
         <div class="mw-row">
           <label for="mw-prompt">输入内容</label
           ><el-button :icon="Document" link type="primary" :disabled="store.busy" @click="example"
@@ -165,9 +202,9 @@ const governed = computed(
               :max="2"
               :step="0.1"
               :precision="1"
-              :disabled="store.busy" /></el-form-item
+              :disabled="store.busy || isGovernanceLlm" /></el-form-item
           ><el-form-item label="最大生成长度"
-            ><el-select v-model="maxLen" :disabled="store.busy"
+            ><el-select v-model="maxLen" :disabled="store.busy || isGovernanceLlm"
               ><el-option
                 v-for="n in [256, 512, 1024, 2048, 4096]"
                 :key="n"
@@ -175,12 +212,15 @@ const governed = computed(
                 :value="n" /></el-select
           ></el-form-item>
         </div>
+        <p v-if="isGovernanceLlm" class="mw-input-summary">
+          真实调用模式：生成与治理均由模型服务执行，采样参数以上游服务配置为准。
+        </p>
         <div class="mw-actions">
           <el-button
             type="primary"
             :icon="VideoPlay"
             :loading="store.busy"
-            :disabled="!service || !prompt.trim()"
+            :disabled="!service || !prompt.trim() || (isGovernanceLlm && !llmModelId)"
             @click="invoke"
             >开始调用</el-button
           ><el-button :icon="Delete" :disabled="store.busy" @click="clear">清空</el-button>

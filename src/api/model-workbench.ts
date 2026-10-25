@@ -1,4 +1,5 @@
 import { isMock, request } from './request'
+import { llmRequest } from './governance-llm'
 import type { ExecuteTaskReq, Task, PageResult } from '../types'
 import type {
   ModelWorkbench,
@@ -125,5 +126,55 @@ export async function executeComparison(input: {
       datasetVersion: input.datasetVersion,
     },
   })
+}
+
+/** 模型服务（8001）真实模型目录条目。 */
+export interface RealModel {
+  id: string
+  name: string
+}
+
+export async function listRealModels(): Promise<RealModel[]> {
+  const rows = await llmRequest<{ modelId?: string; id?: string; name?: string }[]>({ url: '/models' })
+  return Array.isArray(rows)
+    ? rows.map((row) => ({ id: String(row.modelId ?? row.id ?? ''), name: String(row.name ?? '') }))
+    : []
+}
+
+export interface RealInvokeOutcome {
+  originalOutput: string
+  governedOutput: string
+  reason: string
+  riskLevel: string
+  reconstruction: string | null
+  elapsedMs: number
+}
+
+/** 真实调用：由模型服务按 model_risk_governance 结构化契约生成并治理输出。 */
+export async function realModelInvoke(
+  llmModelId: string,
+  prompt: string,
+): Promise<RealInvokeOutcome> {
+  const startedAt = performance.now()
+  const data = await llmRequest<{ result: Record<string, unknown> }>({
+    url: '/llm/invoke',
+    method: 'POST',
+    timeout: 180000,
+    data: { modelId: llmModelId, input: prompt, responseType: 'model_risk_governance' },
+  })
+  const result = (data && data.result) || {}
+  return {
+    originalOutput: String(result.originalOutput ?? ''),
+    governedOutput: String(result.governedOutput ?? ''),
+    reason: String(result.reason ?? ''),
+    riskLevel: String(result.riskLevel ?? 'unknown'),
+    reconstruction: typeof result.reconstruction === 'string' ? result.reconstruction : null,
+    elapsedMs: Math.max(0, Math.round(performance.now() - startedAt)),
+  }
+}
+
+/** 真实调用成功后把留痕回写业务后端 model_calls（风险命中同时生成合规事件）。 */
+export function recordModelCall(data: Record<string, unknown>): Promise<{ id: string }> {
+  return request<{ id: string }>({ url: '/model-calls', method: 'POST', data })
 }
 
