@@ -43,6 +43,13 @@ export async function request<T>(config: RequestConfig): Promise<T> {
       : error instanceof Error
         ? error.message
         : '网络异常'
+    if (axios.isAxiosError(error) && error.response?.status === 401
+        && !config.url?.includes('/auth/login')) {
+      // 平台令牌失效（未登录/过期）：清掉本地身份并回到登录页（#9）。
+      sessionStorage.removeItem('accessToken')
+      sessionStorage.removeItem('authUser')
+      if (!window.location.pathname.startsWith('/login')) window.location.assign('/login')
+    }
     if (!config.silent) ElMessage.error(String(message))
     throw error
   }

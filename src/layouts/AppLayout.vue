@@ -24,9 +24,11 @@ import AppIcon from '../components/AppIcon.vue'
 import TaskTable from '../components/TaskTable.vue'
 import CapabilityDock from '../components/CapabilityDock.vue'
 import { usePlatformStore } from '../stores/platform'
+import { useAuthStore } from '../stores/auth'
 import { isMock } from '../api/request'  /** 判断是否是 Mock模式 */
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const store = usePlatformStore()
 /** 判断当前选中哪个菜单 */
 const current = computed(
@@ -71,6 +73,11 @@ function openUserManagement() {
   router.push('/system/users')
   isProfileOpen.value = false
 }
+function logout() {
+  auth.logout()
+  isProfileOpen.value = false
+  router.push('/login')
+}
 </script>
 <template>
   <div class="app-shell">
@@ -101,7 +108,7 @@ function openUserManagement() {
           <AppIcon name="BellFilled" /><i v-if="hasUnread"></i></button
         >
         <button class="top-button user-button" @click="isProfileOpen = true">
-          <span class="avatar"><AppIcon name="UserFilled" /></span>演示用户<AppIcon name="ArrowDown" />
+          <span class="avatar"><AppIcon name="UserFilled" /></span>{{ auth.user?.displayName || '演示用户' }}<AppIcon name="ArrowDown" />
         </button>
       </div>
     </header>
@@ -177,12 +184,13 @@ function openUserManagement() {
     >
     <el-dialog v-model="isProfileOpen" title="个人信息" width="420px" class="profile-dialog"
       ><el-descriptions :column="1" border
-        ><el-descriptions-item label="用户">演示用户</el-descriptions-item
-        ><el-descriptions-item label="角色">平台管理员（演示）</el-descriptions-item
+        ><el-descriptions-item label="用户">{{ auth.user?.displayName || '演示用户' }}</el-descriptions-item
+        ><el-descriptions-item label="角色">{{ auth.user ? auth.user.role + (auth.isReader ? '（只读）' : '') : '平台管理员（演示）' }}</el-descriptions-item
         ><el-descriptions-item label="工作空间"
           >内容安全治理中心</el-descriptions-item
         ></el-descriptions
       ><template #footer
+        ><el-button v-if="auth.loggedIn" @click="logout">退出登录</el-button
         ><el-button type="primary" @click="openUserManagement" class="profile-dialog">用户管理</el-button></template
       ></el-dialog
     >

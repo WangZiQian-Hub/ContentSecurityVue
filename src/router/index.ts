@@ -6,6 +6,7 @@
 5. 未知地址跳回首页。
  */
 import { createRouter, createWebHistory } from 'vue-router'
+import { isMock } from '../api/request'
 import { navigation } from './navigation'
 const views = {
   '/dashboard': () => import('../views/dashboard/DashboardPage.vue'),
@@ -14,9 +15,10 @@ const views = {
   '/scenario': () => import('../views/scenario/ScenarioPage.vue'),
   '/system': () => import('../views/system/SystemPage.vue'),
 }
-export default createRouter({
+export const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/login', component: () => import('../views/LoginView.vue') },
     { path: '/', redirect: '/dashboard' },
     {
       path: '/model-train',
@@ -78,4 +80,15 @@ export default createRouter({
       })),
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
+})
+
+export default router
+
+/** 平台登录守卫（#9）：真实接口模式下未登录一律先去登录页；mock 模式保持免登录演示。 */
+router.beforeEach((to) => {
+  if (isMock) return true
+  const token = sessionStorage.getItem('accessToken')
+  if (to.path === '/login') return token ? '/dashboard' : true
+  if (!token) return { path: '/login', query: to.fullPath === '/dashboard' ? {} : { redirect: to.fullPath } }
+  return true
 })
