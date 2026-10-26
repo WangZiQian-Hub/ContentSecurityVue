@@ -198,8 +198,9 @@ export function syncRealTraining(taskId: string, data: Record<string, unknown>) 
 }
 
 export function fetchRealTrainingTask(taskId: string): Promise<Record<string, unknown>> {
-  return llmRequest<Record<string, unknown>>({
-    url: `/training/tasks/${encodeURIComponent(taskId)}`,
+  // 台账只读代理：由 8000 用服务端令牌转发模型服务，浏览器不再持有/依赖模型服务令牌。
+  return request<Record<string, unknown>>({
+    url: `/training-tasks/${encodeURIComponent(taskId)}/detail`,
   })
 }
 
@@ -215,8 +216,8 @@ export function fetchRealTrainingMetrics(
   taskId: string,
   afterId: number,
 ): Promise<{ items: MetricEvent[]; nextAfterId: number; hasMore: boolean }> {
-  return llmRequest({
-    url: `/training/tasks/${encodeURIComponent(taskId)}/metrics`,
+  return request({
+    url: `/training-tasks/${encodeURIComponent(taskId)}/metrics`,
     params: { afterId, limit: 1000 },
   })
 }
@@ -232,21 +233,20 @@ export interface RealArtifact {
 }
 
 export function listRealArtifacts(taskId: string): Promise<RealArtifact[]> {
-  return llmRequest<RealArtifact[]>({
-    url: `/training/tasks/${encodeURIComponent(taskId)}/artifacts`,
+  return request<RealArtifact[]>({
+    url: `/training-tasks/${encodeURIComponent(taskId)}/artifacts`,
   })
 }
 
-/** 产物下载需要原始字节流，绕开信封解析，直接用模型服务令牌取回并触发保存。 */
+/** 产物下载需要原始字节流，绕开信封解析；走 8000 只读代理，携带平台登录令牌即可。 */
 export async function downloadRealArtifact(
   taskId: string,
   artifactId: string,
   filename: string,
 ): Promise<void> {
-  const base = import.meta.env.VITE_LLM_API_BASE_URL || '/llm-api/v1'
   const response = await fetch(
-    `${base}/training/tasks/${encodeURIComponent(taskId)}/artifacts/${encodeURIComponent(artifactId)}/download`,
-    { headers: { Authorization: 'Bearer ' + (getLlmToken() || '') } },
+    `/api/v1/training-tasks/${encodeURIComponent(taskId)}/artifacts/${encodeURIComponent(artifactId)}/download`,
+    { headers: { Authorization: 'Bearer ' + (sessionStorage.getItem('accessToken') || '') } },
   )
   if (!response.ok) throw new Error(`产物下载失败（HTTP ${response.status}）`)
   const blob = await response.blob()
