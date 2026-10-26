@@ -42,6 +42,9 @@ export interface ValueResult {
   scope: ValueScope
   datasetName: string
   versionLabel: string
+  // 版本清单冻结（#13-1.5）：分析当时解析到的 dsv 主键与清单指纹。
+  versionId?: string
+  manifestHash?: string
   languageName: string
   schemeName: string
   finishedAt: string

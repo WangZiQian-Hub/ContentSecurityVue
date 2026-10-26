@@ -426,7 +426,10 @@ onMounted(loadOptions)
         <span
           >当前结果：{{ result.versionLabel }} / {{ result.languageName }} /
           {{ result.schemeName }} · 分析时间 ·
-          {{ new Date(result.finishedAt).toLocaleString('zh-CN') }}</span
+          {{ new Date(result.finishedAt).toLocaleString('zh-CN') }}
+          <template v-if="result.manifestHash">
+            · 样本清单 <code :title="result.manifestHash">{{ result.manifestHash.slice(0, 8) }}…</code>
+          </template></span
         ><el-button link type="primary" @click="showTaskDetail">查看任务 ›</el-button>
       </div>
       <div v-else class="muted">
