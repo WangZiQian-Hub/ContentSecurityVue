@@ -280,7 +280,7 @@ onMounted(load)
   <el-drawer
     :model-value="!!selected"
     :title="selected?.name"
-    size="480px"
+    size="760px"
     class="resource-detail"
     @close="selected = undefined"
   >

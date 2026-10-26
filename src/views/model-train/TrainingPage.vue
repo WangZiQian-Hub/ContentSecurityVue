@@ -349,6 +349,7 @@ async function saveArtifact(row: RealArtifact) {
     >
     <PanelCard
       v-if="isGovernanceLlm && isRealId(selected.id)"
+      class="mw-artifact-panel"
       title="模型服务产物（真实文件）"
       icon="Download"
       ><el-alert
@@ -363,15 +364,22 @@ async function saveArtifact(row: RealArtifact) {
         :data="artifacts"
         border
         empty-text="任务完成后即可下载产物"
-        ><el-table-column prop="filename" label="文件" min-width="180" /><el-table-column
-          prop="kind"
-          label="类型"
-          width="110"
-        /><el-table-column label="大小" width="100"
+        ><el-table-column
+          prop="filename"
+          label="文件"
+          min-width="220"
+          show-overflow-tooltip
+        /><el-table-column prop="kind" label="类型" width="110" /><el-table-column
+          label="大小"
+          width="100"
           ><template #default="{ row }">{{ (row.size / 1024).toFixed(1) }} KB</template></el-table-column
-        ><el-table-column label="SHA-256" width="130"
-          ><template #default="{ row }">{{ row.sha256.slice(0, 12) }}…</template></el-table-column
-        ><el-table-column label="操作" width="90"
+        ><el-table-column label="SHA-256" min-width="130"
+          ><template #default="{ row }"
+            ><el-tooltip :content="row.sha256" placement="top"
+              ><code class="mw-sha">{{ row.sha256.slice(0, 12) }}…</code></el-tooltip
+            ></template
+          ></el-table-column
+        ><el-table-column label="操作" width="80" fixed="right"
           ><template #default="{ row }"
             ><el-button link type="primary" @click="saveArtifact(row)">下载</el-button></template
           ></el-table-column

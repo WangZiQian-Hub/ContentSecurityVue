@@ -66,6 +66,17 @@
 .mw-evaluation-grid > * {
   min-width: 0;
 }
+/* 真实训练产物表列多（文件/类型/大小/哈希/下载），独占整行才放得下。 */
+.mw-grid > .mw-artifact-panel,
+.mw-training-grid > .mw-artifact-panel {
+  grid-column: 1 / -1;
+}
+.mw-sha {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  color: #4a648c;
+  cursor: default;
+}
 .mw-wide-left {
   grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr);
 }
