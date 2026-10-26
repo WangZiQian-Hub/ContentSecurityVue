@@ -1,5 +1,5 @@
 import { isMock, request } from './request'
-import { getLlmToken, llmRequest } from './governance-llm'
+import { llmRequest } from './governance-llm'
 import type { ExecuteTaskReq, Task, PageResult } from '../types'
 import type {
   ModelWorkbench,
@@ -178,13 +178,12 @@ export function recordModelCall(data: Record<string, unknown>): Promise<{ id: st
   return request<{ id: string }>({ url: '/model-calls', method: 'POST', data })
 }
 
-/** 真实训练：业务后端代理 8001 建单并登记同款台账（令牌透传，任务按令牌隔离）。 */
+/** 真实训练：8000 用服务端令牌代理 8001 建单并登记同款台账；浏览器无需模型服务令牌。 */
 export function createRealTraining(data: Record<string, unknown>): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>({
     url: '/training-tasks/real',
     method: 'POST',
     data,
-    headers: { Authorization: 'Bearer ' + (getLlmToken() || '') },
   })
 }
 
