@@ -58,6 +58,11 @@ const chart = computed<EChartsOption>(() => ({
 }))
 const dialog = ref(false)
 const checkpoint = ref<{ name: string; epoch: number; loss: number }>()
+/** 后端允许代理建单的真实训练脚本白名单，与 8000 的 REAL_SCRIPTS 保持一致。 */
+const realScripts = [
+  { id: 'mini-mlp', label: '迷你 MLP（合成数据·秒级）', hint: '合成二维数据，用来验证脚本任务、事件流与产物链路。' },
+  { id: 'fashion-cnn', label: 'FashionMNIST 服饰分类 CNN（真实图片）', hint: '两层卷积跑真实灰度图，CPU 分钟级产出 loss/准确率曲线与可下载权重。' },
+]
 const form = reactive({
   name: '',
   modelId: store.data.models[0]?.id || '',
@@ -68,7 +73,12 @@ const form = reactive({
   batchSize: 8,
   targetVersion: '',
   method: trainingMethods[0] as string,
+  scriptId: 'mini-mlp',
+  trainSamples: 5000,
 })
+const realScriptHint = computed(
+  () => realScripts.find((script) => script.id === form.scriptId)?.hint ?? '',
+)
 const baseModel = computed(() => store.data.models.find((m) => m.id === form.modelId))
 // 后台刷新后原选中数据集可能被标成测试集而掉出选项，自动回退到当前首项，避免表单残留失效 ID。
 watch(trainingDatasets, (list) => {
@@ -111,6 +121,8 @@ async function submit() {
         batchSize: form.batchSize,
         targetVersion: form.targetVersion,
         method: form.method || trainingMethods[0],
+        scriptId: form.scriptId,
+        ...(form.scriptId === 'fashion-cnn' ? { trainSamples: form.trainSamples } : {}),
       })
       dialog.value = false
       ElMessage.success('真实训练任务已创建，等待模型服务执行')
@@ -415,6 +427,23 @@ async function saveArtifact(row: RealArtifact) {
             :key="d.id"
             :value="d.id"
             :label="`${d.name} ${d.version}`" /></el-select></el-form-item
+      ><el-form-item v-if="isGovernanceLlm && !isMock" label="训练脚本" required
+        ><el-select v-model="form.scriptId"
+          ><el-option
+            v-for="script in realScripts"
+            :key="script.id"
+            :label="script.label"
+            :value="script.id" /></el-select
+        ><span class="mw-field-hint">{{ realScriptHint }}</span></el-form-item
+      ><el-form-item v-if="isGovernanceLlm && !isMock && form.scriptId === 'fashion-cnn'" label="训练样本数"
+        ><el-input-number
+          v-model="form.trainSamples"
+          :min="100"
+          :max="60000"
+          :step="1000"
+          :precision="0"
+        /><span class="mw-field-hint">按类等额抽样；首批演示建议 5000 条以内，CPU 分钟级完成。</span
+        ></el-form-item
       ><el-form-item label="训练方式" required
         ><el-select v-model="form.method">
           <el-option

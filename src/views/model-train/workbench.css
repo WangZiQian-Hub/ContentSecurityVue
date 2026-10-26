@@ -373,6 +373,16 @@
     flex-wrap: wrap;
   }
 }
+/* 表单控件下的补充说明：小字灰色，独占一行，不挤压控件宽度。 */
+.mw-dialog .mw-field-hint {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b82a5;
+}
+
 @media (max-width: 1050px) {
   .mw-wide-left,
   .mw-invoke-grid {
