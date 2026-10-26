@@ -55,6 +55,25 @@ export function getDataset(id: number): Promise<ResourceDataset> {
   }
   return request({ url: `/datasets/${id}` })
 }
+/** 数据集版本清单（#13）：id=dsv 主键、label=版本号，附样本数与清单哈希。 */
+export interface DatasetVersionInfo {
+  id: string
+  label: string
+  languages: string[]
+  sampleCount: number
+  manifestHash: string
+  sourceVersionId: string | null
+  producingTaskId: string | null
+  changeSummary: string
+  createdAt: string
+}
+export async function getDatasetVersions(id: number): Promise<DatasetVersionInfo[]> {
+  if (isMock) return []
+  const response = await request<{ items: DatasetVersionInfo[] }>({
+    url: `/datasets/${id}/versions`,
+  })
+  return response.items || []
+}
 export async function listIngestTasks(query: {
   page: number
   pageSize: number
