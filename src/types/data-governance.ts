@@ -7,6 +7,8 @@ export interface ProcessKpi extends Kpi {
 export interface ProcessInput {
   datasetId: number
   datasetVersionId: string
+  // 后端按 dataset_versions 清单解析出的人类可读版本号（如 v1.0.0），仅用于展示。
+  datasetVersionLabel?: string
   // 用户指定的输出版本名称；旧任务和不生成版本的预览可以没有此字段。
   outputVersionName?: string
   scope: 'all' | 'batch' | 'filtered'
@@ -36,8 +38,10 @@ export interface ProcessTask {
   datasetName: string
   input: ProcessInput
   ruleName: string
-  // 后端生成的不可变数据版本 ID，与用户填写的名称分开保存。
+  // 用户填写的输出版本名称（如 v2.0.0），用于展示与重名校验。
   outputVersion: string | null
+  // 后端登记的不可变数据版本 ID（dsv_000009），与用户填写的名称分开保存。
+  outputVersionId?: string | null
   status: TaskStatus
   progress: number
   processedCount: number

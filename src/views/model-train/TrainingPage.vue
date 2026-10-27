@@ -68,6 +68,7 @@ const form = reactive({
   modelId: store.data.models[0]?.id || '',
   baseVersion: '',
   datasetId: trainingDatasets.value[0]?.id || '',
+  datasetVersion: '',
   epochs: 10,
   learningRate: 0.0002,
   batchSize: 8,
@@ -80,10 +81,29 @@ const realScriptHint = computed(
   () => realScripts.find((script) => script.id === form.scriptId)?.hint ?? '',
 )
 const baseModel = computed(() => store.data.models.find((m) => m.id === form.modelId))
+// 弹窗当前选中的训练数据集，版本下拉随它联动。
+const currentDataset = computed(() =>
+  trainingDatasets.value.find((d) => d.id === form.datasetId),
+)
 // 后台刷新后原选中数据集可能被标成测试集而掉出选项，自动回退到当前首项，避免表单残留失效 ID。
 watch(trainingDatasets, (list) => {
   if (!list.some((d) => d.id === form.datasetId)) form.datasetId = list[0]?.id || ''
 })
+// 切换数据集后，数据版本默认选中该数据集当前版本（versions 中与主版本一致者），否则取首项；
+// 版本表缺失时兜底主表 version，保证下拉不出现空值。
+watch(
+  () => form.datasetId,
+  (datasetId) => {
+    const d = trainingDatasets.value.find((item) => item.id === datasetId)
+    const versions = d?.versions ?? []
+    form.datasetVersion =
+      versions.find((v) => v.version === d?.version)?.version ??
+      versions[0]?.version ??
+      d?.version ??
+      ''
+  },
+  { immediate: true },
+)
 watch(
   baseModel,
   (m) => {
@@ -100,8 +120,19 @@ async function submit() {
     return void ElMessage.warning('请填写有效的训练轮次、批次大小和学习率')
   // 只接受训练集下拉里的数据集，防止把已标为测试集的数据集提交成训练输入。
   const ds = trainingDatasets.value.find((d) => d.id === form.datasetId)
-  if (!form.name.trim() || !ds || !baseModel.value || !/^v?\d+\.\d+\.\d+$/.test(form.targetVersion))
-    return void ElMessage.warning('请填写任务名称、数据集和有效的目标版本，如 v2.2.0')
+  // 数据版本必须是该数据集版本清单中的一项，防止提交未登记或已失效的版本。
+  const datasetVersionValid =
+    !!ds &&
+    (ds.versions.some((v) => v.version === form.datasetVersion) ||
+      form.datasetVersion === ds.version)
+  if (
+    !form.name.trim() ||
+    !ds ||
+    !datasetVersionValid ||
+    !baseModel.value ||
+    !/^v?\d+\.\d+\.\d+$/.test(form.targetVersion)
+  )
+    return void ElMessage.warning('请填写任务名称、数据集、有效的数据版本和目标版本，如 v2.2.0')
   if (
     baseModel.value.versions.some(
       (v) => v.version.replace(/^v/, '') === form.targetVersion.replace(/^v/, ''),
@@ -115,7 +146,7 @@ async function submit() {
         modelId: form.modelId,
         baseVersion: form.baseVersion,
         datasetId: form.datasetId,
-        datasetVersion: ds.version,
+        datasetVersion: form.datasetVersion,
         epochs: form.epochs,
         learningRate: form.learningRate,
         batchSize: form.batchSize,
@@ -133,7 +164,7 @@ async function submit() {
       ...form,
       name: form.name.trim(),
       method: form.method || trainingMethods[0],
-      datasetVersion: ds.version,
+      datasetVersion: form.datasetVersion,
     }
     const task = await store.addTraining(trainingInput)
     selectedId.value = task.id
@@ -426,7 +457,14 @@ async function saveArtifact(row: RealArtifact) {
             v-for="d in trainingDatasets"
             :key="d.id"
             :value="d.id"
-            :label="`${d.name} ${d.version}`" /></el-select></el-form-item
+            :label="d.name" /></el-select></el-form-item
+      ><el-form-item label="数据版本" required
+        ><el-select v-model="form.datasetVersion"
+          ><el-option
+            v-for="v in currentDataset?.versions"
+            :key="v.versionId || v.version"
+            :value="v.version"
+            :label="v.version" /></el-select></el-form-item
       ><el-form-item v-if="isGovernanceLlm && !isMock" label="训练脚本" required
         ><el-select v-model="form.scriptId"
           ><el-option

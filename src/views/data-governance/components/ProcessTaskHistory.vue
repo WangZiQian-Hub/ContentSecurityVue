@@ -5,7 +5,7 @@ import ProcessTaskPanel from './ProcessTaskPanel.vue'
 import { useDataGovernanceStore } from '../../../stores/data-governance'
 import { TASK_STATUS } from '../../../utils/enums'
 import type { ProcessTask } from '../../../types/data-governance'
-import { processOutputVersionLabel } from '../../../utils/process-output-version'
+import { processInputVersionLabel, processOutputVersionLabel } from '../../../utils/process-output-version'
 const store = useDataGovernanceStore()
 const historyOpen = ref(false)
 const page = ref(1)
@@ -97,13 +97,13 @@ watch(historyOpen, (open) => {
           ><el-descriptions-item label="任务ID">{{ detail.taskId }}</el-descriptions-item
           ><el-descriptions-item label="链路ID">{{ detail.traceId }}</el-descriptions-item
           ><el-descriptions-item label="输入版本">{{
-            detail.input.datasetVersionId
+            processInputVersionLabel(detail, store.options?.datasets)
           }}</el-descriptions-item
           ><el-descriptions-item label="输出版本">{{
             processOutputVersionLabel(detail)
           }}</el-descriptions-item
           ><el-descriptions-item label="输出版本 ID">{{
-            detail.outputVersion ?? '尚未生成'
+            detail.outputVersionId || (detail.outputVersion ? '—' : '尚未生成')
           }}</el-descriptions-item
           ><el-descriptions-item label="数据集">{{ detail.datasetName }}</el-descriptions-item
           ><el-descriptions-item label="处理模板">{{ detail.ruleName }}</el-descriptions-item>

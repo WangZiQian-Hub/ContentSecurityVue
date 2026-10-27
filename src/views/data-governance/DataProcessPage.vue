@@ -118,7 +118,7 @@ async function runAction(action: 'preview' | 'create') {
     } else {
       try {
         await ElMessageBox.confirm(
-          `输入版本：${input.datasetVersionId}；输出版本：${createInput!.outputVersionName}；规则顺序：${input.rules.map((code) => store.options?.rules.find((rule) => rule.code === code)?.label ?? code).join(' → ')}。处理完成后生成新版本，保留原始数据。`,
+          `输入版本：${versions.value.find((item) => item.versionId === input.datasetVersionId)?.label ?? input.datasetVersionId}；输出版本：${createInput!.outputVersionName}；规则顺序：${input.rules.map((code) => store.options?.rules.find((rule) => rule.code === code)?.label ?? code).join(' → ')}。处理完成后生成新版本，保留原始数据。`,
           '确认创建处理任务',
           {
             confirmButtonText: '创建任务',

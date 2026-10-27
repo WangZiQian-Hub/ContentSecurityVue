@@ -4,9 +4,12 @@ import PanelCard from '../../../components/PanelCard.vue'
 import AppIcon from '../../../components/AppIcon.vue'
 import ProcessComparisonTable from './ProcessComparisonTable.vue'
 import { TASK_STATUS } from '../../../utils/enums'
+import { processInputVersionLabel } from '../../../utils/process-output-version'
+import { useDataGovernanceStore } from '../../../stores/data-governance'
 import type { ProcessTask } from '../../../types/data-governance'
 import type { TaskStatus } from '../../../types'
 const props = defineProps<{ task?: ProcessTask }>()
+const store = useDataGovernanceStore()
 
 const standardStageNames = ['读取数据', '规范化', '去重', '字段校验', '生成版本']
 const displaySteps = computed(() => {
@@ -35,7 +38,7 @@ const displaySteps = computed(() => {
     >
     <template v-if="task">
       <p v-if="task.input" class="process-info">
-        当前查看任务：{{ task.datasetName }} · 输入版本 {{ task.input.datasetVersionId }} ·
+        当前查看任务：{{ task.datasetName }} · 输入版本 {{ processInputVersionLabel(task, store.options?.datasets) }} ·
         {{
           task.input.scope === 'all'
             ? '全量数据'

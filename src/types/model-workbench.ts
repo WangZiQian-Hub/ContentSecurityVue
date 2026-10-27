@@ -95,6 +95,13 @@ export interface ModelAssessment {
   retentionAfter: number
   samples: { type: string; input: string; before: string; after: string }[]
 }
+/** 数据集版本选项（#13）：version 为人类版本号，versionId 为 dsv 稳定主键。 */
+export interface DatasetVersionOption {
+  version: string
+  versionId?: string
+  sampleCount?: number
+  changeSummary?: string
+}
 export interface ModelWorkbench {
   models: ModelAsset[]
   training: TrainingTask[]
@@ -107,6 +114,7 @@ export interface ModelWorkbench {
     version: string
     rowCount: number
     purpose: 'training' | 'evaluation'
+    versions: DatasetVersionOption[]
   }[]
   changes: { id: string; serviceName: string; description: string; createdAt: string }[]
 }

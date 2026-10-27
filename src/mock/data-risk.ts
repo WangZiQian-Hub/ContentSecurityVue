@@ -384,6 +384,12 @@ export const riskMock = {
       ),
     ),
   overview: (): Overview => {
+    // 版本固定列展示人类版本号，用治理资源的版本清单把 dsv 主键解析成 label。
+    const versionLabelMap = new Map(
+      governanceResources().flatMap((d) =>
+        d.versions.map((v) => [v.id, v.label] as const),
+      ),
+    )
     // 各资源固定版本只纳入最新的全语种结果，重复检测不重复计数。
     const included = resourceDatasets
       .map((d) =>
@@ -415,6 +421,7 @@ export const riskMock = {
         resultId: r.id,
         datasetName: r.datasetName,
         versionId: r.scope.versionId,
+        versionLabel: versionLabelMap.get(r.scope.versionId) || r.scope.versionId,
         validCount: r.validCount,
         riskCount: r.riskCount,
         finishedAt: r.finishedAt,

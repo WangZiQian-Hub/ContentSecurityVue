@@ -21,3 +21,19 @@ export function processOutputVersionLabel(task: ProcessTask) {
   // 避免在表格单元格渲染时抛异常导致整行错位。
   return task.input?.outputVersionName?.trim() || task.outputVersion || '—'
 }
+
+export function processInputVersionLabel(
+  task: ProcessTask,
+  versions?: ProcessOptions['datasets'],
+) {
+  // 展示口径：输入版本一律显示人类可读版本号（如 v1.0.0），dsv_000003 只作为接口引用。
+  // 优先用后端解析好的标签；旧数据没有时按版本清单本地映射，最后退回原始引用。
+  const input = task.input
+  if (!input) return '—'
+  const fromBackend = input.datasetVersionLabel?.trim()
+  if (fromBackend) return fromBackend
+  const fromOptions = versions
+    ?.find((dataset) => dataset.id === input.datasetId)
+    ?.versions.find((version) => version.versionId === input.datasetVersionId)?.label.trim()
+  return fromOptions || input.datasetVersionId || '—'
+}

@@ -40,7 +40,7 @@ onMounted(async () => {
       <p v-for="line in data?.definitions" :key="line">{{ line }}</p>
       <el-table :data="data?.records"
         ><el-table-column prop="datasetName" label="数据集" /><el-table-column
-          prop="versionId"
+          prop="versionLabel"
           label="固定版本" /><el-table-column prop="validCount" label="有效检测" /><el-table-column
           prop="riskCount"
           label="风险候选" /><el-table-column prop="finishedAt" label="完成时间" min-width="190"

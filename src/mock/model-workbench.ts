@@ -166,6 +166,11 @@ export function createModelDemo(): ModelWorkbench {
         version: 'v1.2.0',
         rowCount: 120000,
         purpose: 'training',
+        versions: [
+          { version: 'v1.0.0', versionId: 'dsv_mock_001', sampleCount: 100000, changeSummary: '初始接入多语种训练样本' },
+          { version: 'v1.1.0', versionId: 'dsv_mock_002', sampleCount: 110000, changeSummary: '增量补充小语种样本' },
+          { version: 'v1.2.0', versionId: 'dsv_mock_003', sampleCount: 120000, changeSummary: '清洗去重后扩充样本' },
+        ],
       },
       {
         id: 'ds-evaluation',
@@ -173,6 +178,9 @@ export function createModelDemo(): ModelWorkbench {
         version: 'v1.0.0',
         rowCount: 1000,
         purpose: 'evaluation',
+        versions: [
+          { version: 'v1.0.0', versionId: 'dsv_mock_004', sampleCount: 1000, changeSummary: '安全回归测试基线' },
+        ],
       },
     ],
     assessment: {

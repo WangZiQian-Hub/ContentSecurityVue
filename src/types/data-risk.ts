@@ -129,6 +129,7 @@ export interface Overview {
     resultId: string
     datasetName: string
     versionId: string
+    versionLabel: string
     validCount: number
     riskCount: number
     finishedAt: string
