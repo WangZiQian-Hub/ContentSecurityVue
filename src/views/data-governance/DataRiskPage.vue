@@ -144,6 +144,16 @@ function changeVersion() {
   scope.language = 'all'
   void loadScope()
 }
+function versionName(datasetId?: number, versionId?: string, fallback?: string) {
+  return (
+    options.value?.datasets
+      .find((item) => item.id === datasetId)
+      ?.versions.find((item) => item.id === versionId)?.label ??
+    fallback ??
+    versionId ??
+    ''
+  )
+}
 function filter(level = '', status = '') {
   Object.assign(query, { level, status, keyword: '', page: 1 })
   void loadRows()
@@ -389,7 +399,7 @@ onBeforeUnmount(() => {
               v-for="v in dataset?.versions"
               :key="v.id"
               :value="v.id"
-              :label="v.id" /></el-select
+              :label="v.label" /></el-select
         ></label>
         <label
           >语种<el-select v-model="scope.language" :disabled="busy || isGovernanceLlm" @change="loadScope"
@@ -418,7 +428,8 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="result" class="risk-identity">
         <span
-          >{{ result.scope.versionId }} · {{ languageName(result.scope.language) }} ·
+          >{{ versionName(result.scope.datasetId, result.scope.versionId) }} ·
+          {{ languageName(result.scope.language) }} ·
           {{ result.status }} · 有效检测 {{ result.validCount.toLocaleString() }} 条 ·
           {{ result.finishedAt }}</span
         ><el-button
@@ -706,7 +717,9 @@ onBeforeUnmount(() => {
           ><el-descriptions-item label="数据集">{{
             options?.datasets.find((d) => d.id === task?.input.datasetId)?.name
           }}</el-descriptions-item>
-          <el-descriptions-item label="固定版本">{{ task?.input.versionId }}</el-descriptions-item>
+          <el-descriptions-item label="固定版本">{{
+            versionName(task?.input.datasetId, task?.input.versionId)
+          }}</el-descriptions-item>
           <el-descriptions-item label="语种">{{
             languageName(task?.input.language || '')
           }}</el-descriptions-item>

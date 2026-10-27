@@ -104,7 +104,11 @@ export interface Task {
   errorMessage?: string
 }
 export interface Options {
-  datasets: { id: number; name: string; versions: { id: string; languages: string[] }[] }[]
+  datasets: {
+    id: number
+    name: string
+    versions: { id: string; label: string; languages: string[] }[]
+  }[]
   schemes: {
     id: string
     name: string

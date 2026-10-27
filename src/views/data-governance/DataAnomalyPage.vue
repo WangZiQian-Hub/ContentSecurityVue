@@ -205,6 +205,16 @@ function changeVersion() {
   scope.language = isGovernanceLlm ? 'all' : version.value?.languages[0]?.code || 'all'
   void loadScope()
 }
+function versionName(datasetId?: number, versionId?: string, fallback?: string) {
+  return (
+    options.value?.datasets
+      .find((item) => item.id === datasetId)
+      ?.versions.find((item) => item.id === versionId)?.label ??
+    fallback ??
+    versionId ??
+    ''
+  )
+}
 function filter(status = '', type = query.type) {
   Object.assign(query, { status, type, keyword: '', page: 1 })
   void loadRows()
@@ -446,7 +456,9 @@ watch(
       </div>
       <div v-if="result" class="anomaly-result">
         <span
-          >当前结果：{{ result.versionLabel }} · {{ languageName(result.scope.language) }} ·
+          >当前结果：{{
+            versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel)
+          }} · {{ languageName(result.scope.language) }} ·
           当前语种全量范围 · 有效检测 {{ result.validCount }} 条 · 已完成 ·
           {{ result.finishedAt }}</span
         ><el-button link type="primary" @click="openTask">查看任务 ›</el-button>
@@ -545,9 +557,9 @@ watch(
             <b>发现问题：</b>{{ f.reason }}<br /><b>证据：</b>“{{ f.quote }}”
           </p>
           <div class="anomaly-source">
-            数据集：{{ result.datasetName }}<br />版本：{{ selected.versionId }} · 样本：{{
-              selected.id
-            }}<br />原文件 / 行号：{{ selected.source.filename || '未记录' }} /
+            数据集：{{ result.datasetName }}<br />版本：{{
+              versionName(result.scope.datasetId, selected.versionId)
+            }} · 样本：{{ selected.id }}<br />原文件 / 行号：{{ selected.source.filename || '未记录' }} /
             {{ selected.source.line ?? '未记录' }}
           </div>
           <el-button link type="primary" @click="drawer = '原始样本'"
@@ -771,7 +783,9 @@ watch(
           <el-descriptions-item label="数据集">{{
             options?.datasets.find((d) => d.id === task?.input.datasetId)?.name
           }}</el-descriptions-item>
-          <el-descriptions-item label="固定版本">{{ task?.input.versionId }}</el-descriptions-item>
+          <el-descriptions-item label="固定版本">{{
+            versionName(task?.input.datasetId, task?.input.versionId)
+          }}</el-descriptions-item>
           <el-descriptions-item label="语种">{{
             languageName(task?.input.language || '')
           }}</el-descriptions-item>

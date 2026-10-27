@@ -116,6 +116,16 @@ function resetDataset() {
   scope.versionId = versions.value[0]?.id ?? ''
   resetVersion()
 }
+function versionName(datasetId?: number, versionId?: string, fallback?: string) {
+  return (
+    options.value?.datasets
+      .find((item) => item.id === datasetId)
+      ?.versions.find((item) => item.id === versionId)?.label ??
+    fallback ??
+    versionId ??
+    ''
+  )
+}
 async function loadOptions() {
   optionsFailed.value = false
   try {
@@ -424,7 +434,9 @@ onMounted(loadOptions)
       </div>
       <div v-if="result" class="value-result-line">
         <span
-          >当前结果：{{ result.versionLabel }} / {{ result.languageName }} /
+          >当前结果：{{
+            versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel)
+          }} / {{ result.languageName }} /
           {{ result.schemeName }} · 分析时间 ·
           {{ new Date(result.finishedAt).toLocaleString('zh-CN') }}
           <template v-if="result.manifestHash">
@@ -681,7 +693,9 @@ onMounted(loadOptions)
           taskFailed ? '—' : taskStatus || '查询中…'
         }}</el-descriptions-item>
         <el-descriptions-item label="数据集">{{ result?.datasetName }}</el-descriptions-item>
-        <el-descriptions-item label="固定版本">{{ result?.versionLabel }}</el-descriptions-item>
+        <el-descriptions-item label="固定版本">{{
+          result ? versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel) : ''
+        }}</el-descriptions-item>
         <el-descriptions-item label="语种">{{ result?.languageName }}</el-descriptions-item>
         <el-descriptions-item label="方案">{{ result?.schemeName }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ result?.finishedAt }}</el-descriptions-item>
