@@ -16,9 +16,11 @@ import {
   downloadRealArtifact,
   fetchRealTrainingMetrics,
   fetchRealTrainingTask,
+  fetchTrainingScripts,
   listRealArtifacts,
   syncRealTraining,
   type RealArtifact,
+  type TrainingScriptCatalog,
 } from '../../api/model-workbench'
 const store = useModelWorkbench()
 /** 真实训练任务用模型服务的 UUID 做主键；旧的演示台账是 TR-xxxxxxxx 短号。 */
@@ -58,11 +60,35 @@ const chart = computed<EChartsOption>(() => ({
 }))
 const dialog = ref(false)
 const checkpoint = ref<{ name: string; epoch: number; loss: number }>()
-/** 后端允许代理建单的真实训练脚本白名单，与 8000 的 REAL_SCRIPTS 保持一致。 */
-const realScripts = [
-  { id: 'mini-mlp', label: '迷你 MLP（合成数据·秒级）', hint: '合成二维数据，用来验证脚本任务、事件流与产物链路。' },
-  { id: 'fashion-cnn', label: 'FashionMNIST 服饰分类 CNN（真实图片）', hint: '两层卷积跑真实灰度图，CPU 分钟级产出 loss/准确率曲线与可下载权重。' },
-]
+/** 真实训练脚本目录，从 8001 透传拉取；不再前端硬编码。8001 注册什么就显示什么。 */
+const realScripts = ref<TrainingScriptCatalog[]>([])
+const realScriptsLoading = ref(false)
+const realScriptsError = ref('')
+/** 当前选中脚本；8001 拉取完成后若默认 scriptId 不在目录里，自动选第一个。 */
+const currentScript = computed(() =>
+  realScripts.value.find((s) => s.id === form.scriptId) ?? realScripts.value[0],
+)
+/** 是否需要"训练样本数"输入框：由 8001 返回的 parameters_schema 是否声明 train_samples 字段决定，不再硬编码脚本 ID。 */
+const scriptHasTrainSamples = computed(() => {
+  const props = (currentScript.value?.parametersSchema?.properties ?? {}) as Record<string, unknown>
+  return 'train_samples' in props
+})
+async function loadRealScripts() {
+  if (isMock || !isGovernanceLlm) return
+  realScriptsLoading.value = true
+  realScriptsError.value = ''
+  try {
+    realScripts.value = await fetchTrainingScripts()
+    // 拉到目录后，若当前 scriptId 不在其中（或还是默认 mini-mlp 但目录里没有），自动选第一项。
+    if (!realScripts.value.some((s) => s.id === form.scriptId)) {
+      form.scriptId = realScripts.value[0]?.id ?? ''
+    }
+  } catch (err) {
+    realScriptsError.value = err instanceof Error ? err.message : '训练脚本目录加载失败'
+  } finally {
+    realScriptsLoading.value = false
+  }
+}
 const form = reactive({
   name: '',
   modelId: store.data.models[0]?.id || '',
@@ -77,14 +103,42 @@ const form = reactive({
   scriptId: 'mini-mlp',
   trainSamples: 5000,
 })
-const realScriptHint = computed(
-  () => realScripts.find((script) => script.id === form.scriptId)?.hint ?? '',
-)
+const realScriptHint = computed(() => currentScript.value?.description ?? '')
 const baseModel = computed(() => store.data.models.find((m) => m.id === form.modelId))
 // 弹窗当前选中的训练数据集，版本下拉随它联动。
 const currentDataset = computed(() =>
   trainingDatasets.value.find((d) => d.id === form.datasetId),
 )
+// 根据当前数据集推断它配套的脚本 dataset_key。
+// 聚合接口已在数据集顶层下发 datasetKey（优先）；再兜底 metadata；最后按名称关键词匹配。
+const currentDatasetKey = computed(() => {
+  const ds = currentDataset.value
+  if (!ds) return ''
+  const top = (ds as Record<string, unknown>).datasetKey
+  if (typeof top === 'string' && top) return top
+  const meta = (ds as Record<string, unknown>).metadata as Record<string, unknown> | undefined
+  const fromMeta = meta?.datasetKey
+  if (typeof fromMeta === 'string' && fromMeta) return fromMeta
+  const name = `${ds.name || ''} ${ds.sourceName || ''}`
+  if (/fashion|服饰|MNIST/i.test(name)) return 'fashion-mnist'
+  if (/cifar/i.test(name)) return 'cifar100'
+  if (/合成|synthetic|mlp/i.test(name)) return 'synthetic'
+  return ''
+})
+// 脚本下拉按当前数据集过滤：只显示 dataset_key 匹配的脚本；数据集没匹配上时下拉为空并提示。
+const filteredScripts = computed(() => {
+  const key = currentDatasetKey.value
+  if (!key) return []
+  return realScripts.value.filter((s) => s.datasetKey === key)
+})
+// 切换数据集后，脚本下拉自动选第一个匹配的脚本；没有匹配则清空。
+watch(currentDatasetKey, (key) => {
+  if (!key) { form.scriptId = ''; return }
+  const matched = realScripts.value.filter((s) => s.datasetKey === key)
+  if (!matched.some((s) => s.id === form.scriptId)) {
+    form.scriptId = matched[0]?.id ?? ''
+  }
+})
 // 后台刷新后原选中数据集可能被标成测试集而掉出选项，自动回退到当前首项，避免表单残留失效 ID。
 watch(trainingDatasets, (list) => {
   if (!list.some((d) => d.id === form.datasetId)) form.datasetId = list[0]?.id || ''
@@ -153,7 +207,7 @@ async function submit() {
         targetVersion: form.targetVersion,
         method: form.method || trainingMethods[0],
         scriptId: form.scriptId,
-        ...(form.scriptId === 'fashion-cnn' ? { trainSamples: form.trainSamples } : {}),
+        ...(scriptHasTrainSamples ? { trainSamples: form.trainSamples } : {}),
       })
       dialog.value = false
       ElMessage.success('真实训练任务已创建，等待模型服务执行')
@@ -190,18 +244,23 @@ async function collectRealCurves(taskId: string) {
   for (const item of items) {
     const epoch = item.epoch
     if (!epoch || !item.metrics) continue
+    // train 事件逐步覆盖，最后一个值是该轮最后一步的瞬时 loss
     if (item.phase === 'train' && typeof item.metrics.loss === 'number') trainLoss[epoch] = item.metrics.loss
-    if (item.phase === 'validation' && typeof item.metrics.loss === 'number')
-      validationLoss[epoch] = item.metrics.loss
+    // validation 事件在同轮 train 事件之后：用轮均 train_loss 覆盖瞬时值，loss 才是验证损失
+    if (item.phase === 'validation') {
+      if (typeof item.metrics.train_loss === 'number') trainLoss[epoch] = item.metrics.train_loss
+      if (typeof item.metrics.loss === 'number') validationLoss[epoch] = item.metrics.loss
+    }
   }
   const epochs = [...new Set([...Object.keys(trainLoss), ...Object.keys(validationLoss)])]
     .map(Number)
     .sort((a, b) => a - b)
+  // 缺值用 null 占位（曲线断点、面板显示“暂无”），不用训练损失顶替验证损失
   return {
-    lossHistory: epochs.map((epoch) => trainLoss[epoch] ?? validationLoss[epoch] ?? 0),
-    validationLossHistory: epochs.map((epoch) => validationLoss[epoch] ?? trainLoss[epoch] ?? 0),
+    lossHistory: epochs.map((epoch) => trainLoss[epoch] ?? null),
+    validationLossHistory: epochs.map((epoch) => validationLoss[epoch] ?? null),
     checkpoints: epochs
-      .filter((epoch) => validationLoss[epoch] !== undefined)
+      .filter((epoch) => validationLoss[epoch] != null)
       .map((epoch) => ({
         name: `checkpoint-${String(epoch).padStart(2, '0')}`,
         epoch,
@@ -253,6 +312,7 @@ watch(() => store.data.training, ensureSyncTimer, { deep: true })
 onMounted(() => {
   void syncRealTasks()
   ensureSyncTimer()
+  void loadRealScripts()
 })
 onBeforeUnmount(() => {
   if (syncTimer) clearInterval(syncTimer)
@@ -466,14 +526,16 @@ async function saveArtifact(row: RealArtifact) {
             :value="v.version"
             :label="v.version" /></el-select></el-form-item
       ><el-form-item v-if="isGovernanceLlm && !isMock" label="训练脚本" required
-        ><el-select v-model="form.scriptId"
+        ><el-select v-model="form.scriptId" :loading="realScriptsLoading" :disabled="filteredScripts.length === 0"
           ><el-option
-            v-for="script in realScripts"
+            v-for="script in filteredScripts"
             :key="script.id"
-            :label="script.label"
+            :label="script.name"
             :value="script.id" /></el-select
-        ><span class="mw-field-hint">{{ realScriptHint }}</span></el-form-item
-      ><el-form-item v-if="isGovernanceLlm && !isMock && form.scriptId === 'fashion-cnn'" label="训练样本数"
+        ><span v-if="realScriptsError" class="mw-field-hint" style="color:#f56c6c">{{ realScriptsError }}</span
+        ><span v-else-if="currentDatasetKey && filteredScripts.length === 0" class="mw-field-hint" style="color:#e6a23c">当前数据集暂无配套训练脚本，请先在 8001 注册对应脚本</span
+        ><span v-else class="mw-field-hint">{{ realScriptHint }}</span></el-form-item
+      ><el-form-item v-if="isGovernanceLlm && !isMock && scriptHasTrainSamples" label="训练样本数"
         ><el-input-number
           v-model="form.trainSamples"
           :min="100"

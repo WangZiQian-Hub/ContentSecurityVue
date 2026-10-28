@@ -187,6 +187,20 @@ export function createRealTraining(data: Record<string, unknown>): Promise<Recor
   })
 }
 
+/** 模型服务登记的真实训练脚本目录（8001 /scripts 透传）。前端不再硬编码脚本白名单。 */
+export interface TrainingScriptCatalog {
+  id: string
+  name: string
+  description: string
+  /** 配套数据集标识；axios 拦截器已把 dataset_key 转成 datasetKey。 */
+  datasetKey: string
+  inputsSchema: Record<string, unknown>
+  parametersSchema: Record<string, unknown>
+}
+export function fetchTrainingScripts(): Promise<TrainingScriptCatalog[]> {
+  return request<TrainingScriptCatalog[]>({ url: '/training-tasks/scripts' })
+}
+
 /** 把模型服务的真实训练进度同步进业务台账（轮次/检查点/终态生成合规事件）。 */
 export function syncRealTraining(taskId: string, data: Record<string, unknown>) {
   return request({
