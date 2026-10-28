@@ -64,10 +64,8 @@ const checkpoint = ref<{ name: string; epoch: number; loss: number }>()
 const realScripts = ref<TrainingScriptCatalog[]>([])
 const realScriptsLoading = ref(false)
 const realScriptsError = ref('')
-/** 当前选中脚本；8001 拉取完成后若默认 scriptId 不在目录里，自动选第一个。 */
-const currentScript = computed(() =>
-  realScripts.value.find((s) => s.id === form.scriptId) ?? realScripts.value[0],
-)
+/** 当前选中脚本；未选中时不做目录首项兜底，避免提示/参数跟着无关脚本走。 */
+const currentScript = computed(() => realScripts.value.find((s) => s.id === form.scriptId))
 /** 是否需要"训练样本数"输入框：由 8001 返回的 parameters_schema 是否声明 train_samples 字段决定，不再硬编码脚本 ID。 */
 const scriptHasTrainSamples = computed(() => {
   const props = (currentScript.value?.parametersSchema?.properties ?? {}) as Record<string, unknown>
@@ -79,9 +77,10 @@ async function loadRealScripts() {
   realScriptsError.value = ''
   try {
     realScripts.value = await fetchTrainingScripts()
-    // 拉到目录后，若当前 scriptId 不在其中（或还是默认 mini-mlp 但目录里没有），自动选第一项。
-    if (!realScripts.value.some((s) => s.id === form.scriptId)) {
-      form.scriptId = realScripts.value[0]?.id ?? ''
+    // 目录回来后按当前数据集重新匹配，避免默认值或两个异步加载的先后顺序决定脚本。
+    const matched = filteredScripts.value
+    if (!matched.some((s) => s.id === form.scriptId)) {
+      form.scriptId = matched[0]?.id ?? ''
     }
   } catch (err) {
     realScriptsError.value = err instanceof Error ? err.message : '训练脚本目录加载失败'
@@ -100,7 +99,7 @@ const form = reactive({
   batchSize: 8,
   targetVersion: '',
   method: trainingMethods[0] as string,
-  scriptId: 'mini-mlp',
+  scriptId: '',
   trainSamples: 5000,
 })
 const realScriptHint = computed(() => currentScript.value?.description ?? '')
@@ -119,7 +118,7 @@ const currentDatasetKey = computed(() => {
   const meta = (ds as Record<string, unknown>).metadata as Record<string, unknown> | undefined
   const fromMeta = meta?.datasetKey
   if (typeof fromMeta === 'string' && fromMeta) return fromMeta
-  const name = `${ds.name || ''} ${ds.sourceName || ''}`
+  const name = ds.name || ''
   if (/fashion|服饰|MNIST/i.test(name)) return 'fashion-mnist'
   if (/cifar/i.test(name)) return 'cifar100'
   if (/合成|synthetic|mlp/i.test(name)) return 'synthetic'
@@ -138,7 +137,7 @@ watch(currentDatasetKey, (key) => {
   if (!matched.some((s) => s.id === form.scriptId)) {
     form.scriptId = matched[0]?.id ?? ''
   }
-})
+}, { immediate: true })
 // 后台刷新后原选中数据集可能被标成测试集而掉出选项，自动回退到当前首项，避免表单残留失效 ID。
 watch(trainingDatasets, (list) => {
   if (!list.some((d) => d.id === form.datasetId)) form.datasetId = list[0]?.id || ''
@@ -409,6 +408,8 @@ async function saveArtifact(row: RealArtifact) {
     </PanelCard>
     <PanelCard title="训练配置" icon="Setting"
       ><el-descriptions v-if="selected" :column="1" border
+        ><el-descriptions-item label="任务ID"
+          ><code class="mw-task-id">{{ selected.id }}</code></el-descriptions-item
         ><el-descriptions-item label="基础模型"
           >{{ model?.name }} {{ selected.baseVersion }}</el-descriptions-item
         ><el-descriptions-item label="训练方式">{{ selected.method || '未记录' }}</el-descriptions-item

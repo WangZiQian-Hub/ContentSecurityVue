@@ -73,6 +73,16 @@ function edgePath(relation: { fromId: string; toId: string }) {
 function shortNodeLabel(label: string) {
   return label.length > 12 ? `${label.slice(0, 12)}…` : label
 }
+// 数据集与模型可能同名（都叫 FashionMNIST…）且版本号也可能相同，只靠圆点颜色分不清。
+const NODE_TYPE_LABELS: Record<string, string> = {
+  dataset: '数据集',
+  model: '模型版本',
+  training_task: '训练任务',
+  task: '处理任务',
+}
+function nodeTypeLabel(type: string) {
+  return NODE_TYPE_LABELS[type] || type
+}
 const objectCandidates = computed(() => {
   const seen = new Set<string>()
   return store.candidates.filter((candidate) => {
@@ -267,6 +277,9 @@ function selectRow(row: { id: string }) {
                   "
                   style="width: 38px; height: 38px; color: white"
               /></foreignObject>
+              <text y="-56" text-anchor="middle" fill="#7187a7" font-size="12">
+                {{ nodeTypeLabel(node.type) }}
+              </text>
               <text y="70" text-anchor="middle" fill="#183d73" font-size="16" font-weight="600">
                 <title>{{ node.label }}</title>
                 {{ shortNodeLabel(node.label) }}
