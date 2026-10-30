@@ -79,6 +79,7 @@ const form = reactive({
   languages: ['zh'],
   modalities: ['文本'],
   sourceName: '',
+  ingestNote: '',
   sourceAddress: '',
   sourceTable: '',
   sourceQuery: '',
@@ -238,6 +239,7 @@ async function submit() {
         modalities: [...form.modalities],
         files: fileIds,
         sourceName: form.sourceName.trim(),
+        ingestNote: form.ingestNote.trim(),
         sourceAddress: form.sourceAddress || null,
         sourceTable: form.sourceTable || null,
         sourceQuery: form.sourceQuery || null,
@@ -365,7 +367,7 @@ onMounted(async () => {
               accept=".txt,.csv,.json,.xlsx,.pdf"
               :on-change="validateFile"
               ><AppIcon name="UploadFilled" /><b>点击或拖拽文件到此处</b>
-              <p>支持 TXT、CSV、JSON、XLSX、PDF<br />单个文件不超过 2GB</p></el-upload
+              <p>支持 TXT、CSV、JSON、XLSX、PDF<br />CSV 首行为列名，每个非空数据行算一条<br />单个文件不超过 2GB</p></el-upload
             >
             <div v-else class="resource-source-hint">
               <AppIcon :name="selectedSource.icon" /><b>{{ selectedSource.label }}接入</b>
@@ -401,6 +403,16 @@ onMounted(async () => {
             <el-form-item label="数据所有者" required>
               <el-input v-model="form.owner" placeholder="请输入数据所有者"
             /></el-form-item>
+            <el-form-item label="本次接入说明（可选）">
+              <el-input
+                v-model="form.ingestNote"
+                type="textarea"
+                :rows="2"
+                maxlength="450"
+                show-word-limit
+                placeholder="例如：补充一条美食主题测试样本"
+              />
+            </el-form-item>
           </div>
         </div>
         <div class="resource-submit">
