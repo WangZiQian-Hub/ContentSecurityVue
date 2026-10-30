@@ -58,6 +58,7 @@ const taskOpen = ref(false)
 const taskLoading = ref(false)
 const taskFailed = ref(false)
 const taskStatus = ref('')
+const taskDetail = ref<ValueTask | null>(null)
 let resultSeq = 0
 let sampleSeq = 0
 let historySeq = 0
@@ -257,10 +258,14 @@ async function showTaskDetail() {
   taskOpen.value = true
   taskLoading.value = true
   taskFailed.value = false
+  taskDetail.value = null
   const seq = ++taskSeq
   try {
     const task = await api.getValueTask(id)
-    if (seq === taskSeq) taskStatus.value = statusNames[task.status]
+    if (seq === taskSeq) {
+      taskStatus.value = statusNames[task.status]
+      taskDetail.value = task
+    }
   } catch {
     if (seq === taskSeq) taskFailed.value = true
   } finally {
@@ -436,11 +441,12 @@ onMounted(loadOptions)
         <span
           >当前结果：{{
             versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel)
-          }} / {{ result.languageName }} /
-          {{ result.schemeName }} · 分析时间 ·
+          }}
+          / {{ result.languageName }} / {{ result.schemeName }} · 分析时间 ·
           {{ new Date(result.finishedAt).toLocaleString('zh-CN') }}
           <template v-if="result.manifestHash">
-            · 样本清单 <code :title="result.manifestHash">{{ result.manifestHash.slice(0, 8) }}…</code>
+            · 样本清单
+            <code :title="result.manifestHash">{{ result.manifestHash.slice(0, 8) }}…</code>
           </template></span
         ><el-button link type="primary" @click="showTaskDetail">查看任务 ›</el-button>
       </div>
@@ -692,9 +698,29 @@ onMounted(loadOptions)
         <el-descriptions-item label="状态">{{
           taskFailed ? '—' : taskStatus || '查询中…'
         }}</el-descriptions-item>
+        <el-descriptions-item label="调用模型"
+          >{{
+            taskLoading
+              ? '查询中…'
+              : taskFailed
+                ? '读取失败'
+                : taskDetail?.modelName || taskDetail?.modelVersion || '未记录'
+          }}<span
+            v-if="
+              !taskLoading &&
+              !taskFailed &&
+              taskDetail?.modelName &&
+              taskDetail.modelVersion &&
+              taskDetail.modelName !== taskDetail.modelVersion
+            "
+            >（{{ taskDetail.modelVersion }}）</span
+          ></el-descriptions-item
+        >
         <el-descriptions-item label="数据集">{{ result?.datasetName }}</el-descriptions-item>
         <el-descriptions-item label="固定版本">{{
-          result ? versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel) : ''
+          result
+            ? versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel)
+            : ''
         }}</el-descriptions-item>
         <el-descriptions-item label="语种">{{ result?.languageName }}</el-descriptions-item>
         <el-descriptions-item label="方案">{{ result?.schemeName }}</el-descriptions-item>

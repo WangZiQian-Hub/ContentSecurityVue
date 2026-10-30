@@ -72,6 +72,9 @@ export interface ValueSampleQuery {
 export interface ValueTask {
   taskId: string
   name: string
+  modelId?: string | null
+  modelName?: string | null
+  modelVersion?: string | null
   status: TaskStatus
   createdAt: string
   resultId: string | null

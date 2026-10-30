@@ -61,6 +61,8 @@ export interface Task {
   coverage: number
   ruleVersion: string
   modelVersion: string
+  modelId?: string | null
+  modelName?: string | null
   errorMessage?: string
 }
 export interface Query {

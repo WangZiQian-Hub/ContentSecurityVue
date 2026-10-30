@@ -780,6 +780,13 @@ watch(
           <el-descriptions-item label="状态">{{
             task && TASK_STATUS[task.status].label
           }}</el-descriptions-item>
+          <el-descriptions-item label="调用模型">
+            {{ task?.modelName || task?.modelVersion || '未记录' }}
+            <span
+              v-if="task?.modelName && task.modelVersion && task.modelName !== task.modelVersion"
+              >（{{ task.modelVersion }}）</span
+            >
+          </el-descriptions-item>
           <el-descriptions-item label="数据集">{{
             options?.datasets.find((d) => d.id === task?.input.datasetId)?.name
           }}</el-descriptions-item>
@@ -790,7 +797,6 @@ watch(
             languageName(task?.input.language || '')
           }}</el-descriptions-item>
           <el-descriptions-item label="方案">{{ task?.ruleVersion }}</el-descriptions-item>
-          <el-descriptions-item label="检测来源">{{ task?.modelVersion }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ task?.createdAt }}</el-descriptions-item>
           <el-descriptions-item label="结果ID">{{
             task?.resultId || '尚未生成'

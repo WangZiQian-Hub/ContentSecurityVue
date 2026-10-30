@@ -96,6 +96,9 @@ export interface Result {
 }
 export interface Task {
   id: string
+  modelId?: string | null
+  modelName?: string | null
+  modelVersion?: string | null
   taskId?: string
   status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
   input: Scope

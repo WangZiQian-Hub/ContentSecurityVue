@@ -714,6 +714,12 @@ onBeforeUnmount(() => {
           ><el-descriptions-item label="状态">{{
             task && TASK_STATUS[task.status].label
           }}</el-descriptions-item
+          ><el-descriptions-item label="调用模型">
+            {{ task?.modelName || task?.modelVersion || '未记录' }}
+            <span
+              v-if="task?.modelName && task.modelVersion && task.modelName !== task.modelVersion"
+              >（{{ task.modelVersion }}）</span
+            > </el-descriptions-item
           ><el-descriptions-item label="数据集">{{
             options?.datasets.find((d) => d.id === task?.input.datasetId)?.name
           }}</el-descriptions-item>
