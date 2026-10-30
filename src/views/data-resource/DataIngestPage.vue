@@ -79,6 +79,7 @@ const form = reactive({
   languages: ['zh'],
   modalities: ['文本'],
   sourceName: '',
+  // 改之前：表单没有记录“这批数据是做什么的”；改之后：备注随接入任务提交，供版本清单说明展示。
   ingestNote: '',
   sourceAddress: '',
   sourceTable: '',
@@ -239,6 +240,7 @@ async function submit() {
         modalities: [...form.modalities],
         files: fileIds,
         sourceName: form.sourceName.trim(),
+        // 改之前：任务只提交来源和数据所有者；改之后：把用户填写的接入备注一并发给后端保存到新版本。
         ingestNote: form.ingestNote.trim(),
         sourceAddress: form.sourceAddress || null,
         sourceTable: form.sourceTable || null,
@@ -403,6 +405,8 @@ onMounted(async () => {
             <el-form-item label="数据所有者" required>
               <el-input v-model="form.owner" placeholder="请输入数据所有者"
             /></el-form-item>
+            <!-- 改之前：用户无法说明本批数据内容，版本抽屉只能显示系统生成的任务信息。 -->
+            <!-- 改之后：填写的说明会随本次接入保存，并显示在数据集管理抽屉的版本“说明”列。 -->
             <el-form-item label="本次接入说明（可选）">
               <el-input
                 v-model="form.ingestNote"
