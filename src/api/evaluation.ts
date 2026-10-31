@@ -124,7 +124,7 @@ export const evaluationHttpApi = {
   samples: (runId: string, metricCode: string, page: number, signal?: AbortSignal) =>
     request<EvaluationPageResult<Sample>>({
       url: `/evaluation/runs/${id(runId)}/samples`,
-      params: { metricCode, page, pageSize: 10, outcome: 'failed' },
+      params: { metricCode, page, pageSize: 10, outcome: 'all' },
       signal,
     }),
   manifest: (runId: string, signal?: AbortSignal) =>

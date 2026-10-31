@@ -52,6 +52,7 @@ export interface ValueResult {
   validCount: number
   highCount: number
   unavailableCount: number
+  failedSamples?: { sampleId: string; errorCode: string; reason: string }[]
   failedCount: number
   targetCount: number
   languages: string[]
@@ -70,6 +71,7 @@ export interface ValueSampleQuery {
   sortOrder?: 'asc' | 'desc'
 }
 export interface ValueTask {
+  failedSamples?: { sampleId: string; errorCode: string; reason: string }[]
   taskId: string
   name: string
   modelId?: string | null

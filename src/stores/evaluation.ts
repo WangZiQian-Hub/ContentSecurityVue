@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
-import { evaluationApi as api } from '../api/evaluation'
+import { evaluationApi as api, isEvaluationDemo } from '../api/evaluation'
+import { request as platformRequest } from '../api/request'
 import type {
   Contexts,
   EvaluationEvent,
@@ -174,10 +175,34 @@ export const useEvaluationStore = defineStore('evaluation', () => {
       return
     }
     const link = document.createElement('a')
-    link.href = url.href
+    let objectUrl: string | undefined
+    if (!isEvaluationDemo) {
+      try {
+        const artifact = await platformRequest<{ content: string; sha256: string }>({
+          url: url.pathname.replace(/^\/api\/v1/, ''),
+        })
+        const hash = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(artifact.content),
+        )
+        const actual = [...new Uint8Array(hash)]
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')
+        if (actual !== artifact.sha256 || actual !== ticket.sha256)
+          throw new Error('下载文件指纹不一致')
+        objectUrl = URL.createObjectURL(
+          new Blob([artifact.content], { type: 'application/json;charset=utf-8' }),
+        )
+      } catch (cause) {
+        describeError(cause)
+        return
+      }
+    }
+    link.href = objectUrl || url.href
     link.download = ticket.fileName
     link.rel = 'noopener'
     link.click()
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
   }
   return {
     metrics,

@@ -84,6 +84,9 @@ export interface SourceRef {
   versionId: string
 }
 export interface SourceContext extends SourceRef {
+  supportedMetricCodes?: string[]
+  evaluationIssues?: string[]
+  referenceField?: string
   name: string
   sourceModule: string
   sourceTaskId: string
@@ -217,6 +220,15 @@ export interface EvaluationRun {
   exports?: ExportJob[]
 }
 export interface Sample {
+  expectedDisplay?: string
+  predictedDisplay?: string
+  judgmentType?: string
+  expectedLevel?: string | null
+  predictedLevel?: string | null
+  predictionStatus?: string
+  correct?: boolean | null
+  reason?: string
+  includedInMetric?: boolean
   sampleId: string
   expected: boolean | null
   predicted: boolean | null

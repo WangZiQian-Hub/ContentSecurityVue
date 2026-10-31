@@ -693,6 +693,15 @@ onMounted(loadOptions)
       <p class="muted">最多展示当前范围最近 20 个任务；进行中的任务可手动刷新状态。</p></el-drawer
     >
     <el-drawer v-model="taskOpen" title="任务详情" size="min(720px, 90vw)">
+      <details v-if="result?.failedCount" style="margin-bottom: 16px">
+        <summary>查看失败样本（{{ result.failedCount }} 条）</summary>
+        <el-table :data="taskDetail?.failedSamples || result.failedSamples || []">
+          <el-table-column prop="sampleId" label="样本 ID" />
+          <el-table-column prop="errorCode" label="错误类型" />
+          <el-table-column prop="reason" label="失败原因" min-width="240" />
+        </el-table>
+        <p v-if="!taskDetail?.failedSamples?.length && !result.failedSamples?.length">这份历史结果未保存逐条原因，新分析任务会记录。</p>
+      </details>
       <el-descriptions v-loading="taskLoading" :column="1" border>
         <el-descriptions-item label="任务ID">{{ result?.taskId }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{

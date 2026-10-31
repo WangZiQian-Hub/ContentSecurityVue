@@ -4,6 +4,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import RiskChart from './components/RiskChart.vue'
 import RiskWeightAccuracyCard from './components/RiskWeightAccuracyCard.vue'
 import { languageName } from '../../utils/governance-language'
+import { formatBeijingTime } from '../../utils/beijing-time'
 import { assertResultScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
 import * as api from '../../api/data-risk'
@@ -431,7 +432,7 @@ onBeforeUnmount(() => {
           >{{ versionName(result.scope.datasetId, result.scope.versionId) }} ·
           {{ languageName(result.scope.language) }} ·
           {{ result.status }} · 有效检测 {{ result.validCount.toLocaleString() }} 条 ·
-          {{ result.finishedAt }}</span
+          {{ formatBeijingTime(result.finishedAt) }}（北京时间）</span
         ><el-button
           link
           type="primary"
@@ -462,6 +463,16 @@ onBeforeUnmount(() => {
         已复核 {{ result.reviewedCount }} · 无法判断 {{ result.unassessableCount }} · 检测失败
         {{ result.failedCount }}。等级为原检测建议，未复核不等于确认违法。
       </p>
+      <details v-if="result?.failedCount" class="risk-note">
+        <summary>查看检测失败原因（{{ result.failedCount }} 条）</summary>
+        <el-table v-if="result.failedSamples?.length" :data="result.failedSamples">
+          <el-table-column prop="sampleId" label="样本 ID" width="120" />
+          <el-table-column prop="language" label="语种" width="90" />
+          <el-table-column prop="reason" label="失败原因" min-width="240" />
+          <el-table-column prop="errorCode" label="错误类型" min-width="200" />
+        </el-table>
+        <p v-else>这份历史结果未保存逐条失败原因，新任务会记录具体原因。</p>
+      </details>
       <el-alert
         v-if="result && !result.riskCount"
         :title="
@@ -613,6 +624,7 @@ onBeforeUnmount(() => {
           <div v-for="f in selected.findings" :key="f.ruleId" class="risk-reason">
             <b>{{ f.category }}</b>
             <p>{{ f.reason }}</p>
+            <blockquote v-if="f.quote">{{ f.quote }}</blockquote>
             <el-button
               link
               type="primary"
@@ -698,7 +710,9 @@ onBeforeUnmount(() => {
       >
       <template v-else-if="drawer === '历史结果'"
         ><el-table class="history-table" :data="history" empty-text="当前固定条件无历史结果"
-          ><el-table-column prop="finishedAt" label="完成时间" min-width="190" /><el-table-column
+          ><el-table-column label="完成时间（北京时间）" min-width="190"
+            ><template #default="{ row }">{{ formatBeijingTime(row.finishedAt) }}</template></el-table-column
+          ><el-table-column
             prop="riskCount"
             label="风险候选"
           /><el-table-column label="操作"
@@ -732,7 +746,7 @@ onBeforeUnmount(() => {
           <el-descriptions-item label="分级方案">{{
             options?.schemes.find((s) => s.id === task?.input.schemeId)?.name
           }}</el-descriptions-item
-          ><el-descriptions-item label="创建时间">{{ task?.createdAt }}</el-descriptions-item
+          ><el-descriptions-item label="创建时间（北京时间）">{{ formatBeijingTime(task?.createdAt) }}</el-descriptions-item
           ><el-descriptions-item label="结果 ID">{{
             task?.resultId || '尚未生成'
           }}</el-descriptions-item
@@ -756,13 +770,13 @@ onBeforeUnmount(() => {
             (f) => f.ruleId === activeRule?.id && f.ruleVersion === activeRule?.version,
           )"
           :key="f.ruleId"
-          ><blockquote
+          ><blockquote v-if="f.quote">{{ f.quote }}</blockquote><template v-else><blockquote
             v-for="e in selected?.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
             :key="e.id"
           >
             {{ e.quote }}
             <p>{{ e.feature }}</p>
-          </blockquote></template
+          </blockquote></template></template
         ></template
       >
       <template v-else-if="drawer === '关联案例'"
@@ -809,18 +823,19 @@ onBeforeUnmount(() => {
             <h4>{{ f.category }} · {{ label(f.suggestedLevel) }}</h4>
             <p>{{ f.reason }}</p>
             <p>{{ f.ruleId }} · v{{ f.ruleVersion }}</p>
-            <blockquote
+            <blockquote v-if="f.quote">{{ f.quote }}</blockquote>
+            <template v-else><blockquote
               v-for="e in selected.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
               :key="e.id"
             >
               {{ e.quote }}
               <p>{{ e.feature }} · {{ e.id }}</p>
-            </blockquote>
+            </blockquote></template>
           </section>
           <h3>人工复核（独立记录）</h3>
           <p>状态：{{ selected.status }} · 工单：{{ selected.review?.id || '尚未创建' }}</p>
           <template v-if="selected.review"
-            ><p>复核人：{{ selected.review.reviewer }} · {{ selected.review.updatedAt }}</p>
+            ><p>复核人：{{ selected.review.reviewer }} · {{ formatBeijingTime(selected.review.updatedAt) }}（北京时间）</p>
             <p>
               结论：{{
                 options?.reviewDecisions.find((d) => d.value === selected?.review?.decision)

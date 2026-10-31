@@ -35,6 +35,13 @@ const selectedMetrics = computed(
       (m) => m.activeRevision && config.metricRevisionRefs.includes(m.activeRevision.revisionId),
     ) || [],
 )
+const availableMetrics = computed(
+  () =>
+    store.metrics?.items.filter(
+      (m) =>
+        !source.value?.supportedMetricCodes || source.value.supportedMetricCodes.includes(m.code),
+    ) || [],
+)
 const canWrite = computed(() => store.session?.allowedActions.includes('write'))
 const requirements = computed(() => [
   ...new Set(selectedMetrics.value.flatMap((m) => m.activeRevision?.inputRequirements || [])),
@@ -44,6 +51,7 @@ watch([() => JSON.stringify({ ...config, preflightToken: null }), name], () => {
   store.preflight = null
 })
 watch(selectedSource, () => {
+  config.metricRevisionRefs = []
   const value = source.value
   config.sourceRefs = value
     ? [{ entityType: value.entityType, entityId: value.entityId, versionId: value.versionId }]
@@ -51,6 +59,7 @@ watch(selectedSource, () => {
   config.datasetVersionRef = value?.datasetVersion || ''
   config.labelVersionRef = value?.labelVersion || ''
   config.modelVersionRef = value?.modelVersion || null
+  if (value && !value.canRerun) config.executionMode = 'reference'
 })
 async function loadSources() {
   selectedSource.value = ''
@@ -130,6 +139,7 @@ onMounted(load)
           <el-form-item label="执行方式"
             ><el-select v-model="config.executionMode"
               ><el-option label="引用已有结果" value="reference" /><el-option
+                :disabled="source && !source.canRerun"
                 label="重新运行能力"
                 value="rerun" /></el-select
           ></el-form-item>
@@ -166,7 +176,11 @@ onMounted(load)
                 v-for="candidate in store.contexts?.candidates || []"
                 :key="`${candidate.entityId}:${candidate.versionId}`"
                 :value="`${candidate.entityId}:${candidate.versionId}`"
-                :label="`${candidate.name} · ${candidate.versionId}`" /></el-select
+                :label="
+                  candidate.entityType === 'task_result'
+                    ? candidate.name
+                    : `${candidate.name} · ${candidate.versionId}`
+                " /></el-select
           ></el-form-item></div
       ></el-form>
       <div v-if="store.contexts?.resolution === 'unavailable'" class="ev-note">
@@ -194,17 +208,27 @@ onMounted(load)
         <div class="ev-field">
           <span>算法来源</span><span>{{ label(source.algorithmMode) }}</span>
         </div>
+        <div v-for="issue in source.evaluationIssues || []" :key="issue" class="ev-note">
+          {{ issue }}
+        </div>
+        <p v-if="source.referenceField === 'reference_value_tier'" class="ev-muted">
+          人工标准答案使用
+          reference_value_tier：high（高价值）、medium（中价值）、low（低价值）。缺少标注时不能计算准确率。
+        </p>
+        <p v-if="source.referenceField === 'reference_is_anomaly'" class="ev-muted">
+          人工标准答案使用 reference_is_anomaly：true（异常）或
+          false（正常）。本次评估检测是否正确，不评定修改建议是否修复成功。
+        </p>
         <div v-if="config.executionMode === 'rerun' && !source.canRerun" class="ev-note">
           此来源当前不支持重新运行。
         </div></template
       >
       <h3 style="margin-top: 24px">选择验收指标</h3>
+      <p v-if="source?.supportedMetricCodes" class="ev-muted">
+        将本次治理结果与人工标准答案逐条比较，不重新调用模型。以下指标使用真实样本计算，默认阈值请按项目要求确认。
+      </p>
       <el-checkbox-group v-model="config.metricRevisionRefs" class="ev-metric-options"
-        ><div
-          v-for="metric in store.metrics?.items || []"
-          :key="metric.metricId"
-          class="ev-metric-option"
-        >
+        ><div v-for="metric in availableMetrics" :key="metric.metricId" class="ev-metric-option">
           <el-checkbox
             :value="metric.activeRevision?.revisionId || metric.metricId"
             :disabled="

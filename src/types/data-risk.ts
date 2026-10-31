@@ -37,6 +37,7 @@ export interface Rule {
 export interface Finding {
   category: string
   suggestedLevel: Level
+  quote?: string
   reason: string
   ruleId: string
   ruleVersion: string
@@ -91,6 +92,7 @@ export interface Result {
   reviewedCount: number
   unassessableCount: number
   failedCount: number
+  failedSamples?: { sampleId: string; language: string; errorCode: string; reason: string }[]
   levels: { level: Level; label: string; color: string; count: number; percent: number }[]
   actions: string[]
 }

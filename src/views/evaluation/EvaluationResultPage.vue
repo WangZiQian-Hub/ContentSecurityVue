@@ -47,7 +47,6 @@ async function load() {
 }
 async function loadSamples(next = 1) {
   samplePage.value = next
-  store.samples = null
   await store.fetchData(
     'samples',
     (signal) => api.samples(runId, metricCode.value, next, signal),
@@ -164,7 +163,7 @@ onMounted(load)
                 "
                 link
                 @click="selectMetric(row.metricCode)"
-                >失败样本</el-button
+                >逐条对错</el-button
               ></template
             ></el-table-column
           ></el-table
@@ -172,22 +171,54 @@ onMounted(load)
       >
       <div class="ev-columns">
         <EvaluationPanel
-          title="未达标样本定位"
+          title="逐条判断与标准答案"
           subtitle="只读核验标准标签与预测，调整请回来源模块。"
           ><el-empty
             v-if="!metricCode"
-            description="选择指标的“失败样本”查看明细"
+            description="选择指标的“逐条对错”查看明细"
             :image-size="70" /><template v-else
-            ><el-table :data="store.samples?.items || []" empty-text="暂无对应失败样本"
+            ><el-table :data="store.samples?.items || []" empty-text="暂无对应样本"
               ><el-table-column prop="sampleId" label="样本编号" /><el-table-column label="标准标签"
                 ><template #default="{ row }">{{
-                  row.expected === null ? '缺失' : row.expected ? '正类' : '负类'
+                  row.expectedDisplay ??
+                  (row.expectedLevel !== undefined
+                    ? label(row.expectedLevel)
+                    : row.expected === null
+                      ? '缺失'
+                      : row.expected
+                        ? '正类'
+                        : '负类')
                 }}</template></el-table-column
               ><el-table-column label="预测结果"
                 ><template #default="{ row }">{{
-                  row.predicted === null ? '缺失' : row.predicted ? '正类' : '负类'
+                  row.predictedDisplay ??
+                  (row.predictionStatus
+                    ? row.predictedLevel
+                      ? label(row.predictedLevel)
+                      : label(row.predictionStatus)
+                    : row.predicted === null
+                      ? '缺失'
+                      : row.predicted
+                        ? '正类'
+                        : '负类')
                 }}</template></el-table-column
-              ></el-table
+              ><el-table-column label="判断是否一致"
+                ><template #default="{ row }">{{
+                  row.expectedLevel == null
+                    ? '无标准答案'
+                    : row.correct === true
+                      ? '正确'
+                      : row.correct === false
+                        ? '不一致'
+                        : row.judgmentType
+                          ? '未得到有效判断'
+                          : '未得到四档判断'
+                }}</template></el-table-column
+              ><el-table-column label="计入本项分母"
+                ><template #default="{ row }">{{
+                  row.includedInMetric === undefined ? '—' : row.includedInMetric ? '是' : '否'
+                }}</template></el-table-column
+              ><el-table-column prop="reason" label="说明" min-width="180" /></el-table
             ><EvaluationPager
               :total="store.samples?.total || 0"
               :page="samplePage"
