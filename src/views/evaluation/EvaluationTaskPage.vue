@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { evaluationApi as api } from '../../api/evaluation'
 import { useEvaluationStore } from '../../stores/evaluation'
 import type { EvaluationTask } from '../../types/evaluation'
-import { label, time } from './presentation'
+import { label, time, sourceLink } from './presentation'
 import EvaluationPanel from './components/EvaluationPanel.vue'
 import EvaluationStatus from './components/EvaluationStatus.vue'
 import EvaluationPager from './components/EvaluationPager.vue'
@@ -84,10 +84,12 @@ onMounted(() => load())
       empty-text="暂无测试任务，创建计划后将在这里显示"
     >
       <el-table-column prop="name" label="任务名称" min-width="210" /><el-table-column
-        prop="datasetVersion"
         label="测试集版本"
         min-width="130"
-      /><el-table-column label="模型版本" min-width="100"
+        ><template #default="{ row }">{{
+          row.datasetDisplay || row.datasetVersion
+        }}</template> </el-table-column
+      ><el-table-column label="模型版本" min-width="100"
         ><template #default="{ row }">{{ row.modelVersion || '不适用' }}</template></el-table-column
       ><el-table-column prop="metricCount" label="指标数" width="80" /><el-table-column
         label="目标阶段"
@@ -118,6 +120,12 @@ onMounted(() => load())
               })
             "
             >{{ row.status === 'succeeded' ? '查看结果' : '查看执行' }}</el-button
+          ><el-button
+            v-if="row.sourceRef && sourceLink(row.sourceRef)"
+            link
+            type="primary"
+            @click="router.push(sourceLink(row.sourceRef)!)"
+            >回跳</el-button
           ></template
         ></el-table-column
       > </el-table

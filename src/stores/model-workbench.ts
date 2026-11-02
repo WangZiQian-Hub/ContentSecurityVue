@@ -29,6 +29,36 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
   // 知识编辑不会自动生成新的评估分数。保留上一次已追溯的结果，
   // 由页面明确标记为待更新，避免编辑任务等待期间右侧结果区变成空白。
   const assessmentStale = ref(false)
+  const comparisonTaskId = ref(
+    typeof sessionStorage === 'undefined'
+      ? ''
+      : sessionStorage.getItem('modelComparisonTaskId') || '',
+  )
+  const comparisonProgress = ref(0)
+  const comparisonStatus = ref('')
+  const comparisonError = ref('')
+  let comparisonTimer: ReturnType<typeof setTimeout> | undefined
+  async function refreshComparison() {
+    if (!comparisonTaskId.value || isMock) return
+    if (comparisonTimer) clearTimeout(comparisonTimer)
+    try {
+      const state = await api.comparisonProgress(comparisonTaskId.value)
+      comparisonStatus.value = state.status
+      comparisonProgress.value = state.progress
+      comparisonError.value = state.result.error || ''
+      if (state.status === 'pending' || state.status === 'running') {
+        comparisonTimer = setTimeout(() => void refreshComparison(), 3000)
+      } else {
+        if (state.result.modelAssessment) data.value.assessment = state.result.modelAssessment
+        if (typeof sessionStorage !== 'undefined')
+          sessionStorage.removeItem('modelComparisonTaskId')
+        assessmentStale.value = false
+        await load()
+      }
+    } catch (e) {
+      comparisonError.value = e instanceof Error ? e.message : '评估进度读取失败，请重试'
+    }
+  }
   let assessmentRefreshTimer: ReturnType<typeof setTimeout> | undefined
   function refreshAssessmentInFiveSeconds() {
     if (assessmentRefreshTimer) clearTimeout(assessmentRefreshTimer)
@@ -189,7 +219,13 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
     return run(async () => {
       const service = data.value.services.find((s) => s.id === id)!
       const stopped = isMock
-        ? { ...service, status: 'offline' as const, checkedAt: null, latencyMs: null, healthy: null }
+        ? {
+            ...service,
+            status: 'offline' as const,
+            checkedAt: null,
+            latencyMs: null,
+            healthy: null,
+          }
         : await api.stopModelService(id)
       Object.assign(service, stopped)
       data.value.changes.unshift({
@@ -352,7 +388,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         status:
           task.status === 'succeeded' ? '已完成' : task.status === 'failed' ? '失败' : '执行中',
       })
-      return `编辑任务已提交：${task.taskId}，评估结果将在 5 秒后自动刷新`
+      return `模拟编辑版本已登记：${task.taskId}；发起评估时将按基线模板自动关联推理服务`
     })
   }
   async function assess(input: {
@@ -381,6 +417,12 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       }
       // 指标编码由公共指标库返回，避免前端自行定义正式指标。
       const task = await api.executeComparison(input)
+      comparisonTaskId.value = task.taskId
+      if (typeof sessionStorage !== 'undefined')
+        sessionStorage.setItem('modelComparisonTaskId', task.taskId)
+      comparisonStatus.value = task.status
+      comparisonError.value = ''
+      void refreshComparison()
       if (task.status === 'succeeded') {
         await load()
         assessmentStale.value = false
@@ -396,6 +438,11 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
     loaded,
     editTasks,
     assessmentStale,
+    comparisonTaskId,
+    comparisonProgress,
+    comparisonStatus,
+    comparisonError,
+    refreshComparison,
     load,
     addModel,
     addTraining,

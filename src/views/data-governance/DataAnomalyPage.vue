@@ -47,8 +47,16 @@ let generation = 0,
 const dataset = computed(() => options.value?.datasets.find((d) => d.id === scope.datasetId))
 const version = computed(() => dataset.value?.versions.find((v) => v.id === scope.versionId))
 const candidate = computed(() => selected.value?.candidates.at(-1))
+const detectionScheme = computed(() => {
+  const id = result.value?.scope.schemeId || scope.schemeId
+  return options.value?.schemes.find((item) => item.id === id)?.name || id || '未记录'
+})
+const schemeRules = computed(() => {
+  const id = result.value?.scope.schemeId || scope.schemeId
+  return options.value?.schemes.find((item) => item.id === id)?.rules || options.value?.rules || []
+})
 const rules = computed(() =>
-  options.value?.rules.filter((r) => `${r.id}${r.name}${r.description}`.includes(ruleSearch.value)),
+  schemeRules.value.filter((r) => `${r.id}${r.name}${r.description}`.includes(ruleSearch.value)),
 )
 const metrics = computed(() =>
   result.value
@@ -161,7 +169,7 @@ function changeStatusSort({
   query.page = 1
   void loadRows()
 }
-async function loadScope() {
+async function loadScope(resultId?: string) {
   const ticket = ++generation
   ++listGeneration
   ++selectionGeneration
@@ -180,10 +188,12 @@ async function loadScope() {
   Object.assign(query, { page: 1, keyword: '', type: '', status: '' })
   loading.value = true
   error.value = ''
-  const input = snapshot()
   try {
+    const exact = resultId ? await api.getAnomalyResult(resultId) : null
+    if (exact) Object.assign(scope, exact.scope)
+    const input = snapshot()
     const [r, c] = await Promise.all([
-      api.getLatestAnomaly(input),
+      exact ? Promise.resolve(exact) : api.getLatestAnomaly(input),
       isGovernanceLlm ? Promise.resolve(undefined) : api.getAnomalyChangeSet(input),
     ])
     if (ticket !== generation) return
@@ -392,9 +402,15 @@ onMounted(() =>
     options.value = await api.getAnomalyOptions()
     if (!dataset.value) scope.datasetId = options.value.datasets[0]!.id
     scope.versionId = dataset.value!.versions[0]!.id
-    scope.language = isGovernanceLlm ? 'all' : dataset.value!.versions[0]!.languages[0]?.code || 'all'
+    scope.language = isGovernanceLlm
+      ? 'all'
+      : dataset.value!.versions[0]!.languages[0]?.code || 'all'
     scope.schemeId = options.value.schemes[0]!.id
-    await loadScope()
+    const resultId =
+      typeof window === 'undefined'
+        ? ''
+        : new URLSearchParams(window.location.search).get('resultId') || ''
+    await loadScope(resultId || undefined)
   }),
 )
 onBeforeUnmount(() => {
@@ -432,7 +448,10 @@ watch(
               :value="v.id" /></el-select
         ></label>
         <label
-          >语种<el-select v-model="scope.language" :disabled="busy || isGovernanceLlm" @change="loadScope"
+          >语种<el-select
+            v-model="scope.language"
+            :disabled="busy || isGovernanceLlm"
+            @change="loadScope()"
             ><el-option label="全部语种" value="all" /><el-option
               v-for="l in version?.languages"
               :key="l.code"
@@ -440,7 +459,7 @@ watch(
               :value="l.code" /></el-select
         ></label>
         <label
-          >检测方案<el-select v-model="scope.schemeId" :disabled="busy" @change="loadScope"
+          >检测方案<el-select v-model="scope.schemeId" :disabled="busy" @change="loadScope()"
             ><el-option
               v-for="s in options?.schemes"
               :key="s.id"
@@ -458,7 +477,8 @@ watch(
         <span
           >当前结果：{{
             versionName(result.scope.datasetId, result.scope.versionId, result.versionLabel)
-          }} · {{ languageName(result.scope.language) }} ·
+          }}
+          · {{ languageName(result.scope.language) }} · 方案：{{ detectionScheme }} ·
           当前语种全量范围 · 有效检测 {{ result.validCount }} 条 · 已完成 ·
           {{ result.finishedAt }}</span
         ><el-button link type="primary" @click="openTask">查看任务 ›</el-button>
@@ -493,7 +513,9 @@ watch(
             @click="filter(m.status)"
           >
             <span>{{ m.label }}</span
-            ><strong>{{ m.value }}<small>{{ m.unit }}</small></strong>
+            ><strong
+              >{{ m.value }}<small>{{ m.unit }}</small></strong
+            >
           </button>
         </div>
         <p class="anomaly-note result-note">
@@ -559,7 +581,11 @@ watch(
           <div class="anomaly-source">
             数据集：{{ result.datasetName }}<br />版本：{{
               versionName(result.scope.datasetId, selected.versionId)
-            }} · 样本：{{ selected.id }}<br />原文件 / 行号：{{ selected.source.filename || '未记录' }} /
+            }}
+            · 样本：{{ selected.id }}<br />原文件 / 行号：{{
+              selected.source.filename || '未记录'
+            }}
+            /
             {{ selected.source.line ?? '未记录' }}
           </div>
           <el-button link type="primary" @click="drawer = '原始样本'"
@@ -659,9 +685,12 @@ watch(
               </p>
             </div>
             <div>
-              <b>校验结果</b>
+              <b>技术检查结果</b>
               <p v-for="v in candidate.validationResults" :key="v.name">
                 {{ v.passed ? '✓' : '✕' }} {{ v.name }}
+              </p>
+              <p class="anomaly-note">
+                技术检查只核对格式、字段和引用，不代表标签错标已确认；人工复核状态另行记录。
               </p>
               <el-tag :type="candidate.status === 'APPROVED' ? 'success' : 'warning'">{{
                 candidate.status === 'DRAFT' || candidate.status === 'PENDING_REVIEW'
@@ -685,12 +714,14 @@ watch(
             /><el-button
               :disabled="busy || !selected.actions.includes('generate')"
               @click="act('generate')"
-              v-if="!isGovernanceLlm">重新生成建议</el-button
+              v-if="!isGovernanceLlm"
+              >重新生成建议</el-button
             ><el-button
               type="primary"
               :disabled="busy || !selected.actions.includes('submit')"
               @click="act('submit')"
-              v-if="!isGovernanceLlm">提交复核</el-button
+              v-if="!isGovernanceLlm"
+              >提交复核</el-button
             ><el-button link type="primary" @click="drawer = '处理时间线'">查看修复记录</el-button
             ><el-button
               v-if="selected.actions.includes('approve') && !isGovernanceLlm"
@@ -703,7 +734,8 @@ watch(
           ><el-button
             :disabled="busy || !selected.actions.includes('generate')"
             @click="act('generate')"
-            v-if="!isGovernanceLlm">生成建议</el-button
+            v-if="!isGovernanceLlm"
+            >生成建议</el-button
           ></template
         ><el-empty v-else description="选择样本查看字段级修复候选" :image-size="50"
       /></PanelCard>
@@ -730,7 +762,8 @@ watch(
             type="primary"
             :disabled="busy || !changeSet.actions.includes('publish')"
             @click="preparePublish"
-            v-if="!isGovernanceLlm">生成新版本</el-button
+            v-if="!isGovernanceLlm"
+            >生成新版本</el-button
           >
         </div>
         <p class="anomaly-note">
@@ -764,10 +797,10 @@ watch(
         ><p>严重度优先、规则优先级次之；每个样本仅一个 primaryType，全部命中在详情展示。</p>
         <p v-for="t in result?.primaryTypeCounts" :key="t.type">{{ t.type }}：{{ t.count }}</p>
         <el-alert
-          title="重复项应保留主记录并排除重复项；缺失来源仅标记待补充，不编造内容。基础方案不承诺投毒检测。"
+          title="新版基础方案只检查主题明显冲突；近义、细分类别和上下级标签允许匹配。未配置标签清单，不检查枚举值；基础方案不承诺投毒检测。"
           type="info"
           :closable="false" />
-        <h3>方案规则（{{ options?.rules.length }} 项）</h3>
+        <h3>{{ detectionScheme }} · 方案规则（{{ schemeRules.length }} 项）</h3>
         <el-input v-model="ruleSearch" placeholder="查询规则名称或编号" clearable /><el-table
           :data="rules"
           ><el-table-column prop="id" label="编号" /><el-table-column
@@ -820,8 +853,13 @@ watch(
             ><template #default="{ row }">{{ row.conflict || '无' }}</template></el-table-column
           ><el-table-column label="操作"
             ><template #default="{ row }"
-              ><el-button link type="danger" :disabled="busy" @click="remove(row.candidateId)"
-                v-if="!isGovernanceLlm">移除条目</el-button
+              ><el-button
+                link
+                type="danger"
+                :disabled="busy"
+                @click="remove(row.candidateId)"
+                v-if="!isGovernanceLlm"
+                >移除条目</el-button
               ></template
             ></el-table-column
           ></el-table
@@ -858,15 +896,18 @@ watch(
             type="primary"
             :disabled="busy || !selected?.actions.includes('approve')"
             @click="act('approve').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm">审核通过</el-button
+            v-if="!isGovernanceLlm"
+            >审核通过</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('reject')"
             @click="act('reject').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm">驳回</el-button
+            v-if="!isGovernanceLlm"
+            >驳回</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('withdraw')"
             @click="act('withdraw').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm">撤回复核</el-button
+            v-if="!isGovernanceLlm"
+            >撤回复核</el-button
           >
         </div></template
       >

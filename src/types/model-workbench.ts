@@ -72,6 +72,10 @@ export interface ModelCall {
   traceId: string | null
 }
 export interface ModelAssessment {
+  simulation?: boolean
+  comparisonVersion?: string
+  failedCount?: number
+  incompleteTypes?: string[]
   id: string
   modelId: string
   baseline: string
@@ -93,7 +97,15 @@ export interface ModelAssessment {
   retentionTotal: number
   retentionBefore: number
   retentionAfter: number
-  samples: { type: string; input: string; before: string; after: string }[]
+  samples: {
+    type: string
+    input: string
+    before: string
+    after: string
+    beforeJudgment?: { correct: boolean; reason: string }
+    afterJudgment?: { correct: boolean; reason: string }
+    errors?: Record<string, string>
+  }[]
 }
 /** 数据集版本选项（#13）：version 为人类版本号，versionId 为 dsv 稳定主键。 */
 export interface DatasetVersionOption {

@@ -84,6 +84,7 @@ export interface SourceRef {
   versionId: string
 }
 export interface SourceContext extends SourceRef {
+  datasetName?: string
   supportedMetricCodes?: string[]
   evaluationIssues?: string[]
   referenceField?: string
@@ -134,6 +135,8 @@ export interface Preflight {
   resolvedRefs: SourceContext[]
 }
 export interface EvaluationTask {
+  datasetDisplay?: string
+  sourceRef?: SourceContext | null
   taskId: string
   runId: string
   name: string
@@ -198,6 +201,8 @@ export interface MetricResult {
   formulaCode: Formula
 }
 export interface EvaluationRun {
+  datasetDisplay?: string
+  sourceRef?: SourceContext | null
   runId: string
   taskId: string
   recordId: string

@@ -5,6 +5,7 @@ vi.mock('../api/request', () => backend)
 import { useModelWorkbench } from './model-workbench'
 import { percent } from '../types/model-workbench'
 import * as api from '../api/model-workbench'
+import { AxiosError } from 'axios'
 
 describe('模型训推工作流与接口约束', () => {
   beforeEach(() => {
@@ -144,7 +145,7 @@ describe('模型训推工作流与接口约束', () => {
     expect(store.data.calls).toHaveLength(count)
     expect(store.busy).toBe(false)
   })
-  it('模型注册遵循已有模型枚举，指标读取遵循统一指标库', async () => {
+  it('模型注册遵循枚举，评估提交版本组合且不依赖部署服务', async () => {
     backend.isMock = false
     backend.request.mockResolvedValueOnce({
       id: 12,
@@ -174,12 +175,7 @@ describe('模型训推工作流与接口约束', () => {
         }),
       }),
     )
-    backend.request
-      .mockResolvedValueOnce({
-        items: [{ metricCode: 'configured_metric', status: 'enabled' }],
-        totalPages: 1,
-      })
-      .mockResolvedValueOnce({ taskId: 'assessment-task', status: 'pending' })
+    backend.request.mockResolvedValueOnce({ taskId: 'assessment-task', status: 'pending' })
     await api.executeComparison({
       modelId: '12',
       baseline: 'v1.0.0',
@@ -187,22 +183,40 @@ describe('模型训推工作流与接口约束', () => {
       datasetId: '3',
       datasetVersion: 'v1.0.0',
     })
-    expect(backend.request).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        url: '/metrics',
-        params: expect.objectContaining({ category: 'model_capability', status: 'enabled' }),
-      }),
-    )
     expect(backend.request).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        url: '/tasks/execute',
-        data: expect.objectContaining({
-          capabilityCode: 'evaluation',
-          input: expect.objectContaining({ metricCodes: ['configured_metric'] }),
-        }),
+        url: '/model-workbenches/comparisons',
+        headers: expect.objectContaining({ 'X-LLM-Authorization': expect.any(String) }),
+        data: {
+          modelId: '12',
+          baseline: 'v1.0.0',
+          edited: 'v1.1.0',
+          datasetId: '3',
+          datasetVersion: 'v1.0.0',
+        },
       }),
     )
+    expect(backend.request).not.toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/tasks/execute' }),
+    )
+  })
+  it('评估启动失败显示后端中文原因且由页面统一提示', async () => {
+    backend.isMock = false
+    const error = new AxiosError('Request failed with status code 409')
+    error.response = { status: 409, data: { detail: '基线尚未配置模拟编辑模板' } } as NonNullable<
+      typeof error.response
+    >
+    backend.request.mockRejectedValueOnce(error)
+    await expect(
+      api.executeComparison({
+        modelId: '10',
+        baseline: 'v1',
+        edited: 'v1-edit',
+        datasetId: '16',
+        datasetVersion: 'v1',
+      }),
+    ).rejects.toThrow('基线尚未配置模拟编辑模板')
+    expect(backend.request).toHaveBeenCalledWith(expect.objectContaining({ silent: true }))
   })
   it('真实读取失败显示重试状态，不注入示例模型', async () => {
     backend.isMock = false

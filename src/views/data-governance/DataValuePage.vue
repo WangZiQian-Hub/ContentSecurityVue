@@ -17,6 +17,10 @@ import type {
   ValueTask,
 } from '../../types/data-value'
 
+let initialResultId =
+  typeof window === 'undefined'
+    ? ''
+    : new URLSearchParams(window.location.search).get('resultId') || ''
 const options = ref<ValueOptions>()
 const scope = reactive<ValueScope>({ datasetId: 0, versionId: '', language: '', schemeId: '' })
 const versions = computed(
@@ -131,6 +135,11 @@ async function loadOptions() {
   optionsFailed.value = false
   try {
     options.value = await api.getValueOptions()
+    if (initialResultId) {
+      const exact = await api.getValueResult(initialResultId)
+      Object.assign(scope, exact.scope)
+      return
+    }
     scope.schemeId = options.value.schemes[0]?.id ?? ''
     scope.datasetId = options.value.datasets[0]?.id ?? 0
     resetDataset()
@@ -205,7 +214,9 @@ watch(scopeKey, () => {
   ++historySeq
   tasks.value = []
   detailOpen.value = false
-  void loadResult()
+  const resultId = initialResultId
+  initialResultId = ''
+  void loadResult(resultId || undefined)
 })
 watch(
   () => [
@@ -700,7 +711,9 @@ onMounted(loadOptions)
           <el-table-column prop="errorCode" label="错误类型" />
           <el-table-column prop="reason" label="失败原因" min-width="240" />
         </el-table>
-        <p v-if="!taskDetail?.failedSamples?.length && !result.failedSamples?.length">这份历史结果未保存逐条原因，新分析任务会记录。</p>
+        <p v-if="!taskDetail?.failedSamples?.length && !result.failedSamples?.length">
+          这份历史结果未保存逐条原因，新分析任务会记录。
+        </p>
       </details>
       <el-descriptions v-loading="taskLoading" :column="1" border>
         <el-descriptions-item label="任务ID">{{ result?.taskId }}</el-descriptions-item>

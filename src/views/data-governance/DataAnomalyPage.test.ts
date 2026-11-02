@@ -36,6 +36,7 @@ const renderer = createRenderer<Host, Host>({
   nextSibling: () => null,
 })
 interface State {
+  detectionScheme: string
   scope: Scope
   query: Query
   result: Result | null
@@ -70,6 +71,16 @@ describe('异常页结果与详情状态隔离', () => {
     api.getAnomalyChangeSet.mockImplementation(async (s) => anomalyMock.changeSet(s))
     api.listAnomalySamples.mockImplementation(async (id, q) => anomalyMock.samples(id, q))
     api.getAnomalySample.mockImplementation(async (id, s) => anomalyMock.detail(id, s))
+  })
+  it('方案名称跟随当前结果，旧结果不会误标为新版方案', async () => {
+    const { state, unmount } = mount()
+    await flush()
+    const original = state.result!
+    state.result = { ...original, scope: { ...original.scope, schemeId: 'anomaly-basic-v2' } }
+    expect(state.detectionScheme).toBe('anomaly-basic-v2')
+    state.result = { ...original, scope: { ...original.scope, schemeId: 'historical-v0' } }
+    expect(state.detectionScheme).toBe('historical-v0')
+    unmount()
   })
   it('后端返回其他版本的结果时拒绝展示', async () => {
     const { state, unmount } = mount()

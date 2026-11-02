@@ -3,11 +3,12 @@ import { onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { evaluationApi as api } from '../../api/evaluation'
 import { useEvaluationStore } from '../../stores/evaluation'
-import { label, time } from './presentation'
+import { label, time, sourceLink } from './presentation'
 import EvaluationPanel from './components/EvaluationPanel.vue'
 import EvaluationStatus from './components/EvaluationStatus.vue'
 import EvaluationPager from './components/EvaluationPager.vue'
 import EvaluationExport from './components/EvaluationExport.vue'
+import type { EvaluationRun } from '../../types/evaluation'
 const store = useEvaluationStore()
 const route = useRoute()
 const router = useRouter()
@@ -38,12 +39,29 @@ function modelCell(snapshot: Record<string, string> | undefined) {
   return s.modelName ? `${s.modelName} ${s.modelVersion || ''}`.trim() : s.modelVersion || '不适用'
 }
 /** 任务编号：桥接记录取来源能力任务 tsk_xxx，工作区任务取自身 eval_task_xxx。 */
-function taskCell(row: { config?: Record<string, string>; taskId?: string }) {
-  return row.config?.capabilityTaskId || row.taskId || '—'
+function taskCell(row: {
+  config?: Record<string, string>
+  taskId?: string
+  sourceRef?: { sourceTaskId?: string }
+}) {
+  return row.config?.capabilityTaskId || row.sourceRef?.sourceTaskId || row.taskId || '—'
 }
-/** 桥接记录带来源模型 ID，可回跳模型训推评估页复现现场。 */
-function sourceModelId(row: { config?: Record<string, string>; snapshot?: Record<string, string> }) {
-  return row.config?.source === 'model-train/evaluation' ? row.snapshot?.modelId || '' : ''
+function backLink(row: EvaluationRun) {
+  if ((row.config as unknown as Record<string, string>)?.source === 'model-train/evaluation') {
+    const s = row.snapshot as typeof row.snapshot & Record<string, string>
+    return {
+      path: '/model-train/evaluation',
+      query: {
+        modelId: s.modelId,
+        recordId: row.recordId,
+        baseline: s.baselineVersion,
+        edited: s.editedVersion,
+        datasetId: s.datasetId,
+      },
+    }
+  }
+  const source = row.sourceRef || row.snapshot.resolvedRefs?.[0]
+  return source ? sourceLink(source) : null
 }
 const resolutionLabels = {
   not_found: '未找到此来源记录，未选择其他运行。',
@@ -168,27 +186,18 @@ onMounted(load)
         ><template #default="{ row }"
           ><span class="ev-task-id">{{ taskCell(row) }}</span>
           <el-button
-            v-if="sourceModelId(row)"
+            v-if="backLink(row)"
             link
             type="primary"
             size="small"
-            @click="
-              router.push({
-                path: '/model-train/evaluation',
-                query: {
-                  modelId: sourceModelId(row),
-                  recordId: row.recordId,
-                  baseline: row.snapshot?.baselineVersion || undefined,
-                  edited: row.snapshot?.editedVersion || undefined,
-                  datasetId: row.snapshot?.datasetId || undefined,
-                },
-              })
-            "
+            @click="router.push(backLink(row)!)"
             >回跳</el-button
           ></template
         ></el-table-column
-      ><el-table-column label="测试集" min-width="180" show-overflow-tooltip
-        ><template #default="{ row }">{{ datasetCell(row.snapshot) }}</template></el-table-column
+      ><el-table-column label="测试集" min-width="180"
+        ><template #default="{ row }">{{
+          row.datasetDisplay || datasetCell(row.snapshot)
+        }}</template></el-table-column
       ><el-table-column label="模型版本" min-width="220" show-overflow-tooltip
         ><template #default="{ row }">{{ modelCell(row.snapshot) }}</template></el-table-column
       ><el-table-column label="验收结论" width="100"
@@ -274,7 +283,7 @@ onMounted(load)
 </template>
 <style scoped>
 .ev-task-id {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
   color: #476590;
 }

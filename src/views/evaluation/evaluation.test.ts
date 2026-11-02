@@ -18,6 +18,18 @@ beforeEach(() => {
 })
 
 describe('evaluation request isolation and exact references', () => {
+  it.each([
+    ['governance-value', '/data-governance/value-analysis'],
+    ['governance-anomaly', '/data-governance/anomaly'],
+    ['governance-risk', '/data-governance/risk-classification'],
+  ])('returns to the exact historical result for %s', (capabilityCode, path) => {
+    const source = {
+      capabilityCode,
+      entityType: 'task_result',
+      entityId: 'historical/result-1',
+    } as SourceContext
+    expect(sourceLink(source)).toBe(`${path}?resultId=historical%2Fresult-1`)
+  })
   it('adds only an evaluation-scoped credential and preserves logical request identity', async () => {
     const getItem = vi.fn((key: string) =>
       key === 'evaluationAccessToken' ? 'scoped-test-token' : 'platform-token',

@@ -10,7 +10,7 @@ export interface Rule {
 }
 export interface Options {
   datasets: ValueOptions['datasets']
-  schemes: { id: string; name: string }[]
+  schemes: { id: string; name: string; rules?: Rule[] }[]
   rules: Rule[]
   types: string[]
 }

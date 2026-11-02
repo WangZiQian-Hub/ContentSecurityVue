@@ -16,6 +16,11 @@ export const labels: Record<string, string> = {
   unassessable: '无法判断',
   assessed: '已判断',
   predictions_missing: '部分样本缺少有效判断，无法确认误报率达标',
+  simulated_policy: '真实推理＋模拟治理策略',
+  real_model_comparison: '真实模型版本对照',
+  incomplete_predictions: '部分题目调用失败，无法判定达标',
+  missing_samples: '缺少该类样本或有效分母',
+  missing_threshold: '尚未配置该阶段阈值',
   risk_reference: '真实风险结果计算',
   value_reference: '真实价值结果计算',
   anomaly_reference: '真实异常检测结果计算',
@@ -88,6 +93,14 @@ export function threshold(value: Threshold | null | undefined): string {
     : '未设定'
 }
 export function sourceLink(source: SourceContext): string | null {
+  const governancePaths: Record<string, string> = {
+    'governance-value': '/data-governance/value-analysis',
+    'governance-anomaly': '/data-governance/anomaly',
+    'governance-risk': '/data-governance/risk-classification',
+  }
+  if (governancePaths[source.capabilityCode] && source.entityType === 'task_result') {
+    return `${governancePaths[source.capabilityCode]}?resultId=${encodeURIComponent(source.entityId)}`
+  }
   const paths: Record<string, string> = {
     'data-resource': '/data-resource/datasets',
     data_value: '/data-governance/value-analysis',

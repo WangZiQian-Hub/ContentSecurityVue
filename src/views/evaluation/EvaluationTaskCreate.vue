@@ -224,7 +224,10 @@ onMounted(load)
         </div></template
       >
       <h3 style="margin-top: 24px">选择验收指标</h3>
-      <p v-if="source?.supportedMetricCodes" class="ev-muted">
+      <p v-if="source?.entityType === 'model_comparison'" class="ev-muted">
+        引用已保存的逐条前后回答和测试规则重新计算指标，不再次调用模型。
+      </p>
+      <p v-else-if="source?.supportedMetricCodes" class="ev-muted">
         将本次治理结果与人工标准答案逐条比较，不重新调用模型。以下指标使用真实样本计算，默认阈值请按项目要求确认。
       </p>
       <el-checkbox-group v-model="config.metricRevisionRefs" class="ev-metric-options"

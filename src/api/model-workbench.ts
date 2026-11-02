@@ -1,5 +1,6 @@
 import { isMock, request } from './request'
-import { llmRequest } from './governance-llm'
+import axios from 'axios'
+import { getLlmToken, llmRequest } from './governance-llm'
 import type { ExecuteTaskReq, Task, PageResult } from '../types'
 import type {
   ModelWorkbench,
@@ -68,7 +69,7 @@ export async function registerModel(
       modelType: wireTypes[data.type],
       source: wireSources[data.source],
       version: data.version,
-      description: data.description || "",
+      description: data.description || '',
       status: 'pending',
       serviceUrl: null,
     },
@@ -87,7 +88,11 @@ export function checkModelService(id: string): Promise<ModelService> {
   return request({ url: `/model-services/${encodeURIComponent(id)}/check`, method: 'POST' })
 }
 export function upgradeModelService(id: string, version: string): Promise<ModelService> {
-  return request({ url: `/model-services/${encodeURIComponent(id)}`, method: 'PATCH', data: { version } })
+  return request({
+    url: `/model-services/${encodeURIComponent(id)}`,
+    method: 'PATCH',
+    data: { version },
+  })
 }
 export function stopModelService(id: string): Promise<ModelService> {
   return request({ url: `/model-services/${encodeURIComponent(id)}/stop`, method: 'POST' })
@@ -106,25 +111,42 @@ export async function executeComparison(input: {
   datasetId: string
   datasetVersion: string
 }): Promise<Task> {
-  const metrics = await request<PageResult<{ metricCode: string; status: string }>>({
-    url: '/metrics',
-    params: { category: 'model_capability', status: 'enabled', page: 1, pageSize: 100 },
-  })
-  if (!metrics.items.length || metrics.items.some((m) => !m.metricCode))
-    throw new Error('指标库尚未配置模型安全评估指标')
-  return executeModelTask({
-    capabilityCode: 'evaluation',
-    name: '模型版本安全效果评估',
-    input: {
-      modelId: input.modelId,
-      datasetId: input.datasetId,
-      metricCodes: metrics.items.map((m) => m.metricCode),
-    },
-    config: {
-      baselineVersion: input.baseline,
-      editedVersion: input.edited,
-      datasetVersion: input.datasetVersion,
-    },
+  try {
+    return await request<Task>({
+      url: '/model-workbenches/comparisons',
+      method: 'POST',
+      data: input,
+      headers: { 'X-LLM-Authorization': `Bearer ${getLlmToken()}` },
+      silent: true,
+    })
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const body = error.response?.data
+      throw new Error(
+        body?.message ||
+          (typeof body?.detail === 'string' ? body.detail : '') ||
+          '评估启动失败，请检查模型版本绑定',
+      )
+    }
+    throw error
+  }
+}
+
+export function comparisonProgress(taskId: string) {
+  return request<{
+    taskId: string
+    status: string
+    progress: number
+    result: {
+      processed?: number
+      total?: number
+      error?: string
+      modelAssessment?: ModelAssessment
+    }
+  }>({
+    url: `/model-workbenches/comparisons/${encodeURIComponent(taskId)}`,
+    headers: { 'X-LLM-Authorization': `Bearer ${getLlmToken()}` },
+    silent: true,
   })
 }
 
@@ -135,7 +157,9 @@ export interface RealModel {
 }
 
 export async function listRealModels(): Promise<RealModel[]> {
-  const rows = await llmRequest<{ modelId?: string; id?: string; name?: string }[]>({ url: '/models' })
+  const rows = await llmRequest<{ modelId?: string; id?: string; name?: string }[]>({
+    url: '/models',
+  })
   return Array.isArray(rows)
     ? rows.map((row) => ({ id: String(row.modelId ?? row.id ?? ''), name: String(row.name ?? '') }))
     : []
@@ -179,7 +203,9 @@ export function recordModelCall(data: Record<string, unknown>): Promise<{ id: st
 }
 
 /** 真实训练：8000 用服务端令牌代理 8001 建单并登记同款台账；浏览器无需模型服务令牌。 */
-export function createRealTraining(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+export function createRealTraining(
+  data: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>({
     url: '/training-tasks/real',
     method: 'POST',
@@ -270,4 +296,3 @@ export async function downloadRealArtifact(
   anchor.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
-

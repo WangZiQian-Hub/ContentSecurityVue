@@ -16,6 +16,7 @@ const store = useModelWorkbench(),
 onMounted(() => {
   // 从模型训练页切换进来时，确保读取后端最新的评估聚合结果。
   if (!isMock) void store.load()
+  if (!isMock) void store.refreshComparison()
 })
 const modelId = ref(
   String(route.query.modelId || store.data.assessment?.modelId || store.data.models[0]?.id || ''),
@@ -31,10 +32,9 @@ const datasetId = ref(
 )
 const model = computed(() => store.data.models.find((m) => m.id === modelId.value))
 const dataset = computed(() => store.data.datasets.find((d) => d.id === datasetId.value))
-// 本页对比的是“同一基线经风险知识编辑前后台效果”，编辑后版本只能是该基线的编辑产物
-// （后端按 {基线}-edit 命名登记）；训练等后训练版本与编辑无关，列出来会误导成版本横评。
+// 前后版本是否可评估由后台绑定校验；允许模拟策略版本及将来的真实编辑版本。
 const editCandidates = computed(() =>
-  (model.value?.versions || []).filter((v) => v.version.startsWith(`${baseline.value}-edit`)),
+  (model.value?.versions || []).filter((v) => v.version !== baseline.value),
 )
 // 工作台数据刷新（如提交评估后的 load）不能动用户的选择；只有切换评估模型才重置基线。
 const appliedModelId = ref('')
@@ -47,7 +47,12 @@ watch(
       appliedModelId.value = m.id
       if (!firstResolve) baseline.value = m.version || ''
     }
-    if (!m.versions.some((v) => v.version === baseline.value)) baseline.value = m.version || ''
+    if (!m.versions.some((v) => v.version === baseline.value))
+      baseline.value =
+        m.versions.find((v) => v.version === m.version)?.version ||
+        (store.data.assessment?.modelId === m.id ? store.data.assessment.baseline : '') ||
+        m.versions[0]?.version ||
+        ''
   },
   { immediate: true },
 )
@@ -130,22 +135,38 @@ const kpis = computed(() => {
     },
     {
       label: '风险样本减少率',
-      value: r ? percent(r.riskBefore - r.riskAfter, r.riskBefore) : '暂无',
+      value: r?.incompleteTypes?.includes('risk')
+        ? '无法判断'
+        : r
+          ? percent(r.riskBefore - r.riskAfter, r.riskBefore)
+          : '暂无',
       icon: 'Bottom',
     },
     {
       label: '非目标能力保持率',
-      value: r ? percent(r.retentionAfter, r.retentionBefore) : '暂无',
+      value: r?.incompleteTypes?.includes('retention')
+        ? '无法判断'
+        : r
+          ? percent(r.retentionAfter, r.retentionBefore)
+          : '暂无',
       icon: 'Shield',
     },
     {
       label: '编辑目标成功率',
-      value: r ? percent(r.targetAfter, r.targetTotal) : '暂无',
+      value: r?.incompleteTypes?.includes('target')
+        ? '无法判断'
+        : r
+          ? percent(r.targetAfter, r.targetTotal)
+          : '暂无',
       icon: 'Aim',
     },
     {
       label: '泛化测试成功率',
-      value: r ? percent(r.generalAfter, r.generalTotal) : '暂无',
+      value: r?.incompleteTypes?.includes('generalization')
+        ? '无法判断'
+        : r
+          ? percent(r.generalAfter, r.generalTotal)
+          : '暂无',
       icon: 'Share',
     },
   ]
@@ -237,7 +258,10 @@ function submitEdit() {
           :key="v.version"
           :value="v.version" /></el-select></label
     ><label
-      >编辑后版本<el-select v-model="edited" aria-label="编辑后版本" placeholder="该基线版本尚无编辑产物"
+      >编辑后版本<el-select
+        v-model="edited"
+        aria-label="编辑后版本"
+        placeholder="该基线版本尚无编辑产物"
         ><el-option
           v-for="v in editCandidates"
           :key="v.version"
@@ -249,11 +273,28 @@ function submitEdit() {
           :key="d.id"
           :value="d.id"
           :label="`${d.name} ${d.version}`" /></el-select></label
-    ><el-button type="primary" :icon="VideoPlay" :loading="store.busy" @click="assess"
+    ><el-button
+      type="primary"
+      :icon="VideoPlay"
+      :loading="store.busy"
+      :disabled="['pending', 'running'].includes(store.comparisonStatus)"
+      @click="assess"
       >发起评估</el-button
     ><router-link :to="{ path: '/evaluation/records', query: { recordId: result?.id } }"
       ><el-button>查看测试记录</el-button></router-link
     >
+  </div>
+  <div v-if="store.comparisonTaskId" class="mw-info-strip">
+    真实推理任务 {{ store.comparisonTaskId }} · {{ store.comparisonStatus }} ·
+    {{ store.comparisonProgress }}%
+    <el-button link @click="store.refreshComparison">刷新进度</el-button>
+    <p v-if="store.comparisonError">{{ store.comparisonError }}</p>
+  </div>
+  <div v-if="result?.simulation" class="mw-info-strip">
+    本次为真实模型推理与模拟治理策略的对照，尚未执行模型权重编辑。按测试题中固定的包含词、禁用词规则判定。
+  </div>
+  <div v-if="result?.failedCount" class="mw-info-strip">
+    {{ result.failedCount }} 条测试题存在调用失败；涉及这些题的指标不作达标判断，请查看明细。
   </div>
   <div class="mw-evaluation-grid">
     <PanelCard title="风险知识编辑" icon="Setting"
@@ -262,7 +303,10 @@ function submitEdit() {
           selectedEditVersion?.taskId || latestEditTask?.id || result?.taskId || '暂无关联任务'
         }}</el-descriptions-item
         ><el-descriptions-item label="目标知识">{{
-          selectedEditVersion?.editKnowledge || latestEditTask?.knowledge || result?.knowledge || '尚未编辑'
+          selectedEditVersion?.editKnowledge ||
+          latestEditTask?.knowledge ||
+          result?.knowledge ||
+          '尚未编辑'
         }}</el-descriptions-item
         ><el-descriptions-item label="编辑方式">定向抑制</el-descriptions-item
         ><el-descriptions-item label="状态"
@@ -299,6 +343,9 @@ function submitEdit() {
         ></el-descriptions
       >
       <p class="mw-paragraph">降低输出个人联系方式的倾向，保持普通问答能力。</p>
+      <p v-if="!isMock" class="mw-footnote">
+        当前为模拟编辑。首次发起评估时，系统按管理员配置的基线模板与本次编辑目标生成策略，并自动关联推理服务；尚未接入权重编辑算法。
+      </p>
       <div
         v-for="task in store.editTasks.filter((t) => t.modelId === modelId)"
         :key="task.id"
@@ -320,8 +367,8 @@ function submitEdit() {
       ><template v-if="result"
         ><div v-if="store.assessmentStale" class="mw-info-strip">
           当前展示的是上一次评估结果。编辑任务完成后，请点击“发起评估”生成本次编辑的新结果。
-        </div
-        ><WorkbenchChart :option="chart" label="编辑前后风险输出、目标编辑与泛化成功样本数对比" />
+        </div>
+        <WorkbenchChart :option="chart" label="编辑前后风险输出、目标编辑与泛化成功样本数对比" />
         <div class="mw-info-strip">
           同一安全测试子集 {{ result.riskTotal }} 条<br />风险率
           {{ percent(result.riskBefore, result.riskTotal) }} →
@@ -340,8 +387,8 @@ function submitEdit() {
       ><template v-if="result"
         ><div v-if="store.assessmentStale" class="mw-info-strip">
           上次评估数据待更新；本次编辑的能力保持率以重新发起评估后的结果为准。
-        </div
-        ><div class="mw-retention">
+        </div>
+        <div class="mw-retention">
           <span>非目标能力保持率</span
           ><strong>{{ percent(result.retentionAfter, result.retentionBefore) }}</strong>
         </div>
@@ -367,14 +414,22 @@ function submitEdit() {
       ><el-table-column prop="type" label="测试类型" width="130" /><el-table-column
         prop="input"
         label="测试输入"
-        min-width="200" /><el-table-column
+        min-width="200"
+      /><el-table-column
         prop="before"
         :label="`编辑前（${baseline || '未选择'}）`"
-        min-width="230" /><el-table-column
+        min-width="230"
+      /><el-table-column
         prop="after"
         :label="`编辑后（${edited || '未选择'}）`"
         min-width="230"
-    /></el-table>
+      /><el-table-column label="判定与错误" min-width="200">
+        <template #default="{ row }">
+          {{ row.afterJudgment?.reason || '' }}
+          {{ row.errors && Object.keys(row.errors).length ? JSON.stringify(row.errors) : '' }}
+        </template>
+      </el-table-column></el-table
+    >
     <div v-if="result" class="mw-info-strip">
       关联测试记录 {{ result.id }} · 正式指标与报告在测试评估查看。
     </div></PanelCard
@@ -387,9 +442,7 @@ function submitEdit() {
       ><el-form-item label="编辑方式">定向抑制</el-form-item></el-form
     ><template #footer
       ><el-button @click="dialog = false">取消</el-button
-      ><el-button type="primary" @click="submitEdit"
-        >提交编辑任务</el-button
-      ></template
+      ><el-button type="primary" @click="submitEdit">提交编辑任务</el-button></template
     ></el-dialog
   >
 </template>

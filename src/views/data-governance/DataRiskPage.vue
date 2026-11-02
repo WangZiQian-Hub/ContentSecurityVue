@@ -111,7 +111,7 @@ async function loadRows() {
     if (ticket === listGeneration) error.value = String(e)
   }
 }
-async function loadScope() {
+async function loadScope(resultId?: string) {
   const ticket = ++generation
   ++listGeneration
   clearTimeout(timer)
@@ -125,7 +125,8 @@ async function loadScope() {
   Object.assign(query, { page: 1, keyword: '', level: '', status: '' })
   loading.value = true
   try {
-    const r = await api.getLatestRisk({ ...scope })
+    const r = resultId ? await api.getRiskResult(resultId) : await api.getLatestRisk({ ...scope })
+    if (resultId && r) Object.assign(scope, r.scope)
     if (ticket !== generation) return
     assertResultScope(r, scope)
     result.value = r
@@ -163,13 +164,7 @@ function search() {
   query.page = 1
   void loadRows()
 }
-function sortRows({
-  prop,
-  order,
-}: {
-  prop: string
-  order: 'ascending' | 'descending' | null
-}) {
+function sortRows({ prop, order }: { prop: string; order: 'ascending' | 'descending' | null }) {
   query.page = 1
   if (order && (prop === 'maximumSuggestedLevel' || prop === 'status')) {
     query.sortBy = prop as RiskSortField
@@ -368,7 +363,11 @@ onMounted(() =>
     options.value = await api.getRiskOptions()
     Object.assign(scope, options.value.defaultScope)
     query.pageSize = options.value.pageSizes[0]!
-    await loadScope()
+    const resultId =
+      typeof window === 'undefined'
+        ? ''
+        : new URLSearchParams(window.location.search).get('resultId') || ''
+    await loadScope(resultId || undefined)
   }),
 )
 onBeforeUnmount(() => {
@@ -403,7 +402,10 @@ onBeforeUnmount(() => {
               :label="v.label" /></el-select
         ></label>
         <label
-          >语种<el-select v-model="scope.language" :disabled="busy || isGovernanceLlm" @change="loadScope"
+          >语种<el-select
+            v-model="scope.language"
+            :disabled="busy || isGovernanceLlm"
+            @change="loadScope()"
             ><el-option label="全部语种" value="all" /><el-option
               v-for="l in version?.languages"
               :key="l"
@@ -411,7 +413,7 @@ onBeforeUnmount(() => {
               :label="languageName(l)" /></el-select
         ></label>
         <label
-          >分级方案<el-select v-model="scope.schemeId" :disabled="busy" @change="loadScope"
+          >分级方案<el-select v-model="scope.schemeId" :disabled="busy" @change="loadScope()"
             ><el-option
               v-for="s in options?.schemes"
               :key="s.id"
@@ -430,8 +432,8 @@ onBeforeUnmount(() => {
       <div v-if="result" class="risk-identity">
         <span
           >{{ versionName(result.scope.datasetId, result.scope.versionId) }} ·
-          {{ languageName(result.scope.language) }} ·
-          {{ result.status }} · 有效检测 {{ result.validCount.toLocaleString() }} 条 ·
+          {{ languageName(result.scope.language) }} · {{ result.status }} · 有效检测
+          {{ result.validCount.toLocaleString() }} 条 ·
           {{ formatBeijingTime(result.finishedAt) }}（北京时间）</span
         ><el-button
           link
@@ -511,7 +513,9 @@ onBeforeUnmount(() => {
         <p class="risk-note">
           每条样本按最高建议等级计数。点击分段或图例筛选列表，清空其他筛选；百分比四舍五入，以条数为准。
         </p>
-        <el-button class="risk-all-link" link type="primary" @click="filter()">查看全部风险候选</el-button>
+        <el-button class="risk-all-link" link type="primary" @click="filter()"
+          >查看全部风险候选</el-button
+        >
       </PanelCard>
       <PanelCard title="风险样本明细" icon="List"
         ><template #extra
@@ -655,7 +659,8 @@ onBeforeUnmount(() => {
                 busy || !selected.actions.some((a) => ['viewReview', 'createReview'].includes(a))
               "
               @click="openReview"
-              v-if="!isGovernanceLlm">{{ selected.review ? '查看复核' : '发起复核' }}</el-button
+              v-if="!isGovernanceLlm"
+              >{{ selected.review ? '查看复核' : '发起复核' }}</el-button
             ><el-button @click="drawer = '原始样本（只读）'">原始样本</el-button>
           </div> </template
         ><el-empty v-else description="选择样本查看已保存证据" :image-size="60" />
@@ -711,11 +716,10 @@ onBeforeUnmount(() => {
       <template v-else-if="drawer === '历史结果'"
         ><el-table class="history-table" :data="history" empty-text="当前固定条件无历史结果"
           ><el-table-column label="完成时间（北京时间）" min-width="190"
-            ><template #default="{ row }">{{ formatBeijingTime(row.finishedAt) }}</template></el-table-column
-          ><el-table-column
-            prop="riskCount"
-            label="风险候选"
-          /><el-table-column label="操作"
+            ><template #default="{ row }">{{
+              formatBeijingTime(row.finishedAt)
+            }}</template></el-table-column
+          ><el-table-column prop="riskCount" label="风险候选" /><el-table-column label="操作"
             ><template #default="{ row }"
               ><el-button link @click="useHistory(row)">查看结果</el-button></template
             ></el-table-column
@@ -746,7 +750,9 @@ onBeforeUnmount(() => {
           <el-descriptions-item label="分级方案">{{
             options?.schemes.find((s) => s.id === task?.input.schemeId)?.name
           }}</el-descriptions-item
-          ><el-descriptions-item label="创建时间（北京时间）">{{ formatBeijingTime(task?.createdAt) }}</el-descriptions-item
+          ><el-descriptions-item label="创建时间（北京时间）">{{
+            formatBeijingTime(task?.createdAt)
+          }}</el-descriptions-item
           ><el-descriptions-item label="结果 ID">{{
             task?.resultId || '尚未生成'
           }}</el-descriptions-item
@@ -770,13 +776,16 @@ onBeforeUnmount(() => {
             (f) => f.ruleId === activeRule?.id && f.ruleVersion === activeRule?.version,
           )"
           :key="f.ruleId"
-          ><blockquote v-if="f.quote">{{ f.quote }}</blockquote><template v-else><blockquote
-            v-for="e in selected?.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
-            :key="e.id"
-          >
-            {{ e.quote }}
-            <p>{{ e.feature }}</p>
-          </blockquote></template></template
+          ><blockquote v-if="f.quote">{{ f.quote }}</blockquote>
+          <template v-else
+            ><blockquote
+              v-for="e in selected?.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
+              :key="e.id"
+            >
+              {{ e.quote }}
+              <p>{{ e.feature }}</p>
+            </blockquote></template
+          ></template
         ></template
       >
       <template v-else-if="drawer === '关联案例'"
@@ -824,18 +833,23 @@ onBeforeUnmount(() => {
             <p>{{ f.reason }}</p>
             <p>{{ f.ruleId }} · v{{ f.ruleVersion }}</p>
             <blockquote v-if="f.quote">{{ f.quote }}</blockquote>
-            <template v-else><blockquote
-              v-for="e in selected.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
-              :key="e.id"
+            <template v-else
+              ><blockquote
+                v-for="e in selected.evidence.filter((e) => f.evidenceRefs.includes(e.id))"
+                :key="e.id"
+              >
+                {{ e.quote }}
+                <p>{{ e.feature }} · {{ e.id }}</p>
+              </blockquote></template
             >
-              {{ e.quote }}
-              <p>{{ e.feature }} · {{ e.id }}</p>
-            </blockquote></template>
           </section>
           <h3>人工复核（独立记录）</h3>
           <p>状态：{{ selected.status }} · 工单：{{ selected.review?.id || '尚未创建' }}</p>
           <template v-if="selected.review"
-            ><p>复核人：{{ selected.review.reviewer }} · {{ formatBeijingTime(selected.review.updatedAt) }}（北京时间）</p>
+            ><p>
+              复核人：{{ selected.review.reviewer }} ·
+              {{ formatBeijingTime(selected.review.updatedAt) }}（北京时间）
+            </p>
             <p>
               结论：{{
                 options?.reviewDecisions.find((d) => d.value === selected?.review?.decision)
@@ -900,7 +914,8 @@ onBeforeUnmount(() => {
             type="primary"
             :loading="busy"
             :disabled="!review.opinion.trim() || !review.reviewer"
-            v-if="!isGovernanceLlm">{{ selected.review ? '提交人工结论' : '创建复核工单' }}</el-button
+            v-if="!isGovernanceLlm"
+            >{{ selected.review ? '提交人工结论' : '创建复核工单' }}</el-button
           >
         </el-form>
       </template>
