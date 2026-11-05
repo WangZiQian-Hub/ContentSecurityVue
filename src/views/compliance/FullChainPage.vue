@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PanelCard from '../../components/PanelCard.vue'
 import StateBadge from './components/StateBadge.vue'
+import AuditSnapshotPanel from './components/AuditSnapshotPanel.vue'
 import { complianceApi } from '../../api/compliance'
 import { request } from '../../api/request'
 import { describeError, isNotFound, useComplianceStore } from '../../stores/compliance'
@@ -160,6 +161,13 @@ onMounted(async () => {
 watch(() => route.query.taskId, applyTaskDeepLink)
 </script>
 <template>
+  <AuditSnapshotPanel
+    kind="task"
+    entity-type="task"
+    :entity-id="taskId"
+    :demo="store.demo"
+    :ready="!!evidence && !loading"
+  />
   <div class="compliance-filter">
     <label
       >任务类别<el-select v-model="category" placeholder="请选择任务类别" @change="categoryChanged"
@@ -185,18 +193,11 @@ watch(() => route.query.taskId, applyTaskDeepLink)
     }}</span
     ><el-button type="primary" :loading="loading" :disabled="!taskId" @click="load">查询</el-button>
   </div>
-  <el-alert
-    v-if="loadError"
-    :title="loadError"
-    type="warning"
-    :closable="false"
-    show-icon
-  />
+  <el-alert v-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
   <template v-if="selected"
     ><PanelCard title="任务信息" icon="Tickets"
-      ><template #extra
-        ><span class="compliance-muted">数据来自任务登记记录</span></template
-      ><dl class="chain-task">
+      ><template #extra><span class="compliance-muted">数据来自任务登记记录</span></template>
+      <dl class="chain-task">
         <dt>任务号</dt>
         <dd class="compliance-id">{{ selected.taskId }}</dd>
         <dt>任务名称</dt>
@@ -221,7 +222,8 @@ watch(() => route.query.taskId, applyTaskDeepLink)
         ><span class="compliance-muted">{{
           pendingCount ? `${pendingCount} 项待补证` : '五项均已核验'
         }}</span></template
-      ><div class="chain-elements">
+      >
+      <div class="chain-elements">
         <div v-for="item in elements" :key="item.key" class="chain-element" :class="item.state">
           <strong>{{ item.label }}</strong
           ><StateBadge :state="item.state" /><small v-if="item.value">{{ item.value }}</small
@@ -229,7 +231,10 @@ watch(() => route.query.taskId, applyTaskDeepLink)
         </div>
       </div>
       <p class="compliance-muted">
-        证据编号 {{ evidenceId || '未查询' }}；五要素取自该任务在后端登记的证据记录，标为「待补证」的项需要补充留痕。
+        证据编号
+        {{
+          evidenceId || '未查询'
+        }}；五要素取自该任务在后端登记的证据记录，标为「待补证」的项需要补充留痕。
       </p></PanelCard
     ></template
   ><el-empty v-else-if="!loading" description="请选择任务类别与任务记录，查询该任务的五要素留痕" />

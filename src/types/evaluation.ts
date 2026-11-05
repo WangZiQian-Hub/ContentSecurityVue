@@ -84,6 +84,9 @@ export interface SourceRef {
   versionId: string
 }
 export interface SourceContext extends SourceRef {
+  subjectType?: string
+  subjectVersion?: string
+  direction?: string
   datasetName?: string
   supportedMetricCodes?: string[]
   evaluationIssues?: string[]

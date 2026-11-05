@@ -18,6 +18,25 @@ beforeEach(() => {
 })
 
 describe('evaluation request isolation and exact references', () => {
+  it('审计来源回到实际业务页面并携带精确对象与版本', () => {
+    const source = {
+      entityType: 'audit_record',
+      sourceTaskId: '1',
+      capabilityCode: 'audit_lineage',
+      subjectType: 'model',
+      subjectVersion: 'v1.0.0',
+      direction: 'upstream',
+    } as SourceContext
+    expect(sourceLink(source)).toBe(
+      '/compliance/lineage?entityType=model&sourceId=1&versionId=v1.0.0&direction=upstream',
+    )
+    expect(sourceLink({ ...source, capabilityCode: 'audit_checkpoints' })).toBe(
+      '/compliance/model-internal?taskId=1',
+    )
+    expect(sourceLink({ ...source, capabilityCode: 'audit_task' })).toBe(
+      '/compliance/full-chain?taskId=1',
+    )
+  })
   it.each([
     ['governance-value', '/data-governance/value-analysis'],
     ['governance-anomaly', '/data-governance/anomaly'],

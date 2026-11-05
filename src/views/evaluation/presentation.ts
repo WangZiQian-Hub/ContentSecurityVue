@@ -8,6 +8,7 @@ export const categories = {
   edit_evaluation: '编辑评估',
 }
 export const labels: Record<string, string> = {
+  audit_reference: '固定审计快照核验',
   safe: '安全',
   low: '低风险',
   medium: '中风险',
@@ -93,6 +94,14 @@ export function threshold(value: Threshold | null | undefined): string {
     : '未设定'
 }
 export function sourceLink(source: SourceContext): string | null {
+  if (source.entityType === 'audit_record') {
+    const id = encodeURIComponent(source.sourceTaskId)
+    if (source.capabilityCode === 'audit_lineage')
+      return `/compliance/lineage?entityType=${encodeURIComponent(source.subjectType || '')}&sourceId=${id}&versionId=${encodeURIComponent(source.subjectVersion || '')}&direction=${encodeURIComponent(source.direction || 'both')}`
+    return source.capabilityCode === 'audit_checkpoints'
+      ? `/compliance/model-internal?taskId=${id}`
+      : `/compliance/full-chain?taskId=${id}`
+  }
   const governancePaths: Record<string, string> = {
     'governance-value': '/data-governance/value-analysis',
     'governance-anomaly': '/data-governance/anomaly',

@@ -10,7 +10,13 @@ const store = useEvaluationStore()
 const route = useRoute()
 const router = useRouter()
 const name = ref('')
-const kind = ref('task_result')
+const kind = ref(
+  ['task_result', 'model_comparison', 'audit_record', 'dataset_snapshot'].includes(
+    String(route.query.sourceKind),
+  )
+    ? String(route.query.sourceKind)
+    : 'task_result',
+)
 const keyword = ref('')
 const selectedSource = ref('')
 const config = reactive<EvaluationConfig>({
@@ -73,8 +79,11 @@ async function loadSources() {
       candidates = data.candidates
     },
   )
-  if (loaded && candidates.length === 1) {
-    const candidate = candidates[0]
+  const linked = candidates.find(
+    (s) => s.entityId === route.query.sourceId && s.versionId === route.query.versionId,
+  )
+  if (loaded && (linked || candidates.length === 1)) {
+    const candidate = linked || candidates[0]
     selectedSource.value = `${candidate.entityId}:${candidate.versionId}`
   }
 }
@@ -177,7 +186,7 @@ onMounted(load)
                 :key="`${candidate.entityId}:${candidate.versionId}`"
                 :value="`${candidate.entityId}:${candidate.versionId}`"
                 :label="
-                  candidate.entityType === 'task_result'
+                  ['task_result', 'audit_record'].includes(candidate.entityType)
                     ? candidate.name
                     : `${candidate.name} · ${candidate.versionId}`
                 " /></el-select
@@ -186,6 +195,9 @@ onMounted(load)
       <div v-if="store.contexts?.resolution === 'unavailable'" class="ev-note">
         <b>来源暂不可用</b>
         <p v-for="issue in store.contexts.issues" :key="issue.reasonCode">{{ issue.message }}</p>
+      </div>
+      <div v-if="kind === 'audit_record' && !store.contexts?.candidates.length" class="ev-note">
+        请先到全链路合规治理的数据谱系追踪、全链路追踪或模型内部审计（训练检查点留痕）保存评估快照，再刷新来源。神经元采集和场景覆盖矩阵暂未接入。
       </div>
       <el-empty
         v-else-if="store.contexts && !store.contexts.candidates.length"

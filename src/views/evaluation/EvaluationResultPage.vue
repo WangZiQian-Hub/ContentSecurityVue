@@ -171,8 +171,14 @@ onMounted(load)
       >
       <div class="ev-columns">
         <EvaluationPanel
-          title="逐条判断与标准答案"
-          subtitle="只读核验标准标签与预测，调整请回来源模块。"
+          :title="
+            source?.entityType === 'audit_record' ? '逐项要求与核验结果' : '逐条判断与标准答案'
+          "
+          :subtitle="
+            source?.entityType === 'audit_record'
+              ? '按已冻结规则检查材料，缺失与无法核验均保留。'
+              : '只读核验标准标签与预测，调整请回来源模块。'
+          "
           ><el-empty
             v-if="!metricCode"
             description="选择指标的“逐条对错”查看明细"
@@ -204,15 +210,21 @@ onMounted(load)
                 }}</template></el-table-column
               ><el-table-column label="判断是否一致"
                 ><template #default="{ row }">{{
-                  row.expectedLevel == null
-                    ? '无标准答案'
-                    : row.correct === true
-                      ? '正确'
+                  row.judgmentType === 'audit'
+                    ? row.correct === true
+                      ? '满足要求'
                       : row.correct === false
-                        ? '不一致'
-                        : row.judgmentType
-                          ? '未得到有效判断'
-                          : '未得到四档判断'
+                        ? '缺失'
+                        : '无法核验'
+                    : row.expectedLevel == null
+                      ? '无标准答案'
+                      : row.correct === true
+                        ? '正确'
+                        : row.correct === false
+                          ? '不一致'
+                          : row.judgmentType
+                            ? '未得到有效判断'
+                            : '未得到四档判断'
                 }}</template></el-table-column
               ><el-table-column label="计入本项分母"
                 ><template #default="{ row }">{{

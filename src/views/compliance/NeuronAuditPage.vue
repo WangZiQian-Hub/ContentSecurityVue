@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useComplianceStore } from '../../stores/compliance'
 import PanelCard from '../../components/PanelCard.vue'
 import ContextSelector from './components/ContextSelector.vue'
+import AuditSnapshotPanel from './components/AuditSnapshotPanel.vue'
 import StateBadge from './components/StateBadge.vue'
 import AuditReviewDialog from './components/AuditReviewDialog.vue'
 import { getModelWorkbench } from '../../api/model-workbench'
@@ -17,7 +19,7 @@ import type { TrainingTask } from '../../types/model-workbench'
  * ② 神经元激活审计：看模型推理时捕获的采样单元激活（本地无法部署模型，真实模式给说明，演示模式可看效果）。
  */
 const store = useComplianceStore(),
-  taskId = ref(''),
+  taskId = ref(String(useRoute().query.taskId || '')),
   trainings = ref<TrainingTask[]>([]),
   trainingsLoading = ref(false),
   trainingsError = ref(''),
@@ -54,8 +56,7 @@ const lossOffset = computed(() => {
 /** 第 N 轮结束后的训练损失。 */
 const lossAt = (epoch: number) => task.value?.loss?.[epoch - 1 + lossOffset.value]
 /** 第 N 轮结束后的验证损失。 */
-const validationAt = (epoch: number) =>
-  task.value?.validationLoss?.[epoch - 1 + lossOffset.value]
+const validationAt = (epoch: number) => task.value?.validationLoss?.[epoch - 1 + lossOffset.value]
 /** 应存档的检查点核验行：损失值取自逐轮训练日志，缺失的轮次同样能显示数值。 */
 const checkpointRows = computed(() =>
   expectedEpochs.value.map((epoch) => {
@@ -116,8 +117,7 @@ const chart = computed(() => {
   const xOf = (epoch: number) =>
     padX +
     ((Math.min(Math.max(epoch, 1), axisMax) - 1) / Math.max(axisMax - 1, 1)) * (width - padX * 2)
-  const yOf = (value: number) =>
-    padTop + (1 - (value - min) / span) * (height - padTop - padBottom)
+  const yOf = (value: number) => padTop + (1 - (value - min) / span) * (height - padTop - padBottom)
   // 轮次多时按步长抽稀刻度，避免横轴文字挤在一起。
   const tickStep = Math.max(1, Math.ceil(axisMax / 12))
   return {
@@ -152,8 +152,10 @@ async function loadTrainings() {
     trainingsLoading.value = false
   }
 }
-const statusLabel = (state: string) => TASK_STATUS[state as keyof typeof TASK_STATUS]?.label ?? state
-const statusColor = (state: string) => TASK_STATUS[state as keyof typeof TASK_STATUS]?.color ?? 'info'
+const statusLabel = (state: string) =>
+  TASK_STATUS[state as keyof typeof TASK_STATUS]?.label ?? state
+const statusColor = (state: string) =>
+  TASK_STATUS[state as keyof typeof TASK_STATUS]?.color ?? 'info'
 /* ── 区块②：神经元激活（沿用原有逻辑，仅在真实模式补一段说明） ── */
 const result = computed(() =>
   store.audit?.result.kind === 'neuron_audit' ? store.audit.result : null,
@@ -165,8 +167,9 @@ const hasMatrix = computed(
     result.value.heatmap.length > 0,
 )
 /** 本地没有部署模型，真实模式读不到模型内部的激活数据。 */
-const neuronHint = computed(() =>
-  '当前环境没有本地部署模型，读不到模型内部的神经元激活数据。神经元捕获需要在模型推理时由推理服务侧采集；可切换到「示例演示」查看这个模块的演示效果。',
+const neuronHint = computed(
+  () =>
+    '当前环境没有本地部署模型，读不到模型内部的神经元激活数据。神经元捕获需要在模型推理时由推理服务侧采集；可切换到「示例演示」查看这个模块的演示效果。',
 )
 function color(value: number | null | undefined) {
   if (value == null) return '#eef1f5'
@@ -192,9 +195,15 @@ function cell(layer: number, index: number) {
 onMounted(loadTrainings)
 </script>
 <template>
+  <AuditSnapshotPanel
+    kind="checkpoints"
+    entity-type="training_task"
+    :entity-id="taskId"
+    :demo="store.demo"
+    :ready="task?.status === 'succeeded'"
+  />
   <div class="audit-section">
-    <span class="audit-section-index">①</span
-    ><strong>📋 训练检查点留痕</strong
+    <span class="audit-section-index">①</span><strong>📋 训练检查点留痕</strong
     ><small>核验一个训练任务该存的检查点有没有存够</small>
   </div>
   <div class="compliance-filter">
@@ -213,36 +222,44 @@ onMounted(loadTrainings)
       task ? `${task.id} · 检查点核验` : '选择训练任务，核验它的检查点留痕'
     }}</span>
   </div>
-  <el-alert v-if="trainingsError" :title="trainingsError" type="warning" :closable="false" show-icon />
+  <el-alert
+    v-if="trainingsError"
+    :title="trainingsError"
+    type="warning"
+    :closable="false"
+    show-icon
+  />
   <template v-if="task"
-    ><div class="checkpoint-row"
-      ><PanelCard title="训练检查点留痕" icon="Tickets"
-      ><template #extra
-        ><span class="compliance-muted"
-          >规则来自后端存档逻辑：每 {{ interval }} 轮存一次，最后一轮必存</span
-        ></template
-      ><dl class="checkpoint-task">
-        <dt>训练任务</dt>
-        <dd>{{ task.id }} · {{ task.name }}</dd>
-        <dt>计划轮数</dt>
-        <dd>{{ task.epochs }} 轮</dd>
-        <dt>已训到</dt>
-        <dd>第 {{ task.epoch }} 轮</dd>
-        <dt>目标版本</dt>
-        <dd>{{ task.targetVersion || '未记录' }}</dd>
-        <dt>训练方法</dt>
-        <dd>{{ task.method || '未记录' }}</dd>
-        <dt>更新时间</dt>
-        <dd>{{ formatTime(task.updatedAt) }}</dd>
-        <dt>执行状态</dt>
-        <dd>
-          <el-tag :type="statusColor(task.status)">{{ statusLabel(task.status) }}</el-tag>
-        </dd>
-      </dl></PanelCard
+    ><div class="checkpoint-row">
+      <PanelCard title="训练检查点留痕" icon="Tickets"
+        ><template #extra
+          ><span class="compliance-muted"
+            >规则来自后端存档逻辑：每 {{ interval }} 轮存一次，最后一轮必存</span
+          ></template
+        >
+        <dl class="checkpoint-task">
+          <dt>训练任务</dt>
+          <dd>{{ task.id }} · {{ task.name }}</dd>
+          <dt>计划轮数</dt>
+          <dd>{{ task.epochs }} 轮</dd>
+          <dt>已训到</dt>
+          <dd>第 {{ task.epoch }} 轮</dd>
+          <dt>目标版本</dt>
+          <dd>{{ task.targetVersion || '未记录' }}</dd>
+          <dt>训练方法</dt>
+          <dd>{{ task.method || '未记录' }}</dd>
+          <dt>更新时间</dt>
+          <dd>{{ formatTime(task.updatedAt) }}</dd>
+          <dt>执行状态</dt>
+          <dd>
+            <el-tag :type="statusColor(task.status)">{{ statusLabel(task.status) }}</el-tag>
+          </dd>
+        </dl></PanelCard
       ><PanelCard title="训练损失曲线" icon="DataAnalysis"
         ><template #extra
           ><span class="compliance-muted">横轴为训练轮次，纵轴为损失值</span></template
-        ><div class="checkpoint-chart">
+        >
+        <div class="checkpoint-chart">
           <template v-if="chart"
             ><svg
               :viewBox="`0 0 ${chart.width} ${chart.height}`"
@@ -312,27 +329,24 @@ onMounted(loadTrainings)
             <p class="compliance-muted">
               ● 绿色实心＝已保存的检查点，○ 红色空心＝规则要求但缺失。
             </p></template
-          ><el-empty
-            v-else
-            description="这个任务还没有逐轮损失数据"
-            :image-size="60" /></div></PanelCard
-    ></div>
+          ><el-empty v-else description="这个任务还没有逐轮损失数据" :image-size="60" /></div
+      ></PanelCard>
+    </div>
     <PanelCard title="检查点核验" icon="Shield"
       ><template #extra
         ><span class="compliance-muted"
           >应有 {{ checkpointRows.length }} 个 · 实际 {{ savedRows.length }} 个 · 缺
           {{ missingRows.length }} 个</span
         ></template
-      ><p class="compliance-muted">{{ conclusion }}</p>
+      >
+      <p class="compliance-muted">{{ conclusion }}</p>
       <div class="checkpoint-detail">
         <h3 class="checkpoint-heading">应存档的检查点</h3>
         <el-table :data="checkpointRows" stripe
           ><el-table-column label="轮次" width="110"
             ><template #default="{ row }">第 {{ row.epoch }} 轮</template></el-table-column
           ><el-table-column label="实际保存" min-width="200"
-            ><template #default="{ row }">{{
-              row.name || '未保存'
-            }}</template></el-table-column
+            ><template #default="{ row }">{{ row.name || '未保存' }}</template></el-table-column
           ><el-table-column label="训练损失" width="120"
             ><template #default="{ row }">{{
               row.loss == null ? '—' : row.loss.toFixed(2)
@@ -360,12 +374,17 @@ onMounted(loadTrainings)
     ></template
   >
   <div class="audit-section">
-    <span class="audit-section-index">②</span
-    ><strong>🧠 神经元激活审计</strong
+    <span class="audit-section-index">②</span><strong>🧠 神经元激活审计</strong
     ><small>查看模型推理时捕获的采样单元激活</small>
   </div>
   <ContextSelector kind="model" label="模型" capability="neuron_audit" />
-  <el-alert v-if="!store.demo && !hasMatrix" :title="neuronHint" type="warning" :closable="false" show-icon />
+  <el-alert
+    v-if="!store.demo && !hasMatrix"
+    :title="neuronHint"
+    type="warning"
+    :closable="false"
+    show-icon
+  />
   <div v-if="hasMatrix && result" class="compliance-split">
     <PanelCard title="采样单元激活矩阵" icon="Grid"
       ><template #extra

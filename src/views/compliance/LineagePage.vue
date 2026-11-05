@@ -6,6 +6,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import AppIcon from '../../components/AppIcon.vue'
 import StateBadge from './components/StateBadge.vue'
 import EvidenceLinks from './components/EvidenceLinks.vue'
+import AuditSnapshotPanel from './components/AuditSnapshotPanel.vue'
 import type { LineageQuery } from '../../types/compliance'
 const store = useComplianceStore(),
   route = useRoute(),
@@ -94,8 +95,7 @@ const objectCandidates = computed(() => {
 })
 const versionCandidates = computed(() =>
   store.candidates.filter(
-    (candidate) =>
-      String(candidate.sourceId) === entityId.value && Boolean(candidate.modelVersion),
+    (candidate) => String(candidate.sourceId) === entityId.value && Boolean(candidate.modelVersion),
   ),
 )
 function selectedCandidate(versionId = version.value) {
@@ -124,6 +124,8 @@ function selectVersion(value: string) {
   store.invalidate()
 }
 function inbound() {
+  if (['upstream', 'downstream', 'both'].includes(String(route.query.direction)))
+    direction.value = route.query.direction as 'upstream' | 'downstream' | 'both'
   if (
     typeof route.query.entityType === 'string' &&
     ['model', 'dataset'].includes(route.query.entityType)
@@ -147,7 +149,8 @@ watch(() => route.query, inbound)
 function nodeLabel(id: string) {
   const node = store.lineage?.nodes.find((n) => n.id === id)
   if (!node) return '未知节点'
-  if (node.type === 'dataset' || node.type === 'model') return [node.label, node.versionId].filter(Boolean).join(' ')
+  if (node.type === 'dataset' || node.type === 'model')
+    return [node.label, node.versionId].filter(Boolean).join(' ')
   return node.displayId
 }
 function rowClass({ row }: { row: { id: string } }) {
@@ -158,6 +161,15 @@ function selectRow(row: { id: string }) {
 }
 </script>
 <template>
+  <AuditSnapshotPanel
+    kind="lineage"
+    :entity-type="entityType === 'dataset' ? 'dataset' : 'model'"
+    :entity-id="entityId"
+    :version-id="version"
+    :direction="direction"
+    :demo="store.demo"
+    :ready="!!store.lineage"
+  />
   <div class="compliance-filter">
     <label
       >对象类型<el-select v-model="entityType" aria-label="对象类型" @change="typeChanged"
@@ -292,7 +304,9 @@ function selectRow(row: { id: string }) {
                 font-size="12"
               >
                 <title>{{ node.versionId }}</title>
-                {{ node.versionId.length > 14 ? `${node.versionId.slice(0, 14)}…` : node.versionId }}
+                {{
+                  node.versionId.length > 14 ? `${node.versionId.slice(0, 14)}…` : node.versionId
+                }}
               </text>
               <text v-else y="96" text-anchor="middle" fill="#7187a7" font-size="13">
                 {{ node.displayId }}
@@ -397,19 +411,19 @@ function selectRow(row: { id: string }) {
 }
 /* 【行 1】「查看源证据」—— 改 Element Plus 按钮的字号 */
 :deep(.el-button.is-link) {
-  font-size: 16px;          /* ← 默认 14px */
-  height: auto;             /* ← 防止按钮被固定高度限制 */
+  font-size: 16px; /* ← 默认 14px */
+  height: auto; /* ← 防止按钮被固定高度限制 */
   line-height: 1.6;
 }
 
 /* 【行 2】「查看模型内部 →」—— 改 <a> 的字号 */
 :deep(.compliance-details ~ p a) {
-  font-size: 16px;          /* ← 之前靠继承，这里显式指定 */
+  font-size: 16px; /* ← 之前靠继承，这里显式指定 */
   line-height: 1.6;
 }
 
 /* 【两行之间的间距】—— 给包裹链接的 <p> 加外边距 */
 :deep(.compliance-details ~ p) {
-  margin-top: 8px;          /* ← 0 → 8px，两行就分开了 */
+  margin-top: 8px; /* ← 0 → 8px，两行就分开了 */
 }
 </style>
