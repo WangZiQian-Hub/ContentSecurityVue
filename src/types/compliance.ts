@@ -5,7 +5,7 @@ export type VerificationState =
   'verified' | 'missing' | 'unavailable' | 'not_applicable' | 'unknown'
 export type Capability =
   'lineage_audit' | 'training_monitor' | 'reasoning_audit' | 'neuron_audit' | 'full_chain_audit'
-export type ComplianceTab = '' | 'lineage' | 'full-chain' | 'model-internal' | 'risk-alert'
+export type ComplianceTab = '' | 'lineage' | 'full-chain' | 'model-internal' | 'risk-alert' | 'agent-traces'
 /** 「合规风险审计」错误清单的层级：链路层 / 任务层 / 模型层。 */
 export type AuditErrorLayer = 'link' | 'task' | 'model'
 /** 错误来源：system = 前端按检查口径算出的缺口；alert = 后端已登记的告警工单。 */

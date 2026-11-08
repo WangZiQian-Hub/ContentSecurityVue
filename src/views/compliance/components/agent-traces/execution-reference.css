@@ -1,0 +1,98 @@
+/* Every selector is conditional on this view. Shared screens keep their original styles. */
+.at-execution .execution-view{font-size:15px;color:#193451}
+.at-execution .ex-query{gap:18px;padding:10px 8px 7px 16px;min-height:130px;border:2px solid #dce9fb;margin-bottom:12px;border-radius:11px}
+.at-execution .ex-query>label{font-size:22px;line-height:42px}
+.at-execution .ex-query>.el-select{width:280px}
+.at-execution .ex-query .el-select__wrapper{height:42px;box-shadow:0 0 0 2px #d2def2 inset}
+.at-execution .ex-query .el-select__selected-item{font-size:22px;font-weight:700;color:#2a496b}
+.at-execution .ex-query>.el-button{height:42px;min-width:94px;font-size:22px;font-weight:700;border-radius:6px}
+.at-execution .ex-result{padding:6px 14px;line-height:29px;font-size:18px;border-radius:6px;color:#35557c;background:#eaf4ff}
+.at-execution .ex-columns{grid-template-columns:minmax(0,20%) minmax(0,52%) minmax(0,28%);gap:10px;padding:0 20px 0 0;align-items:stretch}
+.at-execution .ex-card{border:2px solid #dce9fb;border-radius:10px;background:linear-gradient(120deg,#fff,#f9fcff);padding:10px 12px;margin:0 0 9px;min-width:0}
+.at-execution .ex-card h3{font-size:18px;line-height:24px;margin:0 0 10px;color:#102f51;font-weight:750;white-space:nowrap}
+.at-execution .ex-card h3 small{font-size:14px;color:#6c84a0;font-weight:600}
+.at-execution .ex-columns>aside:first-child{height:555px;padding:10px 9px}
+.at-execution .ex-columns>aside:first-child h3{font-size:18px}
+.at-execution .ex-search{margin-bottom:13px;gap:12px}
+.at-execution .ex-search .el-input__wrapper{height:38px;box-shadow:0 0 0 2px #dbe6f4 inset;border-radius:8px}
+.at-execution .ex-search .el-input__inner{font-size:13px}
+.at-execution .ex-search>.el-button{width:42px;height:38px;background:#eaf3fd;border:none;color:#476a97;font-size:22px}
+.at-execution .ex-sample{position:relative;border:1px solid #dee8f3;height:65px;min-height:65px;padding:8px 12px;margin:0 0 9px;background:linear-gradient(110deg,#fff,#f8fbff);border-radius:8px;font-size:15px}
+.at-execution .ex-sample.selected{outline:none!important;border:2px solid #438cff!important;padding:7px 11px;background:#edf5ff!important}
+.at-execution .ex-sample>b{color:#142d47;font-size:16px}
+.at-execution .ex-sample .el-tag{height:21px;font-size:13px;font-weight:700;vertical-align:1px;padding:0 9px;margin-left:5px}
+.at-execution .ex-sample>span:last-of-type{position:absolute;right:10px;top:12px;font-size:13px;border:1px solid currentColor;border-radius:5px;font-weight:700;padding:2px 7px;line-height:19px}
+.at-execution .ex-sample small{margin-top:8px;font-size:13px;line-height:17px;color:#344a64;white-space:nowrap}
+.at-execution .ex-sample .high{background:#fff0f1!important;color:#e23738!important;border-color:#ffc5c6!important}.at-execution .ex-sample .medium{background:#fff4e2!important;color:#d57c17!important;border-color:#ffddb6!important}.at-execution .ex-sample .low{background:#eaf4ff!important;color:#1677ff!important;border-color:#bfdcff!important}
+.at-execution .ex-columns>aside:first-child>.el-pagination{margin-top:7px;height:24px;justify-content:center;opacity:.65}
+.at-execution .ex-columns>main>.ex-card:first-child{height:258px;padding:10px 14px 12px}
+.at-execution .ex-columns>main>.ex-card:nth-child(2){height:103px;padding:7px 12px}
+.at-execution .ex-columns>main>.ex-card:nth-child(2) h3{margin-bottom:8px}
+.at-execution .ex-chain{gap:30px;overflow:visible;padding:0 8px}
+.at-execution .ex-chain button{position:relative;display:flex;gap:11px;align-items:center;justify-content:center;min-width:0;flex:1;height:48px;padding:5px;background:#f0f7ff;border:1px solid #c9dfff;color:#253f5d;border-radius:7px;font-size:13px;white-space:nowrap}
+.at-execution .ex-chain button:not(:last-child)::after{content:'➜';position:absolute;right:-28px;color:#8bbcea;font-size:26px}
+.at-execution .ex-chain button>.el-icon{font-size:24px;color:#1677ff}
+.at-execution .ex-chain button>b{font-size:14px}
+.at-execution .ex-columns>main>.ex-card:nth-child(3){height:175px;padding:5px 12px 10px}
+.at-execution .ex-toolbar{margin-bottom:5px;min-height:28px}
+.at-execution .ex-toolbar h3{margin:0}
+.at-execution .ex-content{grid-template-columns:46% 54%;gap:10px;padding-right:10px}
+.at-execution .ex-content article{height:118px;padding:6px 10px;overflow:auto;background:linear-gradient(#f8fafc,#f5f8fc);border-color:#e7edf5}
+.at-execution .ex-content article>b{font-size:14px;color:#152e49}
+.at-execution .ex-content p{font-size:14px;line-height:25px;margin:4px 0 0;color:#243a51}
+.at-execution .ex-content small{font-size:12px;color:#6f84a0}
+.at-execution .el-radio-button__inner{padding:5px 15px;font-size:13px;font-weight:600}
+.at-execution .ex-columns>aside:last-child>.ex-card:first-child{height:224px;padding:8px 10px}
+.at-execution .ex-columns>aside:last-child>.ex-card:nth-child(2){height:133px;padding:6px 12px}
+.at-execution .ex-columns>aside:last-child>.ex-card:nth-child(3){height:179px;padding:7px 10px}
+.at-execution .ex-columns>aside:last-child h3{margin:0 0 6px}
+.at-execution dl{grid-template-columns:130px 1fr;font-size:14px;margin:0;line-height:18px}
+.at-execution dt,.at-execution dd{padding:4px 10px;height:29px;border-color:#e0e9f5;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-execution dt{background:#f0f6ff;color:#5b7390;font-weight:600}.at-execution dd{background:#fcfdff;color:#2a405d}.at-execution dd.high{background:#fcfdff!important;font-weight:700;color:#dc2428!important}
+.at-execution .ex-bar{grid-template-columns:155px 1fr;gap:8px;margin:9px 0;line-height:18px;font-size:14px}
+.at-execution .ex-bar .el-progress-bar__outer{height:11px!important;background:#dfe8f2}.at-execution .ex-bar .el-progress-bar__inner{background:#147cff}
+.at-execution .ex-distribution-note{display:none}
+.at-execution .ex-pattern-heading,.at-execution .ex-pattern{display:grid;grid-template-columns:42px 105px minmax(0,1fr) 72px;gap:0;align-items:center;line-height:20px;font-size:13px}
+.at-execution .ex-pattern-heading{height:32px;background:#e5f0fd;color:#58718f;font-weight:700;border:1px solid #dbe7f5;border-radius:6px 6px 0 0}
+.at-execution .ex-pattern{height:37px;padding:0;background:#fcfdff;border-color:#e1ebf7;border-radius:0}
+.at-execution .ex-pattern>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 5px}
+.at-execution .ex-pattern>span:first-child,.at-execution .ex-pattern-heading>span:first-child{text-align:center}
+.at-execution .ex-pattern small{font-size:13px;color:#293f59}.at-execution .ex-pattern b{font-size:13px;font-weight:500}.at-execution .ex-pattern .el-tag{height:22px;padding:0 4px;margin:0 3px;font-size:12px;font-weight:700}
+.at-execution .ex-log{height:295px;margin-top:4px;padding:8px 10px 10px}
+.at-execution .ex-log>.ex-toolbar{margin:0 0 6px;min-height:38px}.at-execution .ex-log>.ex-toolbar h3{font-size:18px}.at-execution .ex-log .ex-toolbar>div{display:flex;gap:12px}.at-execution .ex-log .el-button{height:38px;min-width:112px;font-size:15px;font-weight:600;border-radius:8px;margin:0}.at-execution .ex-log>small{font-size:12px;position:absolute;transform:translate(322px,-31px)}
+.at-execution .ex-table{height:228px;max-height:228px;overflow:auto;position:relative;border:1px solid #dce7f5}
+.at-execution table{font-size:13px;table-layout:fixed}.at-execution th{font-size:13px;font-weight:700;background:#e3effc;color:#1a304c;height:29px}.at-execution td{height:27px;color:#293f58;background:#fcfdff}.at-execution td,.at-execution th{padding:3px 9px;line-height:19px;border-color:#dfe9f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-execution th:nth-child(1){width:60px}.at-execution th:nth-child(2){width:140px}.at-execution th:nth-child(3){width:130px}.at-execution th:nth-child(4){width:160px}.at-execution th:nth-child(5){width:40%}
+.at-execution .ex-log tr.selected{outline:none!important}.at-execution .ex-log tr.selected td{background:#ffe6e8!important}.at-execution .ex-log tr.selected td:first-child{color:#dc2732;font-weight:700}
+.at-execution .ex-log>.el-pagination{height:22px;margin-top:2px;display:none}.at-execution .ex-log:has(.el-pagination .number:nth-child(2))>.el-pagination{display:flex}
+/* Parent-scoped legacy rules load after the child. Keep these overrides explicit. */
+.at-execution .ex-query{row-gap:6px;padding-top:8px;padding-bottom:6px}
+.at-execution .ex-result{line-height:27px;padding-top:4px;padding-bottom:4px}
+.at-execution .ex-columns>main>.ex-card:nth-child(3){height:160px}
+.at-execution .ex-content article{height:106px}
+.at-execution .ex-columns>aside:first-child{height:546px}
+.at-execution .ex-columns>aside:last-child>.ex-card:nth-child(3){height:171px}
+.at-execution .ex-log th:nth-child(1){width:60px}.at-execution .ex-log th:nth-child(2){width:140px}.at-execution .ex-log th:nth-child(3){width:130px}.at-execution .ex-log th:nth-child(4){width:160px}.at-execution .ex-log th:nth-child(5){width:auto}.at-execution .ex-log th:nth-child(6){width:29%}
+.at-execution .ex-chain:has(button:nth-child(5)) button:last-child{background:#fff0f1;color:#d52c35;border-color:#ffc5c8}.at-execution .ex-chain:has(button:nth-child(5)) button:last-child>.el-icon{color:#ef4850}
+.at-execution .ex-card h3 .el-tag{vertical-align:2px;margin-left:5px}
+.at-execution .ex-sample .el-tag--warning{background:#fff3df;border-color:#ffe1ba;color:#c97b20}
+.at-execution .ex-chain .execution-glyph{color:#1677ff}.at-execution .ex-chain:has(button:nth-child(5)) button:last-child .execution-glyph{color:#ef4850}
+/* Match the compact form typography used by the preceding audit views. */
+.at-execution .ex-query{min-height:106px;row-gap:8px}
+.at-execution .ex-query>label{font-size:14px;line-height:32px}
+.at-execution .ex-query .el-select__wrapper{height:32px;min-height:32px}
+.at-execution .ex-query .el-select__selected-item{font-size:14px;font-weight:500}
+.at-execution .ex-query>.el-button{height:32px;min-width:64px;font-size:14px;font-weight:500}
+.at-execution .ex-result{font-size:14px;line-height:22px;padding-top:4px;padding-bottom:4px}
+.at-execution .ex-export-status{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#edf6ff;color:#526d98;border:0;border-radius:8px;padding:10px;margin:12px 0 10px;font-size:14px;word-break:break-word}
+.at-execution .ex-export-status .el-progress{width:280px;max-width:100%}
+.at-execution .ex-export-error{color:var(--el-color-danger)}
+/* The count comes from PageResult.total; pagination stays inside its own card. */
+.at-execution .ex-columns>.ex-sample-panel{display:flex;flex-direction:column;overflow:hidden}
+.at-execution .ex-sample-panel>h3,.at-execution .ex-sample-panel>.ex-search{flex-shrink:0}
+.at-execution .ex-sample-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 2px 0;scrollbar-gutter:stable}
+.at-execution .ex-sample-footer{display:flex;align-items:center;flex:0 0 36px;height:36px;min-height:36px;margin-top:6px;padding:0;border-top:1px solid #e5edf8;background:#fbfdff;overflow:hidden}
+.at-execution .ex-sample-footer .el-pagination{display:flex;justify-content:center;margin:0;width:100%;height:26px;opacity:1}
+.at-execution .ex-sample-footer .el-pager li{min-width:24px}
+.at-execution .ex-sample-panel .ex-sample{height:60px;min-height:60px;margin-bottom:6px}
+.at-execution .ex-sample-panel .ex-sample small{margin-top:6px}

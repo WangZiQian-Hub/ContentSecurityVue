@@ -8,6 +8,7 @@ import LineagePage from './LineagePage.vue'
 import NeuronAuditPage from './NeuronAuditPage.vue'
 import RiskAlertPage from './RiskAlertPage.vue'
 import FullChainPage from './FullChainPage.vue'
+import AgentTraceAuditPage from './AgentTraceAuditPage.vue'
 import SourceEvidenceDrawer from './components/SourceEvidenceDrawer.vue'
 import NeuronIcon from './components/NeuronIcon.vue'
 import { tabs } from './presentation'
@@ -21,6 +22,7 @@ const components = {
   'full-chain': FullChainPage,
   'model-internal': NeuronAuditPage,
   'risk-alert': RiskAlertPage,
+  'agent-traces': AgentTraceAuditPage,
 }
 const tab = computed(() => String(route.params.tab || '') as keyof typeof components)
 provide('complianceEvidence', (id: string) => {
@@ -79,7 +81,12 @@ onUnmounted(() => store.invalidate())
       :closable="false"
     />
     <div v-loading="store.loading" :aria-busy="store.loading" class="compliance-content">
-      <component :is="components[tab] || OverviewPage" :key="`${tab}-${store.demo}`" />
+      <!-- This page switches its own API and store state; also remounting it lets
+           the old instance cancel the new instance's initialization. -->
+      <component
+        :is="components[tab] || OverviewPage"
+        :key="tab === 'agent-traces' ? tab : `${tab}-${store.demo}`"
+      />
     </div>
     <SourceEvidenceDrawer v-model="drawer" :evidence-id="evidenceId" />
   </section>

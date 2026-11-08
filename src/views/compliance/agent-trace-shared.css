@@ -1,0 +1,23 @@
+/* Shared chrome for all four audit views and their teleported export dialogs. */
+.agent-traces.agent-traces .at-heading { margin: 10px 0; min-height: 44px; }
+.agent-traces.agent-traces .at-heading h1 { margin: 0; font-size: 30px; font-weight: 700; color: #142644; }
+.agent-traces.agent-traces .at-heading > div { display: flex; gap: 12px; flex-wrap: wrap; }
+.agent-traces.agent-traces .at-heading .el-button { height: 40px; margin: 0; padding: 0 20px; border-radius: 8px; font-size: 16px; }
+.agent-traces.agent-traces .at-tabs { padding: 10px 12px; gap: 10px; margin-bottom: 12px; border: 1px solid #e1ecfa; border-radius: 10px; background: #ffffffb8; }
+.agent-traces.agent-traces .at-tabs > button { width: auto; min-width: 150px; padding: 12px 26px; border: 1px solid #dbe7f7; border-radius: 12px; background: linear-gradient(#f5f9ff, #edf4ff); box-shadow: 0 2px 3px #b5c9e866; color: #435e82; font-size: 20px; font-weight: 700; line-height: 1.4; }
+.agent-traces.agent-traces .at-tabs > button.active { background: #456cff; border-color: #6e8cff; color: white; box-shadow: 0 2px 4px #456cff33; }
+.agent-traces.agent-traces .at-tabs > button:focus-visible { outline: 3px solid #9ab5ff; outline-offset: 2px; }
+.el-dialog.trace-package-dialog { box-sizing: border-box; width: min(640px, calc(100vw - 32px)); height: min(540px, calc(100dvh - 32px)); margin: auto; padding: 0; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; color: #263e60; }
+.trace-package-dialog .el-dialog__header { padding: 22px 26px 18px; margin: 0; border-bottom: 1px solid #e4ecf8; }
+.trace-package-dialog .el-dialog__title { font-size: 20px; font-weight: 700; }
+.trace-package-dialog .el-dialog__body { flex: 1; min-height: 0; overflow: auto; padding: 20px 26px; }
+.trace-package-dialog .el-dialog__footer { padding: 16px 26px; border-top: 1px solid #e4ecf8; background: #f8faff; }
+.trace-package-dialog .trace-package-section { margin: 0 0 12px; font-size: 15px; color: #24446e; }
+.trace-package-dialog p { margin: 12px 0; line-height: 1.7; overflow-wrap: anywhere; }
+.trace-package-dialog .el-select { width: 100%; margin-bottom: 16px; }
+.trace-package-dialog .el-checkbox-group, .trace-package-dialog .trace-package-files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; padding: 14px; margin: 14px 0; border: 1px solid #e0eafa; border-radius: 10px; background: #f5f8ff; }
+.trace-package-dialog .el-checkbox { margin: 0; height: auto; min-height: 30px; white-space: normal; }
+.trace-package-dialog .el-checkbox__label { white-space: normal; line-height: 1.6; }
+.trace-package-dialog .el-radio-group { display: flex; flex-direction: column; align-items: flex-start; }
+.trace-package-dialog small { display: block; color: #75849b; line-height: 1.7; }
+@media (max-width: 700px) { .agent-traces.agent-traces .at-tabs > button { min-width: 0; padding: 10px 14px; font-size: 16px; } .trace-package-dialog .el-checkbox-group { grid-template-columns: 1fr; } }
