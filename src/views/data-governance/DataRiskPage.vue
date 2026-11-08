@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { analysisError } from '../../types/assessment'
+import AssessmentNotice from '../../components/AssessmentNotice.vue'
+
 import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import RiskChart from './components/RiskChart.vue'
@@ -48,7 +51,7 @@ const dataset = computed(() => options.value?.datasets.find((d) => d.id === scop
 const version = computed(() => dataset.value?.versions.find((v) => v.id === scope.versionId))
 const scheme = computed(() => options.value?.schemes.find((s) => s.id === scope.schemeId))
 const label = (level?: string) =>
-  scheme.value?.levels.find((l) => l.level === level)?.label || level
+  level === 'UNKNOWN' ? '无法判断' : scheme.value?.levels.find((l) => l.level === level)?.label || level
 const extraCategories = (sample: Sample) => new Set(sample.findings.map((f) => f.category)).size - 1
 const color = (level: string) => scheme.value?.levels.find((l) => l.level === level)?.color
 const relatedCases = computed(() =>
@@ -378,6 +381,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
+  <AssessmentNotice :value="result" />
   <div v-loading="loading" class="risk-page">
     <div class="risk-heading">
       <div></div>
@@ -471,7 +475,7 @@ onBeforeUnmount(() => {
           <el-table-column prop="sampleId" label="样本 ID" width="120" />
           <el-table-column prop="language" label="语种" width="90" />
           <el-table-column prop="reason" label="失败原因" min-width="240" />
-          <el-table-column prop="errorCode" label="错误类型" min-width="200" />
+          <el-table-column label="错误说明" min-width="200"><template #default="{ row }">{{ analysisError(row.errorCode, row.reason) }}</template></el-table-column>
         </el-table>
         <p v-else>这份历史结果未保存逐条失败原因，新任务会记录具体原因。</p>
       </details>

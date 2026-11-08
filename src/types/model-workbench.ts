@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 import type { TaskStatus } from './index'
 
 export interface ModelVersion {
@@ -55,7 +56,7 @@ export interface ModelService {
   latencyMs: number | null
   healthy: boolean | null
 }
-export interface ModelCall {
+export interface ModelCall extends Assessment {
   id: string
   modelId: string
   version: string

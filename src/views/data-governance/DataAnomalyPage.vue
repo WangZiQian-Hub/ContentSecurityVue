@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AssessmentNotice from '../../components/AssessmentNotice.vue'
+
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
@@ -427,6 +429,7 @@ watch(
 )
 </script>
 <template>
+  <AssessmentNotice :value="result" />
   <div v-loading="loading" class="anomaly-page">
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <PanelCard title="当前数据集检测">

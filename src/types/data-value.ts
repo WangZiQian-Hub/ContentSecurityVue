@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 import type { TaskStatus } from './index'
 
 export const VALUE_KIND = 'governance-value'
@@ -27,7 +28,7 @@ export interface ValueDimension {
   reason: string
   evidence?: string[]
 }
-export interface ValueSample {
+export interface ValueSample extends Assessment {
   id: string
   text: string
   language: string
@@ -36,7 +37,7 @@ export interface ValueSample {
   dimensions: (ValueDimension & { evidence: string[] })[]
   unavailableReason?: string
 }
-export interface ValueResult {
+export interface ValueResult extends Assessment {
   id: string
   taskId: string
   scope: ValueScope

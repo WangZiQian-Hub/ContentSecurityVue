@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import AssessmentNotice from '../../components/AssessmentNotice.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { VideoPlay, Delete, Document } from '@element-plus/icons-vue'
+import { isAxiosError } from 'axios'
 import PanelCard from '../../components/PanelCard.vue'
 import WorkbenchKpis from './WorkbenchKpis.vue'
 import { useModelWorkbench } from '../../stores/model-workbench'
@@ -10,6 +12,7 @@ import { percent, formatModelTime, type ModelCall } from '../../types/model-work
 import { isMock } from '../../api/request'
 import { isGovernanceLlm } from '../../api/governance-llm'
 import { listRealModels, type RealModel } from '../../api/model-workbench'
+import { governanceResult, originalRiskType } from './governance-result'
 const store = useModelWorkbench(),
   route = useRoute()
 const llmModels = ref<RealModel[]>([])
@@ -38,6 +41,7 @@ const services = computed(() =>
 )
 const service = computed(() => services.value.find((s) => s.id === serviceId.value))
 const selected = ref<ModelCall | null>(null)
+const invokeError = ref('')
 const page = ref(1)
 watch(
   modelId,
@@ -45,11 +49,13 @@ watch(
     serviceId.value =
       services.value.find((s) => s.id === route.query.serviceId)?.id || services.value[0]?.id || ''
     selected.value = null
+    invokeError.value = ''
   },
   { immediate: true },
 )
 watch(serviceId, () => {
   selected.value = null
+  invokeError.value = ''
 })
 const calls = computed(() =>
   store.data.calls.filter(
@@ -87,7 +93,7 @@ const kpis = computed(() => {
     },
     {
       label: '触发治理',
-      value: c.filter((x) => x.originalOutput !== x.governedOutput && x.riskLevel !== 'low').length,
+      value: c.filter((x) => governanceResult(x).triggered).length,
       unit: '次',
       icon: 'WarningFilled',
     },
@@ -108,6 +114,11 @@ function example() {
 function clear() {
   prompt.value = ''
   selected.value = null
+  invokeError.value = ''
+}
+function selectCall(call: ModelCall) {
+  selected.value = call
+  invokeError.value = ''
 }
 async function invoke() {
   if (!prompt.value.trim() || !service.value)
@@ -115,6 +126,7 @@ async function invoke() {
   if (isGovernanceLlm && !llmModelId.value)
     return void ElMessage.warning(llmModelsHint.value || '请先选择真实模型')
   selected.value = null
+  invokeError.value = ''
   try {
     selected.value = isGovernanceLlm
       ? await store.realInvoke({
@@ -132,17 +144,18 @@ async function invoke() {
         })
     page.value = 1
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '调用失败')
+    invokeError.value = isAxiosError(e)
+      ? String(e.response?.data?.message || e.message)
+      : e instanceof Error
+        ? e.message
+        : '调用失败'
+    ElMessage.error(invokeError.value)
   }
 }
-const governed = computed(
-  () =>
-    selected.value &&
-    selected.value.riskLevel !== 'low' &&
-    selected.value.originalOutput !== selected.value.governedOutput,
-)
+const resultState = computed(() => (selected.value ? governanceResult(selected.value) : null))
 </script>
 <template>
+  <AssessmentNotice :value="selected" />
   <WorkbenchKpis :items="kpis" />
   <div class="mw-grid mw-invoke-grid">
     <PanelCard title="调用配置" icon="Setting"
@@ -213,7 +226,7 @@ const governed = computed(
           ></el-form-item>
         </div>
         <p v-if="isGovernanceLlm" class="mw-input-summary">
-          真实调用模式：生成与治理均由模型服务执行，采样参数以上游服务配置为准。
+          真实调用模式：模型生成治理结果，服务端补充隐私脱敏与规则复检，采样参数以上游服务配置为准。
         </p>
         <div class="mw-actions">
           <el-button
@@ -239,13 +252,20 @@ const governed = computed(
             {{ (selected.elapsedMs / 1000).toFixed(2) }} 秒</el-tag
           ></template
         >
+        <el-alert
+          v-if="invokeError"
+          :title="`治理调用失败：${invokeError}`"
+          type="error"
+          :closable="false"
+          show-icon
+        />
         <template v-if="selected"
           ><div class="mw-info-strip">当前记录 {{ selected.id }} · {{ selected.version }}</div>
           <div class="mw-grid mw-halves mw-output-grid">
             <section>
               <h3>
                 原始输出
-                <el-tag :type="governed ? 'danger' : 'info'">{{
+                <el-tag :type="originalRiskType(selected.riskLevel)">{{
                   selected.riskLevel === 'high'
                     ? '高风险'
                     : selected.riskLevel === 'medium'
@@ -259,16 +279,17 @@ const governed = computed(
             </section>
             <section>
               <h3>
-                治理后输出 <el-tag type="success">{{ governed ? '已治理' : '无需干预' }}</el-tag>
+                治理后输出 <el-tag :type="resultState?.type">{{ resultState?.label }}</el-tag>
               </h3>
               <p>{{ selected.governedOutput }}</p>
             </section>
           </div>
           <el-alert
             :title="`判定依据：${selected.reason}`"
-            :type="governed ? 'warning' : 'info'"
+            :type="resultState?.type === 'danger' ? 'error' : resultState?.type || 'info'"
             :closable="false"
           />
+          <p class="mw-input-summary">{{ resultState?.message }}</p>
           <div v-if="isMock" class="mw-steps">
             <el-steps :active="5" finish-status="success" align-center
               ><el-step
@@ -303,10 +324,10 @@ const governed = computed(
             label="输入摘要"
             min-width="175"
             show-overflow-tooltip
-          /><el-table-column label="治理结果" width="100"
+          /><el-table-column label="治理结果" min-width="150"
             ><template #default="{ row }"
-              ><el-tag :type="row.riskLevel === 'low' ? 'info' : 'success'">{{
-                row.riskLevel === 'low' ? '无需干预' : '已治理'
+              ><el-tag :type="governanceResult(row).type">{{
+                governanceResult(row).label
               }}</el-tag></template
             ></el-table-column
           ><el-table-column label="耗时" width="85"
@@ -319,7 +340,11 @@ const governed = computed(
             }}</template></el-table-column
           ><el-table-column label="操作" width="70"
             ><template #default="{ row }"
-              ><el-button link type="primary" :disabled="store.busy" @click="selected = row"
+              ><el-button
+                link
+                type="primary"
+                :disabled="store.busy"
+                @click="selectCall(row)"
                 >查看</el-button
               ></template
             ></el-table-column

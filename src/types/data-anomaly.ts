@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 import type { ResourceSample } from './data-resource'
 import type { ValueScope, ValueOptions } from './data-value'
 export const ANOMALY_KIND = 'governance-anomaly'
@@ -35,7 +36,7 @@ export interface Sample extends ResourceSample {
   timeline: { at: string; message: string }[]
   actions: string[]
 }
-export interface Result {
+export interface Result extends Assessment {
   id: string
   taskId: string
   scope: Scope

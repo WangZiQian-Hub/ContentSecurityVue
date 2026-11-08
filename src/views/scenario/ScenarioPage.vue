@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import KpiStrip from '../../components/KpiStrip.vue'
@@ -45,12 +45,46 @@ const name = computed(
 const models = ref<ScenarioModel[]>([])
 const modelsReady = ref(false)
 const modelsHint = ref('')
+const modelNames = computed(() =>
+  Object.fromEntries(models.value.map((item) => [item.modelId, item.name])),
+)
 const selectedModel = ref('')
 const content = ref('')
 /** 正文语言，对应请求字段 language。文档第 105 行要求传语言代码，不能传「中文」这类名称。 */
 const contentLanguage = ref('zh')
 const materials = ref<ScenarioMaterial[]>([])
 const targetLanguage = ref('en')
+
+/** 每个页签保留自己的正文、语言和材料；模型选择跨页签共用。 */
+interface ScenarioDraft {
+  content: string
+  contentLanguage: string
+  targetLanguage: string
+  materials: ScenarioMaterial[]
+}
+
+const drafts = reactive<Record<string, ScenarioDraft>>({})
+
+function defaultDraft(): ScenarioDraft {
+  return { content: '', contentLanguage: 'zh', targetLanguage: 'en', materials: [] }
+}
+
+function saveDraft(code: string) {
+  drafts[code] = {
+    content: content.value,
+    contentLanguage: contentLanguage.value,
+    targetLanguage: targetLanguage.value,
+    materials: materials.value.map((item) => ({ ...item })),
+  }
+}
+
+function loadDraft(code: string) {
+  const draft = drafts[code] ?? defaultDraft()
+  content.value = draft.content
+  contentLanguage.value = draft.contentLanguage
+  targetLanguage.value = draft.targetLanguage
+  materials.value = draft.materials.map((item) => ({ ...item }))
+}
 
 /** 文档第 105 行：语言用 2–8 位字母的代码，可接 - 分隔的字母数字段，
  *  不能传「中文」「英语」这类名称。允许自由输入其他代码，但必须符合这个格式。 */
@@ -176,8 +210,10 @@ function showRecord(record: AnalysisRecord) {
   outcome.value = { mode: 'llm', result: record.result, record }
 }
 
-watch(scenarioCode, () => {
+watch(activeCode, (next, previous) => {
+  if (previous) saveDraft(previous)
   outcome.value = null
+  loadDraft(next)
 })
 onMounted(loadModelsIfPossible)
 watch(llmTokenConfigured, loadModelsIfPossible)
@@ -321,6 +357,7 @@ watch(llmTokenConfigured, loadModelsIfPossible)
     ref="records"
     class="scenario-records"
     :scenario-code="scenarioCode"
+    :model-names="modelNames"
     @open="showRecord"
   />
   <PanelCard v-else class="scenario-records" title="场景治理任务" icon="Tickets">

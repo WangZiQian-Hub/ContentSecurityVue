@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import { assessmentLabel } from '../../types/assessment'
 import { ref, watch } from 'vue'
 import PanelCard from '../PanelCard.vue'
 import { getScenarioRecord, listScenarioRecords } from '../../api/scenario'
 import type { AnalysisRecord, ScenarioCode } from '../../types/scenario'
 /* 场景分析记录：直接读模型服务的 /analysis/records（文档第 7.1 节）。
    注意该接口不支持 model_id / service_id / version 筛选，也不返回业务任务。 */
-const props = defineProps<{ scenarioCode: ScenarioCode | '' }>()
+const props = defineProps<{
+  scenarioCode: ScenarioCode | ''
+  modelNames?: Record<string, string>
+}>()
 const emit = defineEmits<{ (event: 'open', record: AnalysisRecord): void }>()
 
 const rows = ref<AnalysisRecord[]>([])
@@ -29,6 +33,11 @@ const statusTypes: Record<string, 'success' | 'danger' | 'primary'> = {
 
 function formatTime(value: string | null) {
   return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—'
+}
+
+/** 模型目录里找不到时回退显示原 ID，避免删除模型后记录变成空白。 */
+function modelLabel(id: string) {
+  return props.modelNames?.[id] || id
 }
 
 /** 404 在这条链路上通常表示地址上不是模型服务或该接口未实现，
@@ -90,11 +99,13 @@ defineExpose({ reload: load })
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
     <el-table v-else v-loading="loading" :data="rows" stripe size="small">
       <el-table-column type="index" label="#" width="56" />
-      <el-table-column prop="modelId" label="模型" min-width="160" show-overflow-tooltip />
+      <el-table-column label="模型" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">{{ modelLabel(row.modelId) }}</template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="statusTypes[row.status] || 'info'" effect="plain" size="small">
-            {{ statusLabels[row.status] || row.status }}
+            {{ assessmentLabel(row) || statusLabels[row.status] || row.status }}
           </el-tag>
         </template>
       </el-table-column>

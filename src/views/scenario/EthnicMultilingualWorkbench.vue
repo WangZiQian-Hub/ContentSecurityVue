@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AssessmentNotice from '../../components/AssessmentNotice.vue'
+
 /** 多语言语义权重与风险分层工作台（GN21）。
  * 场景应用「多语言语义权重」页签（路由 /scenario/ethnic-governance）。
  * 左：模型/数据集/版本/语种/模式表单；右：分析结果（统计卡、权重分布、
@@ -351,6 +353,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <AssessmentNotice :value="result" />
   <div class="ml-workbench">
     <!-- 顶部横幅 -->
     <div class="ml-banner">

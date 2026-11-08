@@ -1,3 +1,4 @@
+import type { Assessment } from '../types/assessment'
 import { isMock, request } from './request'
 import axios from 'axios'
 import { getLlmToken, llmRequest } from './governance-llm'
@@ -165,7 +166,7 @@ export async function listRealModels(): Promise<RealModel[]> {
     : []
 }
 
-export interface RealInvokeOutcome {
+export interface RealInvokeOutcome extends Assessment {
   originalOutput: string
   governedOutput: string
   reason: string
@@ -192,6 +193,9 @@ export async function realModelInvoke(
     governedOutput: String(result.governedOutput ?? ''),
     reason: String(result.reason ?? ''),
     riskLevel: String(result.riskLevel ?? 'unknown'),
+    assessmentStatus: result.assessmentStatus as Assessment['assessmentStatus'],
+    unavailableFields: result.unavailableFields as string[] | undefined,
+    assessmentReason: result.assessmentReason as string | null | undefined,
     reconstruction: typeof result.reconstruction === 'string' ? result.reconstruction : null,
     elapsedMs: Math.max(0, Math.round(performance.now() - startedAt)),
   }

@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 /** 多语种语义权重与风险分层的数据契约（GN21）。
  * 归属模型服务（8001），路由前缀 /api/v1/analysis/ethnic-multilingual。
  * 前端按本契约渲染；后端未就绪时由 src/mock/ethnic-multilingual.ts 提供固定样例。
@@ -106,7 +107,7 @@ export interface RiskEvidenceItem {
 }
 
 /** 逐条样本（结果详情）。 */
-export interface MultilingualSample {
+export interface MultilingualSample extends Assessment {
   id: string
   datasetId: number
   versionId: string
@@ -128,7 +129,7 @@ export interface MultilingualSample {
 }
 
 /** 分析结果汇总（结果详情、最近结果、历史结果的条目结构）。 */
-export interface MultilingualResult {
+export interface MultilingualResult extends Assessment {
   id: string
   taskId: string
   scope: MultilingualScope

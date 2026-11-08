@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 import type { Task } from './index'
 
 /** 场景应用的接口契约（对应模型服务 8001 的 /analysis/*）。
@@ -115,7 +116,7 @@ export type ScenarioDetails =
   | CyberSecurityDetails
 
 /** 场景分析结果：六套 details 之外的共同字段完全一致。 */
-export interface ScenarioResult {
+export interface ScenarioResult extends Assessment {
   scenarioCode: ScenarioCode
   summary: string
   riskLevel: RiskLevel
@@ -136,7 +137,7 @@ export interface AnalysisCallRef {
 }
 
 /** 场景、生成治理、审计三类分析共用的记录结构（文档第 7 节）。 */
-export interface AnalysisRecord {
+export interface AnalysisRecord extends Assessment {
   id: string
   kind: 'scenario' | 'model_governance' | 'audit' | string
   scenarioCode: string | null
@@ -189,7 +190,7 @@ export const riskLabels: Record<RiskLevel, string> = {
   low: '低',
   medium: '中',
   high: '高',
-  unknown: '未知',
+  unknown: '无法判断',
 }
 
 export const sentimentLabels: Record<Sentiment, string> = {
@@ -197,7 +198,7 @@ export const sentimentLabels: Record<Sentiment, string> = {
   negative: '负面',
   neutral: '中立',
   mixed: '混合',
-  unknown: '未知',
+  unknown: '无法判断',
 }
 
 /** 把路由页签名转换成文档要求的场景编码；无法识别时返回空串。 */

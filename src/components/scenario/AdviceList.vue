@@ -7,7 +7,7 @@ defineProps<{ items: string[] }>()
   <ul v-if="items?.length" class="advice-list">
     <li v-for="(item, index) in items" :key="index">{{ item }}</li>
   </ul>
-  <p v-else class="empty">无</p>
+  <p v-else class="empty">无可用依据</p>
 </template>
 <style scoped>
 .advice-list {

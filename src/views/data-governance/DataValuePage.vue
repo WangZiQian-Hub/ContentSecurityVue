@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { analysisError } from '../../types/assessment'
+import AssessmentNotice from '../../components/AssessmentNotice.vue'
+
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
@@ -396,6 +399,7 @@ onBeforeUnmount(() => {
 onMounted(loadOptions)
 </script>
 <template>
+  <AssessmentNotice :value="result" />
   <div class="value-page">
     <PanelCard title="当前数据集分析" icon="DataAnalysis">
       <template #extra><span class="muted value-panel-note"></span></template>
@@ -509,7 +513,7 @@ onMounted(loadOptions)
         >
         <template v-if="selected"
           ><div class="sample-score">
-            {{ selected.id }} · 综合评分 {{ selected.score ?? '不可评估' }}
+            {{ selected.id }} · 综合评分 {{ selected.score ?? '0' }}{{ selected.tier === 'unavailable' ? '（无法判断）' : '' }}
           </div>
           <h3 class="sample-title">{{ selected.text }}</h3>
           <div class="reason-scroll" tabindex="0" aria-label="样本价值维度解释，可上下滚动">
@@ -527,7 +531,8 @@ onMounted(loadOptions)
               >
             </div>
           </div>
-          <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
+          <AssessmentNotice :value="selected" />
+        <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
           <p class="muted sample-explanation-note">
             解释对象为选中样本，不代表整个数据集。
           </p></template
@@ -647,10 +652,11 @@ onMounted(loadOptions)
       ><template v-if="selected"
         ><h3 class="value-detail-heading">{{ selected.id }} · {{ selected.text }}</h3>
         <p class="value-detail-meta">
-          语种：{{ languageName(selected.language) }} · 综合评分：{{ selected.score ?? '不可评估' }}
+          语种：{{ languageName(selected.language) }} · 综合评分：{{ selected.score ?? '0' }}{{ selected.tier === 'unavailable' ? '（无法判断）' : '' }}
           ·
           {{ tierNames[selected.tier] }}
         </p>
+        <AssessmentNotice :value="selected" />
         <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
         <div v-for="item in selected.dimensions" :key="item.name" class="reason-row">
           <b>{{ item.name }} {{ item.score }}</b
@@ -708,7 +714,7 @@ onMounted(loadOptions)
         <summary>查看失败样本（{{ result.failedCount }} 条）</summary>
         <el-table :data="taskDetail?.failedSamples || result.failedSamples || []">
           <el-table-column prop="sampleId" label="样本 ID" />
-          <el-table-column prop="errorCode" label="错误类型" />
+          <el-table-column label="错误说明"><template #default="{ row }">{{ analysisError(row.errorCode, row.reason) }}</template></el-table-column>
           <el-table-column prop="reason" label="失败原因" min-width="240" />
         </el-table>
         <p v-if="!taskDetail?.failedSamples?.length && !result.failedSamples?.length">

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AssessmentNotice from '../AssessmentNotice.vue'
+import { analysisError } from '../../types/assessment'
 import { computed } from 'vue'
 import PanelCard from '../PanelCard.vue'
 import RiskBadge from './RiskBadge.vue'
@@ -66,6 +68,7 @@ const rawAnswer = computed(() => {
   </PanelCard>
 
   <PanelCard v-else title="分析结果" icon="DataAnalysis">
+    <AssessmentNotice :value="result" />
     <template #extra>
       <span v-if="record" class="meta">记录 {{ record.id }} · {{ record.elapsedMs }} ms</span>
     </template>
@@ -79,10 +82,10 @@ const rawAnswer = computed(() => {
     <!-- 已执行但失败：把失败阶段和记录 ID 交代清楚，不让用户以为只是网络错误 -->
     <div v-if="failed" class="notice error">
       <b>分析未完成，记录已保存。</b>
-      <p>{{ failed.errorMessage || '模型服务未返回结果。' }}</p>
+      <p>{{ analysisError(failed.errorCode, failed.errorMessage) }}</p>
       <ul>
         <li>失败阶段：{{ failed.stage || '未知' }}</li>
-        <li v-if="failed.errorCode">错误类型：{{ failed.errorCode }}</li>
+        
         <li v-if="failed.upstreamStatus">上游状态：{{ failed.upstreamStatus }}</li>
       </ul>
       <p>可在下方「场景分析记录」中查看这条记录。</p>
@@ -96,7 +99,7 @@ const rawAnswer = computed(() => {
         <RiskBadge :level="result.riskLevel" />
       </div>
       <p v-if="result.insufficientMaterials" class="notice warn verdict-notice">
-        资料不足，风险等级为未知，结论不可用。请补充材料后重新分析。
+        部分结论缺少依据，风险等级无法判断。已有依据的分析仍在下方展示，可补充材料后重新分析。
       </p>
     </section>
 
@@ -129,7 +132,7 @@ const rawAnswer = computed(() => {
         <div class="two-column">
           <ResultSection title="引用来源" note="source_id 为 input 时表示请求正文">
             <CitationList v-if="result.evidence?.length" :items="result.evidence" />
-            <p v-else class="absent">无</p>
+            <p v-else class="absent">无可用依据</p>
           </ResultSection>
           <ResultSection title="分析局限"><AdviceList :items="result.limitations" /></ResultSection>
         </div>

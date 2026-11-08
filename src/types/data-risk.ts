@@ -1,3 +1,4 @@
+import type { Assessment } from './assessment'
 import type { ResourceSample } from './data-resource'
 export type Level = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOTICE'
 export type RiskSortField = 'maximumSuggestedLevel' | 'status'
@@ -77,7 +78,7 @@ export interface Sample extends ResourceSample {
   review?: Review
   actions: string[]
 }
-export interface Result {
+export interface Result extends Assessment {
   id: string
   taskId: string
   scope: Scope
