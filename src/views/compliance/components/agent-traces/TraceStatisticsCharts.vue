@@ -13,10 +13,17 @@ import {
 } from '../../../../utils/agent-trace-statistics'
 const props = defineProps<{ data: AgentTraceStatisticsWorkspace }>()
 const c = computed(() => props.data.charts)
+const matrixRows = computed(() => c.value.behaviorMatrix.rows.filter(r => r.categoryCode !== 'normal' && r.label !== '正常任务'))
+const behaviorLabel = (code: string, fallback: string) => ({ unauthorized: '权限异常', policy_denied: '调用被拦截', argument_error: '参数错误', timeout: '调用超时', duplicate: '重复请求', retry: '调用重试' } as Record<string, string>)[code] || fallback
+const coverageFields = [
+  { key: 'source', label: '来源定位', help: '可定位到导入文件和原始记录。' },
+  { key: 'time', label: '任务耗时', help: '提供了任务总耗时，可用于运行时长统计。' },
+  { key: 'reasoning', label: '推理 Token 用量', help: '提供了推理 Token 数量，不代表提供了完整推理文本。' },
+] as const
 const maxCell = computed(() =>
   Math.max(
     1,
-    ...c.value.behaviorMatrix.rows.flatMap((r) => r.cells.map((cell) => cell.count || 0)),
+    ...matrixRows.value.flatMap((r) => r.cells.map((cell) => cell.count || 0)),
   ),
 )
 const available = (s: string) => ['available', 'partial'].includes(s)
@@ -176,16 +183,17 @@ const available = (s: string) => ['available', 'partial'].includes(s)
         {{ c.toolResultDistribution.unknownCount }}</small
       >
     </PanelCard>
-    <PanelCard title="行为矩阵（风险类别 × 关键行为，单位：次）">
-      <table v-if="available(c.behaviorMatrix.availability)" class="ats-matrix">
+    <PanelCard title="风险类别与关键行为">
+      <div class="ats-matrix-scroll">
+      <table v-if="available(c.behaviorMatrix.availability) && matrixRows.length" class="ats-matrix">
         <thead>
           <tr>
-            <th>风险类别</th>
-            <th v-for="col in c.behaviorMatrix.columns" :key="col.code">{{ col.label }}</th>
+            <th class="ats-matrix-axis">风险类别<span>／关键行为</span></th>
+            <th v-for="col in c.behaviorMatrix.columns" :key="col.code">{{ behaviorLabel(col.code, col.label) }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in c.behaviorMatrix.rows" :key="row.categoryCode">
+          <tr v-for="row in matrixRows" :key="row.categoryCode">
             <th>{{ row.label }}</th>
             <td
               v-for="cell in row.cells"
@@ -206,15 +214,16 @@ const available = (s: string) => ['available', 'partial'].includes(s)
       </table>
       <el-empty
         v-else
-        :description="c.behaviorMatrix.reason || '未采集行为数据'"
+        :description="c.behaviorMatrix.reason || '暂无带风险类别标签的样本，正常任务不进入此矩阵'"
         :image-size="45"
       />
-      <small>按事件类型计数，可重叠；类别为测试标签。</small>
+      </div>
+      <small class="ats-matrix-note">行：测试集风险类别（不含正常任务）；列：实际记录的关键行为。按调用去重计次，同一次调用可命中多列；不是风险样本数。</small>
     </PanelCard>
     <PanelCard :title="`来源与语言分布（共 ${data.listCounts.all} 样本）`"
       ><div class="ats-distributions">
         <div v-for="(distribution, i) in [c.sourceDistribution, c.languageDistribution]" :key="i">
-          <strong>{{ i ? '样本语言' : '轨迹来源（调用场景）' }}</strong
+          <strong>{{ i ? '样本语言' : '接入来源' }}</strong
           ><template v-if="available(distribution.availability)"
             ><div
               v-for="r in distribution.items.filter((row) => row.count !== 0)"
@@ -232,23 +241,16 @@ const available = (s: string) => ['available', 'partial'].includes(s)
       </div></PanelCard
     >
   </div>
-  <div class="ats-completeness">
-    <strong>证据完整性与质量 <small>（轨迹字段可用率）</small></strong>
-    <div
-      v-for="(key, i) in ['source', 'time', 'reasoning'] as const"
-      :key="key"
-      :title="`缺失 ${data.completeness[key].missingCount}；无效 ${data.completeness[key].invalidCount}；不适用 ${data.completeness[key].notApplicableCount}`"
-    >
-      <span
-        >{{ ['来源', '时间', '已记录推理字段'][i] }}：{{ data.completeness[key].availableCount }} /
-        {{ data.completeness[key].applicableCount }}（{{
-          num(data.completeness[key].ratePercent, 1)
-        }}%）</span
-      ><el-progress
-        :percentage="data.completeness[key].ratePercent || 0"
-        :show-text="false"
-        :stroke-width="9"
-      />
+  <section class="ats-completeness">
+    <header><strong>轨迹字段覆盖情况</strong><small>统计有多少条样本提供了对应字段，不代表安全评分或证据可信度。</small></header>
+    <div class="ats-coverage-grid">
+      <article v-for="field in coverageFields" :key="field.key" class="ats-coverage-card">
+        <div class="ats-coverage-heading"><b>{{ field.label }}</b><span>{{ data.completeness[field.key].ratePercent == null ? '不适用' : `${num(data.completeness[field.key].ratePercent, 1)}%` }}</span></div>
+        <p>已提供 <strong>{{ data.completeness[field.key].availableCount }}</strong> / {{ data.completeness[field.key].applicableCount }} 条样本</p>
+        <el-progress :percentage="data.completeness[field.key].ratePercent || 0" :show-text="false" :stroke-width="6" />
+        <small>{{ field.help }}</small>
+        <span class="ats-coverage-missing">缺失 {{ data.completeness[field.key].missingCount }} 条 · 无效 {{ data.completeness[field.key].invalidCount }} 条<template v-if="data.completeness[field.key].notApplicableCount"> · 不适用 {{ data.completeness[field.key].notApplicableCount }} 条</template></span>
+      </article>
     </div>
-  </div>
+  </section>
 </template>

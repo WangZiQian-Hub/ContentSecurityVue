@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ViewExportStatus from './ViewExportStatus.vue'
+import { traceBatchLabel } from '../../../../utils/agent-trace-presentation'
 const autoViewExport = ref(false)
 import { computed, onUnmounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -36,13 +37,13 @@ const rowClass = ({ row }: { row: { traceId: string } }) =>
   row.traceId === store.selectedId ? 'ats-selected' : ''
 const labels = [
   '样本',
-  '检出风险样本',
+  '安全风险样本',
   '已记录 Token',
   '推理/输出比',
   '工具调用',
   '工具种类',
   '平均步骤',
-  '任务成功率',
+  '流程完成率',
 ]
 const keys = [
   'sampleCount',
@@ -57,7 +58,7 @@ const keys = [
 const icons = ['Coin', 'Warning', 'Files', 'DataAnalysis', 'SetUp', 'Box', 'Share', 'Aim']
 const tabs: { code: AgentTraceListFilter; label: string }[] = [
   { code: 'all', label: '全部样本' },
-  { code: 'risk', label: '检出风险' },
+  { code: 'risk', label: '安全风险' },
   { code: 'missing_fields', label: '缺失字段' },
 ]
 const contentLabels: Record<string, string> = {
@@ -67,6 +68,7 @@ const contentLabels: Record<string, string> = {
   manifest: '文件清单',
 }
 function batchLabel(batch: {
+  name?: string
   displayId: string
   sampleCount: number
   languages: { code: string; count: number }[]
@@ -77,7 +79,7 @@ function batchLabel(batch: {
     other: '其他',
     unknown: '未知',
   }
-  return `${batch.displayId}（共${batch.sampleCount}样本，${batch.languages
+  return `${traceBatchLabel(batch)}（共${batch.sampleCount}样本，${batch.languages
     .filter((l) => l.count > 0)
     .map((l) => `${languageNames[l.code] || l.code} ${l.count}`)
     .join(' / ')}）`
@@ -112,9 +114,6 @@ watch(
     const q = old === undefined ? initialQuery() : {}
     const trace =
       old === undefined && typeof route.query.traceId === 'string' ? route.query.traceId : ''
-    // Accept old bookmarked links once, then keep only the page identifier in the address.
-    if (Object.keys(route.query).some((key) => key !== 'view'))
-      await router.replace({ query: { view: 'statistics' } })
     if (!alive || version !== modeVersion) return
     await store.load(q)
     if (!alive || version !== modeVersion) return
@@ -122,6 +121,21 @@ watch(
     if (trace && store.workspace?.scope) await store.select(trace)
   },
   { immediate: true },
+)
+watch(
+  () => [store.query.batchId, store.query.snapshotId, store.selectedId, store.loading],
+  () => {
+    if (route.query.view !== 'statistics' || !store.workspace?.scope || store.loading) return
+    const next = {
+      view: 'statistics',
+      batchId: store.query.batchId,
+      snapshotId: store.query.snapshotId,
+      traceId:
+        store.selectedId ||
+        (typeof route.query.traceId === 'string' ? route.query.traceId : undefined),
+    }
+    if (JSON.stringify(route.query) !== JSON.stringify(next)) void router.replace({ query: next })
+  },
 )
 watch(
   () => store.selectedId,
@@ -139,6 +153,7 @@ async function restoreFocus() {
   button?.focus({ preventScroll: true })
 }
 async function query() {
+  await router.replace({ query: { view: 'statistics', batchId: draft.value.batchId } })
   await store.load({
     batchId: draft.value.batchId || undefined,
     language: draft.value.language,
@@ -190,7 +205,12 @@ onUnmounted(() => {
 </script>
 <template>
   <section class="ats-statistics">
-    <ViewExportStatus v-if="autoViewExport && (store.task || exportStarting || store.exportError)" :task="store.task" :error="store.exportError" :download="a => store.download(a.artifactId)" />
+    <ViewExportStatus
+      v-if="autoViewExport && (store.task || exportStarting || store.exportError)"
+      :task="store.task"
+      :error="store.exportError"
+      :download="(a) => store.download(a.artifactId)"
+    />
     <div
       v-if="!autoViewExport && (exportStarting || store.task || store.exportError)"
       class="ats-export-status"
@@ -273,6 +293,7 @@ onUnmounted(() => {
       description="当前批次没有已发布快照，请先完成轨迹接入与解析"
     />
     <template v-else-if="w?.scope && w.permissions.canViewStatistics">
+      <el-alert v-if="w.batchOptions.items.find(b => b.batchId === w?.scope?.batchId)?.activeSnapshotId && w.batchOptions.items.find(b => b.batchId === w?.scope?.batchId)?.activeSnapshotId !== w.scope.snapshotId" title="当前为历史快照，可查询最新审计结果。" type="info" :closable="false"><el-button link @click="query">查看最新结果</el-button></el-alert>
       <div class="ats-kpis">
         <article
           v-for="(key, i) in keys"
@@ -285,11 +306,18 @@ onUnmounted(() => {
           <AppIcon :name="icons[i]" />
           <div>
             <span>{{ labels[i] }}</span
-            ><strong :class="{ risk: i === 1 }">{{ statisticMetric(w.kpis[key]) }}</strong
+            ><strong :class="{ risk: i === 1 }">{{ i === 1 && w.kpis[key].value == null ? '尚未审计' : statisticMetric(w.kpis[key]) }}</strong
+            ><small v-if="i === 2 && w.kpis[key].estimatedSampleCount"
+              >含估算 {{ w.kpis[key].estimatedSampleCount }} 条</small
             ><small v-if="i === 3">同口径 {{ w.kpis[key].validSampleCount }} 条</small>
           </div>
         </article>
       </div>
+      <section v-if="w.auditSummary" class="trace-audit-summary">
+        <b>规则审计 {{ w.auditSummary.completedSamples }} / {{ w.auditSummary.totalSamples }}</b>
+        <span>策略拒绝样本 {{ w.auditSummary.policySamples }}</span><span>运行异常样本 {{ w.auditSummary.operationSamples }}</span><span>效率线索样本 {{ w.auditSummary.efficiencySamples }}</span>
+        <small>{{ w.auditSummary.scope }}；各项按样本去重，可重叠。{{ w.auditSummary.version }}</small>
+      </section>
       <TraceStatisticsCharts :data="w" />
       <section class="ats-samples">
         <div class="ats-list-tabs">
@@ -299,12 +327,12 @@ onUnmounted(() => {
             :type="store.query.listFilter === t.code ? 'primary' : 'default'"
             :disabled="!w.permissions.canListSamples || store.listLoading"
             @click="store.samples(1, t.code)"
-            >{{ t.label }}（{{ w.listCounts[t.code] }}）</el-button
+            >{{ t.label }}（{{ t.code === 'missing_fields' ? w.completeness.missingUnionCount : w.listCounts[t.code] }}）</el-button
           ><small
             >缺失样本按 ID 去重。{{
               w.completeness.overlapSummary.timeAndReasoningCount
             }}
-            条同时缺失时间和推理字段。</small
+            条同时缺少任务耗时和推理 Token 用量。</small
           >
         </div>
         <el-alert
@@ -422,11 +450,13 @@ onUnmounted(() => {
     <el-dialog
       v-model="packageDialog"
       title="导出结果包"
-      width="640px" align-center
+      width="640px"
+      align-center
       append-to-body
       class="ats-export-dialog trace-package-dialog"
       ><template v-if="w?.scope"
-        ><h3 class="trace-package-section">统计指标 · 导出范围</h3><p>批次 {{ w.scope.batchId }} · 快照 {{ w.scope.snapshotId }}</p>
+        ><h3 class="trace-package-section">统计指标 · 导出范围</h3>
+        <p>批次 {{ w.scope.batchId }} · 快照 {{ w.scope.snapshotId }}</p>
         <el-radio-group v-model="subset"
           ><el-radio :value="false">当前查询范围全部样本（{{ w.listCounts.all }}）</el-radio
           ><el-radio :value="true"
@@ -461,3 +491,7 @@ onUnmounted(() => {
   </section>
 </template>
 <style src="./agent-trace-statistics.css"></style>
+
+<style scoped>
+.trace-audit-summary{display:flex;flex-wrap:wrap;gap:12px;padding:12px;border:1px solid #d5e3f7;border-radius:8px;background:#fff;margin-bottom:12px;font-size:13px}.trace-audit-summary small{width:100%;color:#66788f}
+</style>

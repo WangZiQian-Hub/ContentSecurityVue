@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import RuleFindings from './RuleFindings.vue'
+const router = useRouter()
 import { useAgentTraceStatisticsStore } from '../../../../stores/agent-trace-statistics'
 const emit = defineEmits<{ closed: [] }>()
 import {
@@ -89,11 +92,13 @@ async function copy() {
               no_risk_found: '未检出风险',
               pending: '待审计',
               error: '审计失败',
-              unknown: '未知',
+              unknown: '未审计',
             }[d.audit.decision] || '未知'
           }}</el-tag
         >
       </div>
+      <el-tag v-if="d.summary.tokenUsage.estimated" type="warning">本样本包含估算 Token</el-tag>
+      <RuleFindings :items="d.summary.ruleFindings" :version="d.summary.ruleAudit?.version" @locate="id => router.replace({query:{view:'execution',batchId:d!.batchId,snapshotId:d!.snapshotId,traceId:d!.traceId,eventId:id}})" />
       <div class="ats-drawer-summary">
         <div>
           <small>运行概览</small

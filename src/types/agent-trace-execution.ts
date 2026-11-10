@@ -17,6 +17,7 @@ export interface ExecutionSample {
   durationMs: number | null
 }
 export interface ExecutionQuery {
+  traceId?: string
   batchId?: string
   snapshotId?: string
   projectionVersion?: string
@@ -82,6 +83,8 @@ export interface ExecutionGraph {
   nextCursor: string | null
 }
 export interface ExecutionDetail {
+  ruleFindings?: import('../utils/agent-trace-presentation').RuleFinding[]
+  ruleAudit?: { version: string }
   scope: ExecutionScope
   traceId: string
   summary: ExecutionSample
@@ -100,8 +103,9 @@ export interface ExecutionDetail {
   permissions: { canViewRaw: boolean; canExport: boolean }
 }
 export interface ExecutionWorkspace {
+  activeSnapshotId?: string
   scope: ExecutionScope | null
-  batchOptions: PageResult<{ batchId: string; displayId: string }>
+  batchOptions: PageResult<{ batchId: string; displayId: string; name?: string }>
   batchSummary: { sampleCount: number; byLanguage: { code: string; count: number }[] }
   queriedAt: string
   samplePage: PageResult<ExecutionSample>

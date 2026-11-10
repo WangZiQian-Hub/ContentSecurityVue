@@ -13,5 +13,5 @@ defineProps<{ code: string }>()
     aria-hidden="true"
   />
   <AppIcon v-else-if="code === 'langchain_trace'" name="Link" />
-  <span v-else class="anthropic-mark" aria-hidden="true">AI</span>
+  <AppIcon v-else name="Document" />
 </template>

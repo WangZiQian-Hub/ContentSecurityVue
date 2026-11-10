@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import './agent-trace-shared.css'
+import { traceBatchLabel } from '../../utils/agent-trace-presentation'
 import ViewExportStatus from './components/agent-traces/ViewExportStatus.vue'
 const autoViewExport = ref(false)
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
@@ -58,6 +59,36 @@ function sourceTokens(line: string) {
 }
 const w = computed(() => store.workspace),
   d = computed(() => store.detail)
+const rawPreviewLines = computed(() => {
+  const raw = d.value?.rawPreview.rawText ?? ''
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2).split('\n')
+  } catch {
+    return raw.split('\n')
+  }
+})
+const normalizedFields = computed(() => [
+  { label: 'trace_id', value: d.value?.displayId || '未提供', title: d.value?.traceId },
+  { label: 'event_type', value: d.value?.normalizedEvent?.eventType || '未提供' },
+  { label: 'tool_name', value: d.value?.normalizedEvent?.toolName || '不适用' },
+  { label: 'source_ref', value: d.value?.sourceRef.sourcePath || '未提供' },
+  { label: 'event_id', value: d.value?.normalizedEvent?.eventId || '未提供', wide: true, copyValue: d.value?.normalizedEvent?.eventId },
+  { label: 'call_id', value: d.value?.normalizedEvent?.callId || '不适用', wide: true, copyValue: d.value?.normalizedEvent?.callId },
+])
+const previewEvents = computed(() => d.value?.eventOptions ?? d.value?.events.items ?? [])
+const previewEventIndex = computed(() => previewEvents.value.findIndex(e => e.eventId === d.value?.selectedEventId))
+const eventTypeLabels: Record<string, string> = {
+  user: '用户输入', thought: '已记录推理', tool_call: '工具调用', tool_result: '工具返回',
+  final: '最终回答', error: '运行错误', system: '系统消息', message: '消息', run: '运行记录',
+  recorded_step: '已记录步骤', policy_decision: '策略判定',
+}
+function selectPreviewEvent(eventId: string) {
+  if (d.value) store.select(d.value.traceId, eventId, 1, store.query.eventTypes)
+}
+function movePreviewEvent(offset: number) {
+  const event = previewEvents.value[previewEventIndex.value + offset]
+  if (event) selectPreviewEvent(event.eventId)
+}
 const example = ref<Format | null>(null),
   batchDialog = ref(false),
   batchName = ref(''),
@@ -99,7 +130,7 @@ function syncUrl() {
     query: {
       view: view.value,
       ...Object.fromEntries(
-        ['batchId', 'sourceId', 'snapshotId', 'traceId', 'issueType'].flatMap((k) =>
+        ['batchId', 'sourceId', 'snapshotId', 'traceId', 'eventId', 'issueType'].flatMap((k) =>
           q[k as keyof typeof q] ? [[k, String(q[k as keyof typeof q])]] : [],
         ),
       ),
@@ -130,7 +161,7 @@ watch(
     }
     await store.load(
       Object.fromEntries(
-        ['batchId', 'sourceId', 'snapshotId', 'traceId', 'issueType'].flatMap((k) =>
+        ['batchId', 'sourceId', 'snapshotId', 'traceId', 'eventId', 'issueType'].flatMap((k) =>
           typeof route.query[k] === 'string' ? [[k, route.query[k]]] : [],
         ),
       ),
@@ -148,7 +179,7 @@ watch(view, async (next, previous) => {
   if (previous === 'statistics' || previous === 'execution' || previous === 'tools') {
     await store.load(
       Object.fromEntries(
-        ['batchId', 'snapshotId'].flatMap((k) =>
+        ['batchId', 'snapshotId', 'traceId', 'eventId'].flatMap((k) =>
           typeof route.query[k] === 'string' ? [[k, route.query[k]]] : [],
         ),
       ),
@@ -163,6 +194,21 @@ watch(view, async (next, previous) => {
       view.value === 'tools' ? 'tool_call,tool_result' : undefined,
     )
 })
+watch(
+  () => [store.query, store.loading],
+  () => {
+    if (view.value === 'ingest' && store.workspace?.batch && !store.loading) syncUrl()
+  },
+  { deep: true },
+)
+function openBatch() { batchName.value = ''; batchDialog.value = true }
+async function createBatch() {
+  await store.create(batchName.value.trim())
+  if (!store.actionError) {
+    batchDialog.value = false
+    syncUrl()
+  }
+}
 async function changeSource(sourceId: string) {
   await store.load({ sourceId })
   syncUrl()
@@ -261,7 +307,7 @@ async function parse(mode = 'parse_pending') {
   if (!b) return
   await store.submit({
     capabilityCode: 'agent_trace_ingest',
-    name: '智能体轨迹解析',
+    name: '智能体轨迹解析与规则审计',
     input: {
       batchId: b.batchId,
       expectedVersion: b.batchVersion,
@@ -347,7 +393,13 @@ onUnmounted(() => {
 })
 </script>
 <template>
-  <div class="agent-traces" :class="{ 'at-ingest': view === 'ingest', 'at-execution': view === 'execution' || view === 'tools' }">
+  <div
+    class="agent-traces"
+    :class="{
+      'at-ingest': view === 'ingest',
+      'at-execution': view === 'execution' || view === 'tools',
+    }"
+  >
     <header class="at-heading">
       <h1>智能体轨迹审计</h1>
       <div>
@@ -357,38 +409,48 @@ onUnmounted(() => {
               ? 'primary'
               : undefined
           "
-          :plain="view === 'statistics' || view === 'execution' || view === 'ingest' || view === 'tools'"
+          :plain="
+            view === 'statistics' || view === 'execution' || view === 'ingest' || view === 'tools'
+          "
           :disabled="
-            view === 'tools' ? !toolsPage?.canView : view === 'execution'
-              ? !executionPage?.canView
-              : view === 'statistics'
-                ? !statisticsPage?.canView
-                : !canExport || !pngAllowed || working
+            view === 'tools'
+              ? !toolsPage?.canView
+              : view === 'execution'
+                ? !executionPage?.canView
+                : view === 'statistics'
+                  ? !statisticsPage?.canView
+                  : !canExport || !pngAllowed || working
           "
           title="按当前快照和筛选导出完整分析画布；渲染器不可用时禁用"
           @click="
-            view === 'tools' ? toolsPage?.exportView() : view === 'execution'
-              ? executionPage?.exportView()
-              : view === 'statistics'
-                ? statisticsPage?.exportView()
-                : exportResult('view')
+            view === 'tools'
+              ? toolsPage?.exportView()
+              : view === 'execution'
+                ? executionPage?.exportView()
+                : view === 'statistics'
+                  ? statisticsPage?.exportView()
+                  : exportResult('view')
           "
           ><AppIcon name="Download" />导出当前视图</el-button
         ><el-button
           type="primary"
           :disabled="
-            view === 'tools' ? !toolsPage?.canView : view === 'execution'
-              ? !executionPage?.canPackage
-              : view === 'statistics'
-                ? !statisticsPage?.canPackage
-                : !canExport || working
+            view === 'tools'
+              ? !toolsPage?.canView
+              : view === 'execution'
+                ? !executionPage?.canPackage
+                : view === 'statistics'
+                  ? !statisticsPage?.canPackage
+                  : !canExport || working
           "
           @click="
-            view === 'tools' ? toolsPage?.openPackage() : view === 'execution'
-              ? executionPage?.openPackage()
-              : view === 'statistics'
-                ? statisticsPage?.openPackage()
-                : (exportDialog = true)
+            view === 'tools'
+              ? toolsPage?.openPackage()
+              : view === 'execution'
+                ? executionPage?.openPackage()
+                : view === 'statistics'
+                  ? statisticsPage?.openPackage()
+                  : (exportDialog = true)
           "
           >导出结果包</el-button
         >
@@ -430,10 +492,15 @@ onUnmounted(() => {
         :closable="false"
         show-icon
       /><el-button v-if="store.error" @click="refresh">重试工作区</el-button>
-      <ViewExportStatus v-if="autoViewExport && (store.task || working || store.actionError)" :task="store.task" :error="store.actionError" :download="a => download(a.artifactId)" />
+      <ViewExportStatus
+        v-if="autoViewExport && (store.task || working || store.actionError)"
+        :task="store.task"
+        :error="store.actionError"
+        :download="(a) => download(a.artifactId)"
+      />
       <div v-if="store.task && !autoViewExport" class="at-task" role="status">
         <span
-          >{{ store.task.result?.kind === 'agent_trace_ingest' ? '解析任务' : '导出任务' }} ·
+          >{{ store.task.result?.kind === 'agent_trace_ingest' ? '解析与规则审计' : '导出任务' }} ·
           {{ store.task.status }} · {{ store.task.result?.batchId }}</span
         ><el-progress v-if="working" :percentage="store.task.progress || 0" /><span
           v-if="store.task.result?.outcome === 'partial'"
@@ -455,6 +522,13 @@ onUnmounted(() => {
         ><el-button type="primary" @click="refresh">重新加载工作区</el-button></el-empty
       >
       <template v-if="w">
+        <el-alert v-if="w.batch?.activeSnapshotId && store.query.snapshotId && w.batch.activeSnapshotId !== store.query.snapshotId" title="当前为历史快照，后台已有新的解析或审计结果。" type="info" :closable="false"><el-button link @click="store.load({ batchId: store.query.batchId, traceId: store.query.traceId })">查看最新结果</el-button></el-alert>
+        <el-alert
+          v-if="!w.batch"
+          title="暂无轨迹批次，请先新建批次，再上传外部轨迹文件。"
+          type="info"
+          :closable="false"
+        />
         <template v-if="view === 'ingest'">
           <div class="at-formats">
             <section v-for="f in w.formats" :key="f.code" class="at-format">
@@ -483,16 +557,26 @@ onUnmounted(() => {
               </div>
             </section>
           </div>
+          <el-alert v-if="w.auditSummary" :title="`规则审计：${w.auditSummary.completedSamples} / ${w.auditSummary.totalSamples} 条已完成；安全风险 ${w.auditSummary.securitySamples}，策略拒绝 ${w.auditSummary.policySamples}，运行异常 ${w.auditSummary.operationSamples}`" type="info" :closable="false" />
           <div class="at-ingest-grid">
             <PanelCard title="轨迹文件接入与解析" icon="Upload"
               ><template #extra
                 ><div class="at-file-actions">
-                  <label class="at-upload" :class="{ disabled: working || !w.batch }"
+                  <el-button
+                    :disabled="working"
+                    @click="openBatch"
+                    >新建批次</el-button
+                  >
+                  <label
+                    class="at-upload"
+                    :class="{
+                      disabled: working || !w.batch || !w.batch.allowedActions.includes('upload'),
+                    }"
                     ><input
                       type="file"
                       accept=".json,.jsonl"
                       multiple
-                      :disabled="working || !w.batch"
+                      :disabled="working || !w.batch || !w.batch.allowedActions.includes('upload')"
                       @change="filesChanged"
                     /><AppIcon name="Upload" /><span>选择文件</span></label
                   ><el-select v-model="defaultFormat" aria-label="新文件默认格式"
@@ -503,7 +587,11 @@ onUnmounted(() => {
                       :value="f.code" /></el-select
                   ><el-button
                     type="primary"
-                    :disabled="working || !w.files.items.some((f) => f.parseStatus !== 'succeeded')"
+                    :disabled="
+                      working ||
+                      !w.batch?.allowedActions.includes('parse') ||
+                      !w.files.items.some((f) => f.parseStatus !== 'succeeded')
+                    "
                     @click="parse()"
                     ><AppIcon name="CaretRight" /><span>开始解析</span></el-button
                   >
@@ -521,7 +609,7 @@ onUnmounted(() => {
                   <span class="at-recognition-label">识别结果：</span
                   ><el-select
                     :model-value="f.formatOverride"
-                    :disabled="working"
+                    :disabled="working || !w.batch?.allowedActions.includes('bind_files')"
                     aria-label="文件格式覆盖"
                     @change="override(f.fileId, $event)"
                     ><el-option
@@ -589,7 +677,7 @@ onUnmounted(() => {
               > </PanelCard
             ><PanelCard title="接入汇总" icon="DataAnalysis"
               ><p>
-                批次：<strong>{{ w.batch?.displayId || '未选择' }}</strong>
+                批次：<strong>{{ traceBatchLabel(w.batch) }}</strong>
               </p>
               <p>
                 文件 <b>{{ w.summary.fileCount }}</b> 个 | 已接入格式
@@ -655,7 +743,7 @@ onUnmounted(() => {
               ><el-option
                 v-for="b in w.batchOptions.items"
                 :key="b.batchId"
-                :label="b.displayId"
+                :label="traceBatchLabel(b)"
                 :value="b.batchId"
               /><template #footer
                 ><el-button
@@ -687,11 +775,11 @@ onUnmounted(() => {
           ><el-button
             :disabled="!d?.navigation.previous || store.detailLoading"
             @click="choose(d!.navigation.previous!.traceId)"
-            >← 上一条</el-button
+            >← 上一样本</el-button
           ><el-button
             :disabled="!d?.navigation.next || store.detailLoading"
             @click="choose(d!.navigation.next!.traceId)"
-            >下一条 →</el-button
+            >下一样本 →</el-button
           >
         </div>
         <div v-if="view !== 'ingest' || store.query.issueType" class="at-list-controls">
@@ -757,9 +845,9 @@ onUnmounted(() => {
             </div>
             <pre
               v-if="view === 'ingest'"
-              class="at-code"
-            ><code><span v-for="(line,i) in d.rawPreview.rawText.split('\n')" :key="i"><i>{{ d.rawPreview.lineStart+i }}</i><template v-if="view==='ingest'"><span v-for="(token, ti) in sourceTokens(line)" :key="ti" :class="token.kind ? `at-json-${token.kind}` : undefined">{{ token.text }}</span></template><template v-else>{{ line }}</template>
-</span></code></pre>
+              class="at-code at-structured-json"
+            ><code><span v-for="(line,i) in rawPreviewLines" :key="i"><i>{{ i + 1 }}</i><span class="at-json-line"><span v-for="(token, ti) in sourceTokens(line)" :key="ti" :class="token.kind ? `at-json-${token.kind}` : undefined">{{ token.text }}</span></span></span></code></pre>
+            <small v-if="view === 'ingest'">按 JSON 层级缩进展示，行号为预览行号；原始文件内容不变。</small>
             <el-table
               v-else
               :data="d.events.items"
@@ -790,20 +878,31 @@ onUnmounted(() => {
               @current-change="store.select(d.traceId, undefined, $event, store.query.eventTypes)"
             /> </PanelCard
           ><PanelCard title="标准化结果预览" icon="Files"
-            ><div class="at-fields">
-              <span
-                >trace_id <b :title="d.traceId">{{ d.displayId }}</b></span
-              ><span
-                >event_id <b>{{ d.normalizedEvent?.eventId || '未提供' }}</b></span
-              ><span
-                >event_type <b>{{ d.normalizedEvent?.eventType || '未提供' }}</b></span
-              ><span
-                >tool_name <b>{{ d.normalizedEvent?.toolName || '不适用' }}</b></span
-              ><span
-                >call_id <b>{{ d.normalizedEvent?.callId || '不适用' }}</b></span
-              ><span class="at-path"
-                >source_ref <b>{{ d.sourceRef.sourcePath }}</b></span
+            ><div v-if="view === 'ingest'" class="at-preview-event-controls">
+              <label for="at-preview-event">当前事件</label>
+              <el-select
+                id="at-preview-event"
+                :model-value="d.selectedEventId"
+                aria-label="当前预览事件"
+                filterable
+                @change="selectPreviewEvent"
               >
+                <el-option
+                  v-for="(e, i) in previewEvents"
+                  :key="e.eventId"
+                  :value="e.eventId"
+                  :label="`第 ${i + 1} / ${previewEvents.length} 个事件 · ${eventTypeLabels[e.eventType] || e.label || e.eventType}${e.toolName ? ` · ${e.toolName}` : ''}`"
+                />
+              </el-select>
+              <el-button :disabled="previewEventIndex <= 0" @click="movePreviewEvent(-1)">← 上一事件</el-button>
+              <el-button :disabled="previewEventIndex < 0 || previewEventIndex >= previewEvents.length - 1" @click="movePreviewEvent(1)">下一事件 →</el-button>
+              <small>预览当前选中的一步；切换事件可查看该样本的其他记录。</small>
+            </div><div class="at-normalized-fields">
+              <div v-for="field in normalizedFields" :key="field.label" class="at-normalized-field" :class="{ 'at-normalized-field--wide': field.wide }">
+                <span>{{ field.label }}</span>
+                <code :title="field.title || field.value">{{ field.value }}</code>
+                <el-button v-if="field.copyValue" link :aria-label="`复制 ${field.label}`" :title="`复制完整 ${field.label}`" @click="copy(field.copyValue)"><AppIcon name="CopyDocument" /></el-button>
+              </div>
             </div>
             <div class="at-mapping-title">
               <strong
@@ -934,20 +1033,20 @@ onUnmounted(() => {
         placeholder="输入批次名称"
       /><template #footer
         ><el-button @click="batchDialog = false">取消</el-button
-        ><el-button
-          type="primary"
-          :disabled="!batchName.trim() || working"
-          @click="
-            store.create(batchName).then(() => {
-              if (!store.actionError) batchDialog = false
-            })
-          "
+        ><el-button type="primary" :disabled="!batchName.trim() || working" @click="createBatch"
           >创建</el-button
         ></template
       ></el-dialog
     >
-    <el-dialog v-model="exportDialog" title="导出结果包" width="640px" align-center append-to-body class="trace-package-dialog"
-      ><h3 class="trace-package-section">轨迹接入与校验 · 导出范围</h3><p>批次 {{ w?.batch?.displayId }} · 当前快照 {{ store.query.snapshotId }}</p>
+    <el-dialog
+      v-model="exportDialog"
+      title="导出结果包"
+      width="640px"
+      align-center
+      append-to-body
+      class="trace-package-dialog"
+      ><h3 class="trace-package-section">轨迹接入与校验 · 导出范围</h3>
+      <p>批次 {{ traceBatchLabel(w?.batch) }} · 当前快照 {{ store.query.snapshotId }}</p>
       <el-select v-model="exportScope" aria-label="导出范围"
         ><el-option value="batch" label="整个批次（忽略来源过滤）" /><el-option
           value="filtered"
@@ -977,4 +1076,3 @@ onUnmounted(() => {
   </div>
 </template>
 <style scoped src="./agent-traces.css"></style>
-

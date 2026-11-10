@@ -51,6 +51,20 @@ describe('execution lifecycle', () => {
     expect(s.draftBatchId).toBe('mock_batch_demo')
     expect(s.detailError).toBe('')
   })
+
+  it('forwards a frozen snapshot and a target beyond the initial page', async () => {
+    const mock = createExecutionMock()
+    const workspace = vi.spyOn(executionHttp, 'workspace').mockImplementation(q => mock.workspace(q))
+    const detail = vi.spyOn(executionHttp, 'detail').mockImplementation((b, t, q) => mock.detail(b, t, q))
+    const s = useExecutionStore()
+    await s.configure(false, 'mock_batch_demo', 'mock_trace_105', undefined, 'mock_batch_demo_snapshot')
+    expect(workspace.mock.calls[1]?.[0]).toMatchObject({
+      batchId: 'mock_batch_demo', traceId: 'mock_trace_105', snapshotId: 'mock_batch_demo_snapshot',
+    })
+    expect(detail.mock.calls[0]?.[1]).toBe('mock_trace_105')
+    expect(s.detail?.traceId).toBe('mock_trace_105')
+    expect(s.detailError).toBe('')
+  })
   it('loads a shared-subpage batch link with a labeled selection and matching detail', async () => {
     const s = useExecutionStore()
     await s.configure(true, 'mock_batch_demo')

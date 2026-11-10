@@ -87,7 +87,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
         sourceId: q.issueType ? undefined : s.sourceId || undefined,
         traceId: s.traceId || undefined,
       }
-      if (s.traceId) await select(s.traceId)
+      if (s.traceId) await select(s.traceId, q.eventId, q.eventPage || 1, q.eventTypes)
       if (current === generation) resume()
     } catch (e) {
       if (current === generation && !controller?.signal.aborted) {
@@ -122,7 +122,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
         ...query.value,
         traceId,
         eventId: d.selectedEventId || undefined,
-        eventPage,
+        eventPage: d.selectedEventPage || d.events.page,
         eventTypes,
       }
     } catch (e) {

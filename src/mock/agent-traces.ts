@@ -81,30 +81,23 @@ export const traceFormats: Format[] = [
     ),
   },
   {
-    code: 'anthropic_messages',
-    label: 'Anthropic Messages',
+    code: 'agent_trajectory',
+    label: '智能体轨迹 JSONL',
     containers: ['JSON', 'JSONL'],
-    description: 'Claude 消息与工具内容块轨迹',
+    description: '外部智能体 events / tool_events 轨迹（含推理、工具及 Token）',
     availability: 'available',
     schemaVersion: '1',
-    exampleText: JSON.stringify(
-      {
-        messages: [
-          {
-            role: 'assistant',
-            content: [
-              { type: 'tool_use', id: 'toolu_01', name: 'web.search', input: { q: 'report' } },
-            ],
-          },
-          {
-            role: 'user',
-            content: [{ type: 'tool_result', tool_use_id: 'toolu_01', content: 'public page' }],
-          },
-        ],
-      },
-      null,
-      2,
-    ),
+    exampleText: JSON.stringify({
+      sample_id: 'AGT-001', language: 'zh', duration_ms: 1200,
+      tokens: { input: 100, reasoning: 20, output: 30, total: 150, estimated: false },
+      outcome: 'success',
+      events: [
+        { idx: 0, step_id: 'STEP-00', type: 'user', content: '查询公开报告', ts_ms: 0 },
+        { idx: 1, step_id: 'STEP-01', type: 'tool_call', tool: 'fetch_page', tool_args: { url: 'https://example.com/report' }, ts_ms: 100 },
+        { idx: 2, step_id: 'STEP-01', type: 'tool_result', tool: 'fetch_page', tool_status: 'success', content: '公开报告正文', latency_ms: 100, ts_ms: 100 },
+        { idx: 3, step_id: 'STEP-02', type: 'final', content: '报告摘要', ts_ms: 1200 },
+      ], tool_events: [{ step_id: 'STEP-01', tool: 'fetch_page', status: 'success', latency_ms: 100 }],
+    }, null, 2),
   },
 ]
 const record = (v: unknown): Record<string, unknown> =>
@@ -118,17 +111,27 @@ export function parseTraceRecord(
   const root = record(value),
     messages = arr(root.messages),
     runs = arr(root.runs)
-  const format = runs.length
-    ? 'langchain_trace'
-    : messages.some((m) =>
-          arr(record(m).content).some((c) =>
-            ['tool_use', 'tool_result'].includes(String(record(c).type)),
-          ),
-        )
-      ? 'anthropic_messages'
-      : messages.length
-        ? 'openai_messages'
-        : ''
+  if (root.sample_id && Array.isArray(root.events)) {
+    if (override !== 'auto' && override !== 'agent_trajectory') throw new Error('格式不匹配')
+    const rows = root.events.map(record)
+    if (!rows.length || rows.some(e => typeof e.idx !== 'number') || new Set(rows.map(e => e.idx)).size !== rows.length)
+      throw new Error('events 缺失或 idx 不合法')
+    const events: Event[] = rows.map((e, i) => ({
+      eventId: `STEP-${String(i + 1).padStart(2, '0')}`, ordinal: i + 1,
+      eventType: String(e.type), label: String(e.tool || e.type),
+      toolName: e.tool ? String(e.tool) : null,
+      callId: ['tool_call', 'tool_result'].includes(String(e.type)) ? JSON.stringify([e.step_id, e.tool]) : null,
+      inputJson: e.type === 'tool_call' ? text(e.tool_args) : null,
+      outputJson: e.type === 'tool_result' ? text(e.content) : null,
+      durationMs: typeof e.latency_ms === 'number' ? e.latency_ms : null,
+    }))
+    return { format: 'agent_trajectory', events, paths: rows.map((_, i) => `events[${i}]`),
+      time: typeof root.duration_ms === 'number' && root.duration_ms >= 0,
+      usage: typeof record(root.tokens).input === 'number' && typeof record(root.tokens).output === 'number' }
+  }
+  if (messages.some(m => arr(record(m).content).some(c => ['tool_use', 'tool_result'].includes(String(record(c).type)))))
+    throw new Error('不再支持 Anthropic 格式')
+  const format = runs.length ? 'langchain_trace' : messages.length ? 'openai_messages' : ''
   if (!format || (override !== 'auto' && override !== format))
     throw new Error('结构无法识别或与手动指定格式不匹配')
   const events: Event[] = [],
@@ -182,27 +185,7 @@ export function parseTraceRecord(
             `messages[${i}].tool_calls[${j}]`,
           )
         })
-      else if (format === 'anthropic_messages' && Array.isArray(msg.content))
-        msg.content.forEach((c, j) => {
-          const b = record(c)
-          if (b.type === 'tool_use' && (!b.id || !b.name)) throw new Error('工具内容块缺少标识')
-          add(
-            {
-              eventType:
-                b.type === 'tool_use'
-                  ? 'tool_call'
-                  : b.type === 'tool_result'
-                    ? 'tool_result'
-                    : 'model_response',
-              role: String(msg.role),
-              toolName: b.name ? String(b.name) : null,
-              callId: b.id ? String(b.id) : b.tool_use_id ? String(b.tool_use_id) : null,
-              inputJson: b.type === 'tool_use' ? text(b.input) : null,
-              outputJson: text(b.content),
-            },
-            `messages[${i}].content[${j}]`,
-          )
-        })
+
       else
         add(
           {
@@ -756,6 +739,8 @@ export function createAgentTraceMock(): AgentTraceApi {
         batchId,
         snapshotId: q.snapshotId || s.batch.activeSnapshotId!,
         selectedEventId: event?.eventId || null,
+        selectedEventPage: event ? Math.floor(events.indexOf(event) / 50) + 1 : undefined,
+        eventOptions: events.map(({ eventId, ordinal, eventType, label, toolName }) => ({ eventId, ordinal, eventType, label, toolName })),
         rawPreview: {
           rawText: row.raw.slice(0, 65536),
           kind: 'full',
@@ -763,14 +748,14 @@ export function createAgentTraceMock(): AgentTraceApi {
           lineStart: 1,
           totalLines: row.raw.split('\n').length,
         },
-        events: page(events, q.eventPage || 1, 50),
+        events: page(events, q.eventId && event ? Math.floor(events.indexOf(event) / 50) + 1 : q.eventPage || 1, 50),
         normalizedEvent: event || null,
         sourceRef: { sourcePath: path, recordIndex: all.indexOf(row) + 1 },
         mapping: {
           formatLabel: traceFormats.find((f) => f.code === row.sourceFormat)!.label,
           rows: [
             {
-              sourcePath: row.sourceFormat === 'langchain_trace' ? 'run_type' : 'role',
+              sourcePath: row.sourceFormat === 'langchain_trace' ? 'run_type' : row.sourceFormat === 'agent_trajectory' ? 'events[].type' : 'role',
               targetPath: 'event.role',
               description: '保留来源角色或节点类型',
               state: 'mapped',
@@ -779,15 +764,15 @@ export function createAgentTraceMock(): AgentTraceApi {
               sourcePath:
                 row.sourceFormat === 'langchain_trace'
                   ? 'name'
-                  : row.sourceFormat === 'anthropic_messages'
-                    ? 'content[].name'
+                  : row.sourceFormat === 'agent_trajectory'
+                    ? 'events[].tool'
                     : 'function.name',
               targetPath: 'event.tool_name',
               description: '提取工具名称',
               state: 'mapped',
             },
             {
-              sourcePath: row.sourceFormat === 'langchain_trace' ? 'inputs' : 'function.arguments',
+              sourcePath: row.sourceFormat === 'langchain_trace' ? 'inputs' : row.sourceFormat === 'agent_trajectory' ? 'events[].tool_args' : 'function.arguments',
               targetPath: 'event.input',
               description: '解析参数并保留原始内容',
               state: 'mapped',

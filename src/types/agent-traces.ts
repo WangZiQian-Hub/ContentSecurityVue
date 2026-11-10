@@ -92,6 +92,7 @@ export interface Detail extends Sample {
     totalLines: number
   }
   events: PageResult<Event>
+  eventOptions?: Pick<Event, 'eventId' | 'ordinal' | 'eventType' | 'label' | 'toolName'>[]
   normalizedEvent: Event | null
   sourceRef: { sourcePath: string; recordIndex: number }
   mapping: {
@@ -117,6 +118,7 @@ export interface Issue {
   examples: Locator[]
 }
 export interface Workspace {
+  auditSummary?: import('../utils/agent-trace-presentation').RuleAuditSummary
   resolvedSelection: {
     batchId: string | null
     snapshotId: string | null

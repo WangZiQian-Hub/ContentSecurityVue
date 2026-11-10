@@ -21,14 +21,14 @@ export const statisticStatus = (s: string) =>
   ({
     completed: '成功完成',
     blocked: '风险拦截',
-    terminated: '安全终止',
+    terminated: '流程终止',
     running: '处理中',
     pending: '处理中',
     failed: '执行失败',
     unknown: '未知',
   })[s] || '未知'
 export const statisticStatusType = (s: string): 'success' | 'danger' | 'info' | 'warning' =>
-  ['completed', 'terminated'].includes(s)
+  s === 'completed'
     ? 'success'
     : ['blocked', 'failed'].includes(s)
       ? 'danger'
@@ -114,13 +114,14 @@ export function donutOption(
 export function rankingOption(d: AgentTraceStatisticsCharts['toolRanking']): EChartsOption {
   return {
     animation: false,
-    grid: { left: 85, right: 40, top: 12, bottom: 25 },
+    grid: { left: 8, right: 40, top: 12, bottom: 25, containLabel: true },
     tooltip: { trigger: 'axis', renderMode: 'richText' },
     xAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#edf3fb' } } },
     yAxis: {
       type: 'category',
       inverse: true,
       data: d.items.map((i) => i.label),
+      axisLabel: { interval: 0, fontSize: 11, margin: 10 },
       axisTick: { show: false },
       axisLine: { show: false },
     },

@@ -28,7 +28,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     controller: AbortController | undefined,
     detailController: AbortController | undefined,
     timer: ReturnType<typeof setTimeout> | undefined
-  const options = ref<{ batchId: string; displayId: string }[]>([])
+  const options = ref<{ batchId: string; displayId: string; name?: string }[]>([])
   const canExport = computed(
     () =>
       !!detail.value &&
@@ -52,7 +52,13 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     detailController?.abort()
     pause()
   }
-  async function configure(demo: boolean, batchId?: string, traceId?: string, eventId?: string) {
+  async function configure(
+    demo: boolean,
+    batchId?: string,
+    traceId?: string,
+    eventId?: string,
+    snapshotId?: string,
+  ) {
     dispose()
     api = demo ? createExecutionMock() : executionHttp
     workspace.value = null
@@ -80,7 +86,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
         ''
       // First entry (and mode re-entry) immediately displays a real batch result.
       // Later draft changes remain local until the user explicitly clicks Query.
-      if (draftBatchId.value && w.permissions.canQuery) await run(traceId, eventId)
+      if (draftBatchId.value && w.permissions.canQuery) await run(traceId, eventId, snapshotId)
       else if (!w.permissions.canQuery) error.value = '当前账号没有查询权限'
     } catch (e) {
       if (version === generation && !signal.aborted) error.value = String(e)
@@ -148,7 +154,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
       if (n === listGeneration && g === generation) error.value = String(e)
     }
   }
-  async function run(traceId?: string, eventId?: string) {
+  async function run(traceId?: string, eventId?: string, snapshotId?: string) {
     dispose()
     controller = new AbortController()
     const n = generation
@@ -160,16 +166,13 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     query.value = {}
     try {
       const w = await api.workspace(
-        { include: 'dashboard', batchId: draftBatchId.value },
+        { include: 'dashboard', batchId: draftBatchId.value, traceId, snapshotId },
         controller.signal,
       )
       if (n !== generation) return
       workspace.value = w
       dirty.value = false
-      const chosen =
-        traceId && w.samplePage.items.some((s) => s.traceId === traceId)
-          ? traceId
-          : w.selectedTraceId
+      const chosen = traceId || w.selectedTraceId
       if (chosen) await choose(chosen, eventId)
     } catch (e) {
       if (n === generation && !controller.signal.aborted) error.value = String(e)

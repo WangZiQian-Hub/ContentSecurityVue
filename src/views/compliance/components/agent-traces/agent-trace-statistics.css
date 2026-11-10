@@ -65,7 +65,7 @@
 }
 .ats-secondary-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1.25fr 1.15fr;
+  grid-template-columns: 1fr 1fr 1.55fr 1fr;
   gap: 12px;
   margin-top: 12px;
 }
@@ -174,7 +174,7 @@
   white-space: nowrap;
 }
 .ats-matrix th:first-child {
-  width: 76px;
+  width: 96px;
 }
 .ats-matrix td:focus {
   outline: 2px solid #1677ff;
@@ -203,29 +203,23 @@
   gap: 4px;
   margin-bottom: 6px;
 }
-.ats-completeness {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding: 15px 16px;
-  border: 1px solid #dce9fc;
-  border-radius: 8px;
-  margin: 12px 0;
-  background: #fbfdff;
-}
-.ats-completeness > div {
-  flex: 1;
-  font-size: 13px;
-}
-.ats-completeness .el-progress {
-  margin-top: 9px;
-}
-.ats-completeness > strong {
-  font-size: 15px;
-}
-.ats-completeness small {
-  display: block;
-}
+.ats-matrix-scroll { overflow-x: auto; }
+.ats-matrix { min-width: 370px; font-size: 11px; }
+.ats-matrix thead th { font-size: 11px; line-height: 1.4; padding: 6px 3px; }
+.ats-matrix-axis span { display: block; font-size: 10px; color: #617895; font-weight: 500; }
+.ats-matrix-note { display: block; line-height: 1.6; }
+.ats-completeness { padding: 14px 16px; border: 1px solid #dce9fc; border-radius: 8px; margin: 12px 0; background: #fbfdff; }
+.ats-completeness header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+.ats-completeness header strong { font-size: 15px; }
+.ats-coverage-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.ats-coverage-card { padding: 12px 14px; border: 1px solid #e3ecf9; border-radius: 7px; background: #fff; min-width: 0; }
+.ats-coverage-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.ats-coverage-heading span { color: #1677ff; font-weight: 600; }
+.ats-coverage-card p { margin: 8px 0; font-size: 12px; color: #526b8d; }
+.ats-coverage-card p strong { color: #17345c; font-size: 16px; }
+.ats-coverage-card small { display: block; line-height: 1.6; margin-top: 8px; }
+.ats-coverage-missing { display: block; font-size: 11px; color: #75869e; margin-top: 4px; }
+@media(max-width:900px) { .ats-coverage-grid { grid-template-columns: 1fr; } }
 .ats-samples {
   padding: 10px;
   border: 1px solid #dce9fc;

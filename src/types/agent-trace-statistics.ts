@@ -39,6 +39,7 @@ export interface AgentTraceAvailability {
   reasonCode?: string | null
 }
 export interface AgentTraceMetric extends AgentTraceAvailability {
+  estimatedSampleCount?: number
   value: number | null
   unit: string
   validSampleCount: number
@@ -60,6 +61,8 @@ export interface AgentTraceCoverage extends AgentTraceAvailability {
   ratePercent: number | null
 }
 export interface AgentTraceStatisticsSample extends AgentTraceScope {
+  ruleFindings?: import('../utils/agent-trace-presentation').RuleFinding[]
+  ruleAudit?: { version: string }
   traceId: string
   displayId: string
   sourceId: string
@@ -68,6 +71,7 @@ export interface AgentTraceStatisticsSample extends AgentTraceScope {
   testCategory: string
   testCategoryLabel: string
   tokenUsage: {
+    estimated?: boolean
     input: number | null
     reasoningRecorded: number | null
     finalOutput: number | null
@@ -155,6 +159,7 @@ export interface AgentTraceStatisticsCharts {
   languageDistribution: AgentTraceDistribution
 }
 export interface AgentTraceStatisticsWorkspace {
+  auditSummary?: import('../utils/agent-trace-presentation').RuleAuditSummary
   resolution: string
   resolvedSelection: AgentTraceScope | null
   scope: AgentTraceScope | null
