@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import './agent-trace-shared.css'
 import { traceBatchLabel } from '../../utils/agent-trace-presentation'
+import { traceFieldGuide } from '../../utils/trace-preview'
 import ViewExportStatus from './components/agent-traces/ViewExportStatus.vue'
+import PageSnapshotExport from './components/agent-traces/PageSnapshotExport.vue'
 const autoViewExport = ref(false)
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { useComplianceStore } from '../../stores/compliance'
 import { useAgentTraceStore } from '../../stores/agent-traces'
 import { downloadTraceTicket } from '../../api/agent-traces'
@@ -33,6 +36,12 @@ const index = computed(() => views.findIndex((v) => v.code === view.value))
 const toolsPage = ref<InstanceType<typeof ToolsView>>()
 const executionPage = ref<InstanceType<typeof ExecutionView>>()
 const statisticsPage = ref<InstanceType<typeof TraceStatisticsPage>>()
+const snapshotRoot = ref<HTMLElement>()
+const snapshotExport = ref<InstanceType<typeof PageSnapshotExport>>()
+function exportPageSnapshot() {
+  if (snapshotRoot.value)
+    void snapshotExport.value?.exportView(snapshotRoot.value, views[index.value]!.label)
+}
 // Text-only highlighting: preserve source bytes and never inject log HTML.
 function sourceTokens(line: string) {
   const tokens: { text: string; kind: string }[] = []
@@ -67,28 +76,8 @@ const rawPreviewLines = computed(() => {
     return raw.split('\n')
   }
 })
-const normalizedFields = computed(() => [
-  { label: 'trace_id', value: d.value?.displayId || '未提供', title: d.value?.traceId },
-  { label: 'event_type', value: d.value?.normalizedEvent?.eventType || '未提供' },
-  { label: 'tool_name', value: d.value?.normalizedEvent?.toolName || '不适用' },
-  { label: 'source_ref', value: d.value?.sourceRef.sourcePath || '未提供' },
-  { label: 'event_id', value: d.value?.normalizedEvent?.eventId || '未提供', wide: true, copyValue: d.value?.normalizedEvent?.eventId },
-  { label: 'call_id', value: d.value?.normalizedEvent?.callId || '不适用', wide: true, copyValue: d.value?.normalizedEvent?.callId },
-])
-const previewEvents = computed(() => d.value?.eventOptions ?? d.value?.events.items ?? [])
-const previewEventIndex = computed(() => previewEvents.value.findIndex(e => e.eventId === d.value?.selectedEventId))
-const eventTypeLabels: Record<string, string> = {
-  user: '用户输入', thought: '已记录推理', tool_call: '工具调用', tool_result: '工具返回',
-  final: '最终回答', error: '运行错误', system: '系统消息', message: '消息', run: '运行记录',
-  recorded_step: '已记录步骤', policy_decision: '策略判定',
-}
-function selectPreviewEvent(eventId: string) {
-  if (d.value) store.select(d.value.traceId, eventId, 1, store.query.eventTypes)
-}
-function movePreviewEvent(offset: number) {
-  const event = previewEvents.value[previewEventIndex.value + offset]
-  if (event) selectPreviewEvent(event.eventId)
-}
+const fieldGuide = computed(() => d.value ? traceFieldGuide(d.value) : [])
+const conversionHelp = ref(false)
 const example = ref<Format | null>(null),
   batchDialog = ref(false),
   batchName = ref(''),
@@ -98,6 +87,21 @@ const example = ref<Format | null>(null),
   search = ref(''),
   preview = ref<HTMLElement>(),
   defaultFormat = ref('auto')
+const examplePreview = computed(() => {
+  const raw = example.value?.exampleText || ''
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2)
+  } catch {
+    try {
+      // JSONL examples contain separate records rather than one JSON document.
+      return raw.split(/\r?\n/).filter(line => line.trim()).map(line =>
+        JSON.stringify(JSON.parse(line), null, 2),
+      ).join('\n\n')
+    } catch {
+      return raw
+    }
+  }
+})
 const queue = ref<{ file: File; fileId?: string; state: string; error: string }[]>([])
 let pageAlive = true
 let modeVersion = 0
@@ -209,21 +213,60 @@ async function createBatch() {
     syncUrl()
   }
 }
+async function deleteCurrentBatch() {
+  const batch = w.value?.batch
+  if (!batch || working.value || store.loading) return
+  if (w.value?.files.total || queue.value.length) {
+    store.actionError = '批次中还有文件，请先删除文件后再删除空批次'
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定删除空批次“${traceBatchLabel(batch)}”吗？删除后无法恢复，其他批次不受影响。`,
+      '删除批次', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消', autofocus: false },
+    )
+  } catch { return }
+  if (store.query.batchId !== batch.batchId || working.value || store.loading || w.value?.files.total || queue.value.length) return
+  await store.deleteBatch()
+  if (!store.actionError) {
+    queue.value = []
+    if (store.workspace?.batch) syncUrl()
+    else await router.replace({ query: { view: 'ingest' } })
+  }
+}
+async function removePendingFile(fileId: string, filename: string) {
+  const batchId = store.query.batchId
+  if (working.value || store.loading) return
+  try {
+    await ElMessageBox.confirm(`确定从当前批次删除“${filename}”吗？如需解析此文件，请重新添加。`,
+      '删除未解析文件', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消', autofocus: false })
+  } catch { return }
+  if (batchId !== store.query.batchId || working.value || store.loading) return
+  await store.removeFile(fileId)
+  if (!store.actionError) syncUrl()
+}
 async function changeSource(sourceId: string) {
-  await store.load({ sourceId })
+  await store.load({ batchId: store.query.batchId, snapshotId: store.query.snapshotId, sourceId })
   syncUrl()
 }
 async function changeBatch(batchId: string) {
   await store.load({ batchId })
   syncUrl()
 }
+function searchBatchSamples(q: string) {
+  void store.samples(1, q)
+}
 async function choose(traceId: string) {
+  const locator = [store.detail?.navigation.previous, store.detail?.navigation.next]
+    .find(item => item?.traceId === traceId)
   await store.select(
     traceId,
     undefined,
     1,
     view.value === 'tools' ? 'tool_call,tool_result' : undefined,
   )
+  if (!store.detailError && locator?.page && locator.page !== store.workspace?.samplePage.page)
+    await store.samples(locator.page)
   syncUrl()
 }
 async function locate(code: string) {
@@ -394,6 +437,7 @@ onUnmounted(() => {
 </script>
 <template>
   <div
+    ref="snapshotRoot"
     class="agent-traces"
     :class="{
       'at-ingest': view === 'ingest',
@@ -413,24 +457,18 @@ onUnmounted(() => {
             view === 'statistics' || view === 'execution' || view === 'ingest' || view === 'tools'
           "
           :disabled="
-            view === 'tools'
+            snapshotExport?.busy ||
+            (view === 'tools'
               ? !toolsPage?.canView
               : view === 'execution'
                 ? !executionPage?.canView
                 : view === 'statistics'
                   ? !statisticsPage?.canView
-                  : !canExport || !pngAllowed || working
+                  : !canExport || !pngAllowed || working)
           "
-          title="按当前快照和筛选导出完整分析画布；渲染器不可用时禁用"
-          @click="
-            view === 'tools'
-              ? toolsPage?.exportView()
-              : view === 'execution'
-                ? executionPage?.exportView()
-                : view === 'statistics'
-                  ? statisticsPage?.exportView()
-                  : exportResult('view')
-          "
+          :loading="snapshotExport?.busy"
+          title="将点击时的当前页面（含图表、步骤及详情）保存为 PNG 图片"
+          @click="exportPageSnapshot"
           ><AppIcon name="Download" />导出当前视图</el-button
         ><el-button
           type="primary"
@@ -481,6 +519,7 @@ onUnmounted(() => {
         ></span
       >
     </nav>
+    <PageSnapshotExport ref="snapshotExport" />
     <ToolsView v-if="view === 'tools'" ref="toolsPage" />
     <ExecutionView v-else-if="view === 'execution'" ref="executionPage" />
     <TraceStatisticsPage v-else-if="view === 'statistics'" ref="statisticsPage" />
@@ -567,6 +606,9 @@ onUnmounted(() => {
                     @click="openBatch"
                     >新建批次</el-button
                   >
+                  <el-tooltip v-if="w.batch?.allowedActions.includes('delete_batch')" content="批次中还有文件，请先删除文件后再删除空批次" :disabled="!w.files.total && !queue.length" placement="top">
+                    <span><el-button type="danger" plain class="at-delete-batch" :disabled="working || store.loading || w.files.total > 0 || queue.length > 0" @click="deleteCurrentBatch">删除批次</el-button></span>
+                  </el-tooltip>
                   <label
                     class="at-upload"
                     :class="{
@@ -639,6 +681,7 @@ onUnmounted(() => {
                 <p v-for="e in f.errorExamples" :key="e.lineStart" class="at-warning">
                   第 {{ e.lineStart }} 条：{{ e.message }}
                 </p>
+                <el-button v-if="f.parseStatus === 'pending' && w.batch?.allowedActions.includes('remove_file')" link type="danger" :disabled="working || store.loading" :aria-label="`删除未解析文件 ${f.filename}`" @click="removePendingFile(f.fileId, f.filename)">删除文件</el-button>
               </div>
               <el-pagination
                 v-if="w.files.totalPages > 1"
@@ -654,7 +697,8 @@ onUnmounted(() => {
                 ><span class="at-warning">{{ row.error }}</span
                 ><el-button v-if="row.error" link @click="retryUpload(row)">重试上传</el-button
                 ><el-button
-                  v-if="!row.fileId && row.state !== '上传中'"
+                  v-if="row.state !== '上传中'"
+                  :disabled="working"
                   link
                   @click="queue.splice(i, 1)"
                   >移除</el-button
@@ -717,6 +761,10 @@ onUnmounted(() => {
               aria-label="来源"
               @change="changeSource"
               ><el-option
+                v-if="d && !w.sourceOptions.items.some(s => s.sourceId === d?.sourceId)"
+                :label="d.filename"
+                :value="d.sourceId"
+              /><el-option
                 v-for="s in w.sourceOptions.items"
                 :key="s.sourceId"
                 :label="s.filename"
@@ -763,6 +811,9 @@ onUnmounted(() => {
             >当前样本<el-select
               :model-value="store.query.traceId"
               aria-label="当前样本"
+              filterable
+              remote
+              :remote-method="searchBatchSamples"
               @change="choose"
               ><el-option
                 v-if="d && !w.samplePage.items.some((s) => s.traceId === d?.traceId)"
@@ -771,7 +822,18 @@ onUnmounted(() => {
                 v-for="s in w.samplePage.items"
                 :key="s.traceId"
                 :label="`${s.displayId} (${s.language})`"
-                :value="s.traceId" /></el-select></label
+                :value="s.traceId" />
+              <template #footer>
+                <small>批次共 {{ w.summary.parsedTraceCount }} 条 · 当前列表 {{ w.samplePage.total }} 条</small>
+                <el-pagination
+                  small
+                  layout="prev, pager, next"
+                  :total="w.samplePage.total"
+                  :page-size="w.samplePage.pageSize"
+                  :current-page="w.samplePage.page"
+                  @current-change="store.samples($event)"
+                />
+              </template></el-select></label
           ><el-button
             :disabled="!d?.navigation.previous || store.detailLoading"
             @click="choose(d!.navigation.previous!.traceId)"
@@ -877,48 +939,22 @@ onUnmounted(() => {
               :current-page="d.events.page"
               @current-change="store.select(d.traceId, undefined, $event, store.query.eventTypes)"
             /> </PanelCard
-          ><PanelCard title="标准化结果预览" icon="Files"
-            ><div v-if="view === 'ingest'" class="at-preview-event-controls">
-              <label for="at-preview-event">当前事件</label>
-              <el-select
-                id="at-preview-event"
-                :model-value="d.selectedEventId"
-                aria-label="当前预览事件"
-                filterable
-                @change="selectPreviewEvent"
-              >
-                <el-option
-                  v-for="(e, i) in previewEvents"
-                  :key="e.eventId"
-                  :value="e.eventId"
-                  :label="`第 ${i + 1} / ${previewEvents.length} 个事件 · ${eventTypeLabels[e.eventType] || e.label || e.eventType}${e.toolName ? ` · ${e.toolName}` : ''}`"
-                />
-              </el-select>
-              <el-button :disabled="previewEventIndex <= 0" @click="movePreviewEvent(-1)">← 上一事件</el-button>
-              <el-button :disabled="previewEventIndex < 0 || previewEventIndex >= previewEvents.length - 1" @click="movePreviewEvent(1)">下一事件 →</el-button>
-              <small>预览当前选中的一步；切换事件可查看该样本的其他记录。</small>
-            </div><div class="at-normalized-fields">
-              <div v-for="field in normalizedFields" :key="field.label" class="at-normalized-field" :class="{ 'at-normalized-field--wide': field.wide }">
-                <span>{{ field.label }}</span>
-                <code :title="field.title || field.value">{{ field.value }}</code>
-                <el-button v-if="field.copyValue" link :aria-label="`复制 ${field.label}`" :title="`复制完整 ${field.label}`" @click="copy(field.copyValue)"><AppIcon name="CopyDocument" /></el-button>
-              </div>
-            </div>
+          ><PanelCard title="统一轨迹转换预览" icon="Files" class="at-conversion-preview"
+            ><template #extra><el-button link type="primary" @click="conversionHelp = true">查看字段转换说明</el-button></template>
             <div class="at-mapping-title">
               <strong
                 ><AppIcon v-if="view === 'ingest'" name="Files" /><template v-else>▱ </template
-                >当前来源字段映射 · {{ d.mapping.formatLabel }}</strong
-              ><small>默认仅展示当前来源</small>
+                >原始字段 → 统一字段</strong
+              ><small>当前来源：{{ d.mapping.formatLabel }}</small>
             </div>
-            <el-table :data="d.mapping.rows" size="small" border
-              ><el-table-column prop="sourcePath" label="原始字段" /><el-table-column
+            <el-table v-if="fieldGuide.length" :data="fieldGuide" size="small" border class="at-field-guide"
+              ><el-table-column prop="sourcePath" label="原始字段"><template #default="{ row }"><code>{{ row.sourcePath }}</code></template></el-table-column><el-table-column
                 prop="targetPath"
-                label="标准字段" /><el-table-column prop="description" label="说明"
+                label="统一字段"><template #default="{ row }"><code>{{ row.targetPath }}</code></template></el-table-column><el-table-column prop="description" label="说明"
             /></el-table>
-
-            <small
-              >ⓘ 时间与 Token 来自源日志；未提供时显示“未提供”。执行路径仅展示已记录事件。</small
-            ></PanelCard
+            <p v-else class="at-conversion-subtitle">这个来源暂未提供字段对应说明，可以在左侧查看原始记录。</p>
+            <small>左边是原记录里的字段名，右边是平台统一使用的字段名。这是当前来源格式的说明，不代表每个事件都包含所有字段。</small>
+            </PanelCard
           >
         </div>
         <el-empty
@@ -978,7 +1014,7 @@ onUnmounted(() => {
               {{ w.summary.parsedTraceCount }} 条轨迹样本 · 解析失败记录
               {{ w.summary.failedRecordCount }}
             </p></PanelCard
-          ><PanelCard title="问题与后续操作" icon="Warning"
+          ><PanelCard title="接下来可以做什么" icon="Warning"
             ><template #extra
               ><small>{{
                 w.validation.canContinue ? '仅提示，不影响继续分析' : '请先解决阻塞问题'
@@ -994,12 +1030,12 @@ onUnmounted(() => {
             <p v-if="!w.issues.length">
               {{
                 w.validation.canContinue
-                  ? '未发现影响当前分析的数据缺口'
+                  ? '暂未发现影响分析的数据缺失'
                   : w.validation.blockers.join('；')
               }}
             </p>
             <small
-              >{{ w.validation.canContinue ? '✓ 当前批次可继续分析' : '尚不可分析' }} | 解析失败记录
+              ><span :class="{ 'at-continue-status': w.validation.canContinue }">{{ w.validation.canContinue ? '✓ 这批记录可以继续分析' : '请先处理上面的问题，再继续分析' }}</span> | 解析失败记录
               {{ w.summary.failedRecordCount }} | 未导入格式不计入校验</small
             >
             <div class="at-next">
@@ -1008,17 +1044,24 @@ onUnmounted(() => {
                 :key="v.code"
                 :disabled="!w.validation.canContinue"
                 @click="setView(v.code)"
-                >查看{{ v.code === 'execution' ? '执行路径' : v.label }} →</el-button
+                >查看{{ v.label }} →</el-button
               >
             </div></PanelCard
           >
         </div>
       </template>
     </template>
+    <el-dialog v-model="conversionHelp" title="字段是怎么转换的？" width="min(680px, 92vw)" append-to-body>
+      <p>不同系统对同一类信息，可能使用不同的字段名。平台会把这些信息整理到统一字段，方便一起查看和分析。</p>
+      <p>表格解释当前来源格式的字段对应关系，可以结合左侧原始记录核对。</p>
+      <p>表格中的 [] 表示列表里的某一项；例如 messages[].role 表示消息列表中每条消息的角色。</p>
+      <p>调用编号用于把工具请求与返回配对，平台可能生成自己的编号，不一定与原记录的编号相同。</p>
+      <p>没有记录的信息不会补写。详细编号和原始位置可展开查看，也可以复制核对。</p>
+    </el-dialog>
     <el-dialog :model-value="!!example" title="格式示例" width="720px" @close="example = null"
       ><template v-if="example"
         ><p>{{ example.label }} · Schema {{ example.schemaVersion }}</p>
-        <pre class="at-code">{{ example.exampleText }}</pre>
+        <pre class="at-code" tabindex="0" aria-label="格式示例 JSON，可滚动查看">{{ examplePreview }}</pre>
         <el-button @click="copy(example.exampleText)">复制样例</el-button
         ><el-button @click="saveText(example.exampleText, example.code + '.json')"
           >下载样例</el-button

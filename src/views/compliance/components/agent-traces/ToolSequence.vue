@@ -9,7 +9,8 @@ const props = defineProps<{
 }>()
 defineEmits<{ select: [id: string] }>()
 const height = computed(() => props.items.length * 43 + 78)
-const x = (i: number) => 160 + i * (770 / Math.max(props.participants.length - 1, 1))
+const participantSpacing = computed(() => 770 / Math.max(props.participants.length - 1, 1))
+const x = (i: number) => 160 + i * participantSpacing.value
 const target = (c: ToolCall) =>
   x(
     Math.max(
@@ -36,6 +37,20 @@ const returned = (c: ToolCall) =>
 const action = (c: ToolCall) => c.toolName.split('.').at(-1)
 const glyph = (id: string) =>
   ({ agent: 'agent', search: 'search', web: 'web', data: 'data', policy: 'shield' })[id] || 'web'
+const participantWidth = (label: string, index: number) =>
+  Math.min(
+    200,
+    participantSpacing.value - 24,
+    2 * (x(index) - 4),
+    2 * (996 - x(index)),
+    Math.max(
+      100,
+      48 +
+        Array.from(label).reduce((width, char) => width + (/[^\x00-\x7f]/.test(char) ? 12 : 7), 0),
+    ),
+  )
+const participantLeft = (label: string, index: number) =>
+  x(index) - participantWidth(label, index) / 2
 </script>
 <template>
   <svg
@@ -62,15 +77,17 @@ const glyph = (id: string) =>
     <text x="20" y="67" fill="#243653" font-weight="700">时间 ↓</text>
     <line x1="72" x2="72" y1="88" :y2="height - 15" stroke="#8793a5" stroke-width="2" />
     <g v-for="(p, i) in participants" :key="p.participantId">
-      <rect :x="x(i) - 53" y="3" width="112" height="30" rx="5" fill="#e0ecff" />
-      <foreignObject :x="x(i) - 38" y="7" width="23" height="23"
-        ><ToolGlyph
-          :name="glyph(p.participantId)"
-          style="color: #246bff; width: 21px; height: 21px"
-      /></foreignObject>
-      <text :x="x(i) + 18" y="24" text-anchor="middle" fill="#162e54" font-weight="700">
-        {{ p.label }}
-      </text>
+      <foreignObject
+        :x="participantLeft(p.label, i)"
+        y="3"
+        :width="participantWidth(p.label, i)"
+        height="30"
+      >
+        <div xmlns="http://www.w3.org/1999/xhtml" class="participant-label" :title="p.label">
+          <ToolGlyph :name="glyph(p.participantId)" />
+          <span>{{ p.label }}</span>
+        </div>
+      </foreignObject>
       <line
         :x1="x(i)"
         :x2="x(i)"
@@ -176,6 +193,32 @@ const glyph = (id: string) =>
 }
 .tool-sequence-svg g[role='button'] {
   cursor: pointer;
+}
+.participant-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: #e0ecff;
+  color: #162e54;
+  font-size: 12px;
+  font-weight: 700;
+}
+.participant-label .tool-glyph {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: #246bff;
+}
+.participant-label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tool-sequence-svg g[role='button']:focus {
   outline: none;

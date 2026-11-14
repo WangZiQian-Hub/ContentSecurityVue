@@ -46,8 +46,8 @@ export const navigation: NavItem[] = [
     icon: 'Box',
     description: '一站式模型训练、管理、评估、部署、调用，打造安全可靠的大模型能力',
     tabs: tabs(
-      ['training', 'management', 'evaluation', 'deploy', 'invoke'],
-      ['模型训练', '模型管理', '模型评估', '模型部署', '模型调用'],
+      ['training', 'management', 'evaluation', 'deploy', 'invoke', 'agent-tasks'],
+      ['模型训练', '模型管理', '模型评估', '模型部署', '模型调用', '智能体任务'],
     ),
   },
   {

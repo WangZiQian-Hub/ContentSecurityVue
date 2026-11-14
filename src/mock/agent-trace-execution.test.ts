@@ -1,6 +1,25 @@
 import { describe, it, expect } from 'vitest'
 import { createExecutionMock } from './agent-trace-execution'
 describe('execution resource projections', () => {
+  it('provides a clearly marked risk chain whose nodes can all be located', async () => {
+    const api = createExecutionMock()
+    const d = await api.detail('mock_batch_demo', 'mock_trace_0', {})
+    const provenance = d.riskProvenance!
+    expect(provenance.dataOrigin).toBe('generated')
+    const chain = provenance.chains[0]!
+    expect(chain.outcome).toBe('not_executed')
+    expect(chain.edges.map((e) => e.status)).toEqual(['candidate', 'candidate', 'recorded'])
+    for (const node of chain.nodes) {
+      const located = await api.detail('mock_batch_demo', d.traceId, {
+        section: 'selection',
+        eventId: node.eventId,
+      })
+      expect(located.selection?.eventId).toBe(node.eventId)
+      expect(located.riskProvenance?.chains[0]?.chainId).toBe(chain.chainId)
+    }
+    const safe = await api.detail('mock_batch_demo', 'mock_trace_8', {})
+    expect(safe.riskProvenance?.chains).toEqual([])
+  })
   it('accepts the batch ID shared by the preceding subpages', async () => {
     const api = createExecutionMock()
     const w = await api.workspace({ include: 'dashboard', batchId: 'mock_batch_demo' })

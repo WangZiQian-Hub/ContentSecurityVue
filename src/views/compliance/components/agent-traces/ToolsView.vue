@@ -16,6 +16,8 @@ import type {
   ToolsParams,
 } from '../../../../types/agent-trace-tools'
 import { traceZip, tracePng } from '../../../../utils/agent-trace-export'
+import { executionTextTokens } from '../../../../utils/execution-text-preview'
+import { toolOutcome, efficiencyLabel } from '../../../../utils/tool-outcome'
 import { useExecutionExport } from '../../../../composables/useExecutionExport'
 const packageDialog = ref(false),
   packageScope = ref('sample'),
@@ -35,6 +37,26 @@ const parent = useComplianceStore(),
   drawer = ref(false),
   raw = ref(''),
   exporter = useExecutionExport()
+const selectedInputPreview = computed(() => executionTextTokens({
+  text: selected.value?.inputJson || '', highlights: [],
+}).map(token => token.text).join(''))
+const outcome = computed(() => toolOutcome(selected.value))
+const rawEventPreview = computed(() => raw.value.split(/\r?\n\s*\r?\n/)
+  .map(text => executionTextTokens({ text, highlights: [] }).map(token => token.text).join(''))
+  .join('\n\n'))
+const permissionRows = computed(() => {
+  const call = selected.value
+  if (!call) return []
+  const rows = call.analysis.permissionComparison.rows
+  if (rows.length) return rows
+  const granted = call.grantedScopes, requested = call.requestedScopes
+  return [{
+    label: '工具操作权限', granted, requested,
+    comparison: granted.length && requested.length
+      ? requested.every(scope => granted.includes(scope)) ? 'match' : 'mismatch'
+      : 'unknown',
+  }]
+})
 let selectionVersion = 0,
   optionVersion = 0
 const initialSnapshot = ref<string>()
@@ -662,11 +684,11 @@ onUnmounted(() => {
                     v-for="(value, label) in {
                       工具名称: selected.toolName,
                       关联步骤: selected.stepDisplayId,
-                      工具授权范围: selected.grantedScopes.join(', ') || '未提供',
-                      请求权限: selected.requestedScopes.join(', ') || '未提供',
-                      权限校验结果:
+                      允许的权限: selected.grantedScopes.join(', ') || '未提供',
+                      本次请求的权限: selected.requestedScopes.join(', ') || '未提供',
+                      权限检查:
                         selected.permissionDecision === 'denied'
-                          ? '权限未通过'
+                          ? '不允许执行'
                           : selected.permissionDecision === 'allowed'
                             ? '允许'
                             : '未知',
@@ -680,7 +702,7 @@ onUnmounted(() => {
                     <td>
                       <span
                         :class="
-                          label === '权限校验结果' && selected.permissionDecision === 'denied'
+                          label === '权限检查' && selected.permissionDecision === 'denied'
                             ? 'overreach'
                             : label === '执行状态'
                               ? selected.executionStatus
@@ -693,7 +715,7 @@ onUnmounted(() => {
                   <tr>
                     <th>请求参数（脱敏）</th>
                     <td>
-                      <pre>{{ selected.inputJson }}</pre>
+                      <pre class="tool-input-preview" tabindex="0" aria-label="请求参数，可滚动查看">{{ selectedInputPreview }}</pre>
                     </td>
                   </tr>
                 </tbody>
@@ -708,7 +730,7 @@ onUnmounted(() => {
           <article class="tool-panel">
             <h3>权限与异常分析</h3>
             <template v-if="selected"
-              ><h4>1. 权限对比（请求 vs 授权）</h4>
+              ><h4>1. 请求是否符合授权</h4>
               <table class="tool-permissions">
                 <colgroup>
                   <col style="width: 24%" />
@@ -725,17 +747,17 @@ onUnmounted(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in selected.analysis.permissionComparison.rows" :key="row.label">
+                  <tr v-for="row in permissionRows" :key="row.label">
                     <td>{{ row.label }}</td>
-                    <td>{{ row.granted.join(', ') }}</td>
-                    <td>{{ row.requested.join(', ') }}</td>
+                    <td>{{ row.granted.join(', ') || '未提供' }}</td>
+                    <td>{{ row.requested.join(', ') || '未提供' }}</td>
                     <td :class="row.comparison === 'mismatch' ? 'denied' : ''">
                       {{
                         row.comparison === 'match'
                           ? '匹配'
                           : row.comparison === 'mismatch'
                             ? '不匹配'
-                            : '未知'
+                            : '无法对比'
                       }}
                     </td>
                   </tr>
@@ -750,32 +772,35 @@ onUnmounted(() => {
                   </tr>
                 </tbody>
               </table>
-              <h4>2. 错误归因</h4>
+              <p v-if="permissionRows.some(row => !row.granted.length || !row.requested.length)" class="tool-explanation">
+                源日志未提供完整的授权范围或请求权限，暂无法逐项对比。实际判定按日志记录展示。
+              </p>
+              <h4>2. 失败或未执行原因</h4>
               <p class="tool-explanation">
                 <ToolGlyph
-                  v-if="selected.analysis.errorAttribution"
+                  v-if="['policy_denied', 'failed', 'not_executed'].includes(outcome.kind)"
                   name="error"
                   class="error-icon"
-                />{{ selected.analysis.errorAttribution?.message || '无已知异常' }}
+                />{{ outcome.message }}
               </p></template
             >
-            <h4>3. 低效调用证据</h4>
+            <h4>3. 重复或低效的调用</h4>
             <p
               v-for="g in result.sampleAnalysis.inefficiencyGroups"
-              :key="g.canonicalCallId"
+              :key="`${g.kind || 'inefficient'}:${g.canonicalCallId}:${g.duplicateCallIds.join(',')}`"
               class="tool-explanation"
             >
-              <ToolGlyph name="clock" class="warning-icon" /><button
+              <ToolGlyph name="clock" class="warning-icon" /><b>{{ efficiencyLabel(g.kind) }}：</b><button
                 @click="selectCall(g.canonicalCallId)"
               >
                 {{ displayCall(g.canonicalCallId) }}
               </button>
-              →
+              <template v-if="g.duplicateCallIds.length"> → </template>
               <button v-for="id in g.duplicateCallIds" :key="id" @click="selectCall(id)">
                 {{ displayCall(id) }}</button
               >：{{ g.reason }}
             </p>
-            <p v-if="!result.sampleAnalysis.inefficiencyGroups.length">暂无低效调用证据</p>
+            <p v-if="!result.sampleAnalysis.inefficiencyGroups.length">未记录重复或低效调用证据</p>
           </article>
         </div>
       </div></template
@@ -813,7 +838,7 @@ onUnmounted(() => {
         </el-checkbox-group>
         <p>✓ 敏感字段脱敏 ✓ 样本编号匿名化（默认启用）</p>
         <small
-          >按当前已查询样本、固定快照及授权脱敏策略生成 ZIP。生成完成后在导出任务栏点击下载。</small
+          >导出当前样本，敏感内容按当前权限脱敏。生成后可在任务栏下载 ZIP。</small
         >
         <el-alert
           v-if="exporter.error.value"
@@ -834,11 +859,19 @@ onUnmounted(() => {
       >
     </el-dialog>
     <el-drawer v-model="drawer" title="原始事件（脱敏）" size="55%">
-      <pre>{{ raw || '加载中…' }}</pre>
+      <pre class="tool-raw-preview" tabindex="0" aria-label="原始事件，可滚动查看">{{ rawEventPreview || '加载中…' }}</pre>
     </el-drawer>
   </section>
 </template>
 <style scoped>
+.tool-raw-preview {
+  max-height: 72vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 13px/1.7 Consolas, monospace;
+}
 .tools-package-contents {
   display: flex;
   flex-wrap: wrap;
@@ -1350,6 +1383,9 @@ button:not(.el-button) {
   padding: 2px 9px;
 }
 .tools-view .tool-details pre {
+  max-height: 260px;
+  overflow: auto;
+  overscroll-behavior: contain;
   font-size: 13px;
   font-family: Consolas, monospace;
   line-height: 20px;

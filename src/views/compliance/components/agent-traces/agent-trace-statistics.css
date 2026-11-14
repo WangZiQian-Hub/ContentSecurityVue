@@ -96,6 +96,67 @@
 .ats-statistics .el-empty {
   padding: 25px 0;
 }
+.ats-token-tracks {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 12px;
+}
+.ats-token-track {
+  position: relative;
+  min-width: 0;
+  border: 1px solid #dce7f6;
+  border-radius: 8px;
+  background: #f0f5fc;
+  isolation: isolate;
+}
+.ats-token-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 7px;
+  opacity: .42;
+  z-index: -1;
+}
+.ats-token-track-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  color: #193b62;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.ats-token-track-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ats-token-track-value b { font-size: 15px; }
+.ats-token-track-value > span { color: #426181; }
+.ats-token-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ats-token-values > div {
+  flex: 1 0 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ats-token-values b {
+  font-size: 16px;
+}
+.ats-statistics .ats-token-values + .ats-token-stack {
+  margin-top: 8px;
+}
 .ats-token-stack {
   display: flex;
   min-height: 60px;

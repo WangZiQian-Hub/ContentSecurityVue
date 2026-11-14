@@ -595,7 +595,13 @@ button:focus-visible {
   min-height: 152px;
 }
 .at-ingest .at-file-actions {
-  gap: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.at-ingest .at-file-actions .el-button.at-delete-batch {
+  color: #bf293c;
+  background: #fff4f5;
+  border-color: #f0c1c8;
 }
 .at-ingest .at-ingest-grid > .panel:first-child :deep(.panel-heading) {
   justify-content: flex-start;
@@ -840,10 +846,10 @@ button:focus-visible {
   font-weight: 400;
 }
 .at-ingest .at-json-key {
-  color: #c62823;
+  color: #ad211e;
 }
 .at-ingest .at-json-string {
-  color: #16752a;
+  color: #145e25;
 }
 .at-ingest .at-json-literal {
   color: #1735b4;
@@ -851,12 +857,20 @@ button:focus-visible {
 .at-ingest .at-code.at-structured-json {
   height: 360px;
   padding: 12px;
-  font: 12px/1.65 Consolas, monospace;
+  font: 600 15px/1.8 Consolas, 'Microsoft YaHei', monospace;
+}
+.at-ingest .at-structured-json code {
+  font: inherit;
+}
+.at-ingest .at-structured-json code > span > i {
+  color: #526987;
+  font-size: 13px;
+  font-weight: 600;
 }
 .at-ingest .at-structured-json code > span {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
-  line-height: 1.65;
+  line-height: 1.8;
 }
 .at-ingest .at-structured-json .at-json-line {
   white-space: pre-wrap;
@@ -871,6 +885,124 @@ button:focus-visible {
   background: #f8fbff;
   border: 1px solid #deebfa;
   border-radius: 8px;
+}
+.at-conversion-subtitle {
+  margin: 0 0 14px;
+  color: #405d80;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+.at-ingest .at-conversion-preview .at-normalized-fields {
+  background: linear-gradient(110deg, #eef5ff, #e8f0ff);
+  padding: 16px;
+  gap: 16px 24px;
+}
+.at-ingest .at-conversion-preview .at-normalized-field > span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #405b7e;
+}
+.at-ingest .at-conversion-preview .at-normalized-field > code {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.at-ingest .at-conversion-preview .at-mapping-title {
+  margin: 0 0 10px;
+  flex-wrap: wrap;
+}
+.at-ingest .at-conversion-preview .at-mapping-title strong {
+  font-size: 15px;
+}
+.agent-traces.at-ingest .at-preview-grid .at-conversion-preview .at-field-guide :deep(.cell) {
+  font-size: 14px;
+  font-weight: 600;
+  color: #183554;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  padding: 10px 12px;
+}
+.agent-traces.at-ingest .at-preview-grid .at-conversion-preview .at-field-guide :deep(th .cell) {
+  font-size: 15px;
+  font-weight: 700;
+}
+.agent-traces.at-ingest .at-preview-grid .at-conversion-preview .at-field-guide :deep(code) {
+  font-family: Consolas, 'Microsoft YaHei', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+.at-ingest .at-conversion-preview > :deep(.panel-content) > small {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #405d80;
+  line-height: 1.7;
+  margin-top: 8px;
+}
+.agent-traces.at-ingest .at-preview-grid .at-conversion-preview small {
+  font-size: 13px;
+  font-weight: 500;
+  color: #405d80;
+  line-height: 1.7;
+}
+.at-conversion-help {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: #eaf2ff;
+  border-radius: 8px;
+  color: #28476d;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+.at-conversion-help strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #17385d;
+}
+.at-conversion-help p { margin: 4px 0 0; }
+.at-conversion-details {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #d8e5fa;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #27476b;
+}
+.at-conversion-details summary { cursor: pointer; font-weight: 600; }
+.at-conversion-details summary span {
+  margin-left: 12px;
+  color: #405d80;
+  font-weight: 500;
+  font-size: 14px;
+}
+.at-conversion-details dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  margin: 16px 0 0;
+}
+.at-conversion-details dd {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+.at-conversion-details dd code { flex: 1; overflow-wrap: anywhere; }
+.at-continue-status {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: #e0f8e9;
+  color: #168849;
+  font-weight: 600;
 }
 .at-normalized-field {
   min-width: 0;

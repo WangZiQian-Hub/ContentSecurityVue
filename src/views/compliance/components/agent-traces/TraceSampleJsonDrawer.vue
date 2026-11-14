@@ -23,9 +23,17 @@ watch(
     copyMessage.value = ''
   },
 )
-const text = computed(() =>
-  tab.value === 'raw' ? d.value?.rawPreview.rawText || '' : d.value?.sampleJson.jsonText || '',
-)
+const text = computed(() => {
+  if (tab.value === 'raw') return d.value?.rawPreview.rawText || ''
+  const json = d.value?.sampleJson.jsonText || ''
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2)
+  } catch {
+    // A truncated/loading preview may not yet be valid JSON; keep it readable
+    // without changing the original payload used by copy/export/pagination.
+    return json
+  }
+})
 const lines = computed(() => text.value.split('\n').map(jsonLineTokens))
 const full = computed(() => !!d.value?.sampleJson.complete && !d.value.sampleJson.truncated)
 const canCopy = computed(

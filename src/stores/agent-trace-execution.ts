@@ -217,7 +217,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
         part.scope.projectionVersion !== d.scope.projectionVersion
       )
         throw Error('事件上下文不匹配')
-      detail.value = { ...d, events: part.events }
+      detail.value = { ...d, events: part.events, riskProvenance: part.riskProvenance }
       selection.value = part.selection
     } catch (e) {
       if (n === detailGeneration && !detailController.signal.aborted) {
@@ -247,7 +247,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
         redactionMode: raw.value ? 'raw' : 'redacted',
       })
       if (n !== detailGeneration) return
-      detail.value = { ...d, events: p.events }
+      detail.value = { ...d, events: p.events, riskProvenance: p.riskProvenance }
       selection.value = p.selection
     } catch (e) {
       if (n === detailGeneration) detailError.value = String(e)
@@ -274,7 +274,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     raw.value = value
     selection.value = null
     if (detail.value)
-      detail.value = { ...detail.value, events: { ...detail.value.events, items: [] } }
+      detail.value = { ...detail.value, riskProvenance: undefined, events: { ...detail.value.events, items: [] } }
     if (id) await select(id, true)
   }
   async function moreGraph() {

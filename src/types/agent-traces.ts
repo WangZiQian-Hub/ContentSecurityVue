@@ -210,6 +210,8 @@ export interface AgentTraceApi {
   statisticsSource?(q: Query): import('./agent-trace-statistics').AgentTraceStatisticsSource[]
   workspace(q: Query, signal?: AbortSignal): Promise<Workspace>
   createBatch(name: string, key: string): Promise<Batch>
+  deleteBatch(batchId: string, expectedVersion: number, key: string): Promise<{ deleted: boolean }>
+  removeFile(batchId: string, fileId: string, expectedVersion: number, key: string): Promise<{ batch: Batch }>
   upload(file: File, key: string): Promise<{ fileId: string }>
   bind(
     batchId: string,

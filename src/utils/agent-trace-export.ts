@@ -67,183 +67,101 @@ export async function tracePng(lines: string[]): Promise<Blob> {
   )
 }
 
-
-/** Render the displayed audit canvas, including SVG graphs and ECharts canvases. */
-export async function tracePagePng(root: HTMLElement, onProgress: (value: number) => void = () => {}): Promise<Blob> {
-  onProgress(72)
-  await document.fonts.ready
-  let copied = 0
-  const yieldFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+/** Freeze the displayed audit page synchronously, then render its detached copy.
+ * This exports the current page appearance, not a server-generated data report.
+ * Nested scroll panels keep their visible slice; the outer page includes its
+ * full height even when the application's main viewport has been scrolled.
+ */
+export async function tracePagePng(
+  root: HTMLElement,
+  onProgress: (value: number) => void = () => {},
+): Promise<Blob> {
   const width = Math.ceil(Math.max(root.scrollWidth, root.getBoundingClientRect().width))
   const height = Math.ceil(Math.max(root.scrollHeight, root.getBoundingClientRect().height))
   if (!width || !height) throw new Error('页面尚未加载，请稍后导出')
-  const excluded = '.view-export-status,.at-task,.ats-export-status,.ex-export-status,.tools-export-status,.at-heading > div,.el-overlay,.el-popper'
-  async function copy(source: Element): Promise<Element | null> {
-    if (++copied % 100 === 0) {
-      onProgress(Math.min(86, 74 + copied / 1000))
-      await yieldFrame()
-    }
+  const excluded =
+    '.page-snapshot-status,.view-export-status,.at-task,.ats-export-status,.ex-export-status,.tools-export-status,.at-heading > div,.el-overlay,.el-popper'
+  // Do not yield while cloning: capture text, SVG, canvases, styles and selection
+  // from the same browser frame before the user can change the live page.
+  function copy(source: Element): Element | null {
     if (source.matches(excluded)) return null
     const style = getComputedStyle(source)
     if (style.display === 'none' || style.visibility === 'hidden') return null
-    const clone = source.cloneNode(false) as Element & { style: CSSStyleDeclaration }
-    if (clone.style) {
-      for (const key of Array.from(style)) clone.style.setProperty(key, style.getPropertyValue(key))
-      clone.style.setProperty('animation', 'none')
-      clone.style.setProperty('transition', 'none')
-      // Computed styles are self-contained: prevent a second transform in the SVG wrapper.
-      clone.style.setProperty('caret-color', 'transparent')
+    const clone = source.cloneNode(false) as HTMLElement | SVGElement
+    for (const key of Array.from(style)) {
+      // SVG marker/filter references must resolve inside the exported image.
+      const value = style
+        .getPropertyValue(key)
+        .replace(/url\(["']?[^)"']*#([^)'" ]+)["']?\)/g, 'url(#$1)')
+      clone.style.setProperty(key, value)
     }
+    clone.style.setProperty('animation', 'none')
+    clone.style.setProperty('transition', 'none')
+    clone.style.setProperty('caret-color', 'transparent')
     if (source instanceof HTMLCanvasElement) {
       const img = document.createElement('img')
       img.src = source.toDataURL('image/png')
-      img.style.cssText = clone.getAttribute('style') || ''
+      img.style.cssText = clone.style.cssText
       img.width = source.clientWidth
       img.height = source.clientHeight
       return img
     }
-    if (source instanceof HTMLInputElement) clone.setAttribute('value', source.value)
+    if (source instanceof HTMLInputElement) {
+      clone.setAttribute('value', source.value)
+      clone.toggleAttribute('checked', source.checked)
+    }
     if (source instanceof HTMLTextAreaElement) clone.textContent = source.value
     if (source instanceof HTMLImageElement && source.src && !source.src.startsWith('data:')) {
-      // Never fetch arbitrary external assets while exporting an audit page.
-      if (!source.complete || !source.naturalWidth) return null
+      if (!source.complete || !source.naturalWidth)
+        throw new Error('页面图片尚未加载完成，请稍后重试')
       const canvas = document.createElement('canvas')
-      canvas.width = source.naturalWidth; canvas.height = source.naturalHeight
+      canvas.width = source.naturalWidth
+      canvas.height = source.naturalHeight
       canvas.getContext('2d')?.drawImage(source, 0, 0)
       clone.setAttribute('src', canvas.toDataURL('image/png'))
       clone.removeAttribute('srcset')
     }
     if (!(source instanceof HTMLTextAreaElement)) {
       for (const child of source.childNodes) {
-        const node = child instanceof Element ? await copy(child) : child.cloneNode(true)
+        const node = child instanceof Element ? copy(child) : child.cloneNode(true)
         if (node) clone.appendChild(node)
       }
     }
-    // Preserve the visible slice of scrollable code/log/sequence panels.
     if ((source.scrollTop || source.scrollLeft) && clone.firstElementChild) {
-      const children = Array.from(clone.childNodes)
       const wrapper = document.createElement('div')
-      wrapper.style.cssText = `transform:translate(${-source.scrollLeft}px,${-source.scrollTop}px)`
-      for (const child of children) wrapper.appendChild(child)
+      wrapper.style.transform = `translate(${-source.scrollLeft}px,${-source.scrollTop}px)`
+      while (clone.firstChild) wrapper.appendChild(clone.firstChild)
       clone.appendChild(wrapper)
     }
     return clone
   }
-  const content = await copy(root) as HTMLElement | null
+  const content = copy(root) as HTMLElement | null
   if (!content) throw new Error('没有可导出的页面内容')
   content.style.margin = '0'
   content.style.width = `${width}px`
+  content.style.height = `${height}px`
   content.style.boxSizing = 'border-box'
-  // Export-only masthead: do not reuse fixed computed flex widths after removing actions.
-  const heading = content.querySelector<HTMLElement>('.at-heading')
-  const tabs = content.querySelector<HTMLElement>('.at-tabs')
-  if (heading) {
-    heading.style.cssText = 'display:block;width:100%;height:auto;min-height:0;margin:0 0 18px;padding:4px 0 0;box-sizing:border-box;'
-    const title = heading.querySelector<HTMLElement>('h1')
-    if (title) title.style.cssText = 'display:block;width:auto;height:auto;margin:0;padding:0;font:700 30px/1.5 Microsoft YaHei,Arial,sans-serif;white-space:nowrap;color:#142644;'
-  }
-  if (tabs) {
-    tabs.style.cssText = 'display:flex;align-items:center;flex-wrap:nowrap;gap:12px;width:100%;height:auto;min-height:72px;margin:0 0 20px;padding:12px;box-sizing:border-box;border:1px solid #dce7f7;border-radius:12px;background:#ffffff;'
-    tabs.querySelector('.at-page')?.remove()
-    for (const button of tabs.querySelectorAll<HTMLElement>(':scope > button')) {
-      const active = button.classList.contains('active')
-      // Flatten copied child spans so inherited text-fill cannot override the export palette.
-      const label = button.textContent?.trim() || ''
-      button.textContent = label
-      button.style.cssText = `display:block;flex:0 0 auto;width:auto;min-width:160px;height:auto;margin:0;padding:12px 28px;box-sizing:border-box;white-space:nowrap;font:700 20px/1.5 Microsoft YaHei,Arial,sans-serif;border:1px solid ${active ? '#456cff' : '#dce7f7'};border-radius:10px;background:${active ? '#456cff' : '#f3f7ff'};color:${active ? '#fff' : '#435e82'};-webkit-text-fill-color:${active ? '#fff' : '#435e82'};`
-    }
-  }
-  // Normalize text sizing only in the detached export tree. Computed inline
-  // widths can otherwise squeeze labels when the SVG lays out the cloned page.
-  const labels = '.el-tag,.el-tag__content,.el-button > span,.el-select__placeholder,.ats-kpis span,.ats-kpis strong,.tool-metric b,.tool-metric strong,.tool-metric small,.at-categories > span,.at-parse-status,.at-recognition-label,.ex-sample .el-tag'
-  for (const label of content.querySelectorAll<HTMLElement>(labels)) {
-    label.style.whiteSpace = 'nowrap'
-    label.style.wordBreak = 'normal'
-    label.style.overflowWrap = 'normal'
-    label.style.flexShrink = '0'
-    label.style.height = 'auto'
-    label.style.minHeight = 'min-content'
-    if (!label.classList.contains('el-select__placeholder')) label.style.width = 'auto'
-  }
-  for (const title of content.querySelectorAll<HTMLElement>('h2,h3,h4,.panel-heading,.ats-filters label,.tools-query > b,.at-context > label')) {
-    title.style.whiteSpace = 'nowrap'
-    title.style.wordBreak = 'normal'
-    title.style.flexShrink = '0'
-    title.style.height = 'auto'
-  }
-  for (const cell of content.querySelectorAll<HTMLElement>('th')) {
-    cell.style.whiteSpace = 'nowrap'
-    cell.style.wordBreak = 'normal'
-    cell.style.textOverflow = 'clip'
-    cell.style.overflow = 'visible'
-  }
-  // Keep language totals distinct instead of "100English 100".
-  for (const value of content.querySelectorAll<HTMLElement>('.at-ingest-grid .panel-content p > span')) {
-    value.style.display = 'inline-block'
-    value.style.width = 'auto'
-    value.style.marginRight = '14px'
-    value.style.marginInlineEnd = '14px'
-    value.style.whiteSpace = 'nowrap'
-  }
-  for (const cell of content.querySelectorAll<HTMLElement>('.ats-sample-table .cell')) {
-    cell.style.width = 'auto'
-    cell.style.inlineSize = 'auto'
-    cell.style.boxSizing = 'border-box'
-    cell.style.paddingInline = '10px'
-    cell.style.whiteSpace = 'nowrap'
-    cell.style.wordBreak = 'normal'
-  }
-  // Metric icons and labels must not compete with the numbers for fixed widths.
-  for (const card of content.querySelectorAll<HTMLElement>('.ats-kpis article')) {
-    card.style.gap = '10px'
-    card.style.paddingLeft = '12px'
-    card.style.paddingRight = '12px'
-    for (const child of card.querySelectorAll<HTMLElement>(':scope > div')) {
-      child.style.width = 'auto'
-      child.style.minWidth = '0'
-      child.style.height = 'auto'
-    }
-  }
-  // Export-specific layouts for rows whose live flex widths become stale in SVG.
-  const styleExport = (selector: string, rules: Record<string, string>) => {
-    for (const element of content.querySelectorAll<HTMLElement>(selector)) {
-      for (const [key, value] of Object.entries(rules)) element.style.setProperty(key, value, 'important')
-    }
-  }
-  styleExport('.at-issue', {
-    display: 'grid', 'grid-template-columns': 'auto auto minmax(0,1fr) auto',
-    'align-items': 'center', gap: '8px', 'flex-wrap': 'nowrap',
-  })
-  styleExport('.at-issue > *', { width: 'auto', 'inline-size': 'auto', 'min-width': '0', 'margin': '0', 'align-self': 'center' })
-  styleExport('.at-issue > .el-button,.at-issue > strong', { 'white-space': 'nowrap', 'justify-self': 'end' })
-  styleExport('.at-issue > small', { 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis' })
-  styleExport('.at-file-actions', { display: 'flex', 'flex-wrap': 'nowrap', width: 'auto', 'inline-size': 'auto', gap: '14px' })
-  styleExport('.at-file-actions > *', { 'flex-shrink': '0', 'margin-inline': '0', 'white-space': 'nowrap' })
-  styleExport('.at-mapping-title', { 'flex-wrap': 'nowrap', 'align-items': 'center' })
-  styleExport('.at-mapping-title strong', { width: 'auto', 'inline-size': 'auto', 'white-space': 'nowrap', 'flex-shrink': '0' })
-  styleExport('.ats-pagination', { display: 'flex', 'flex-wrap': 'nowrap', 'align-items': 'center', 'justify-content': 'flex-end', gap: '16px' })
-  styleExport('.ats-pagination > span', { width: 'max-content', 'inline-size': 'max-content', height: 'auto', 'block-size': 'auto', 'white-space': 'nowrap', flex: '0 0 auto', 'line-height': '32px' })
-  styleExport('.ats-pagination > .el-pagination', { flex: '0 0 auto', 'white-space': 'nowrap' })
-  styleExport('.tools-metrics', { display: 'grid', 'grid-template-columns': 'auto repeat(6,minmax(72px,1fr)) minmax(390px,2fr)', 'align-items': 'center', gap: '10px', height: 'auto', 'block-size': 'auto' })
-  styleExport('.tools-metrics > *', { width: 'auto', 'inline-size': 'auto', 'min-width': '0', 'margin-inline': '0' })
-  styleExport('.tool-timing', { 'white-space': 'nowrap', 'align-self': 'center' })
-  styleExport('.tool-explanation button', { display: 'inline-flex', width: 'max-content', 'inline-size': 'max-content', height: 'auto', 'block-size': 'auto', 'white-space': 'nowrap', 'word-break': 'normal', 'flex-shrink': '0', 'line-height': '22px', 'vertical-align': 'middle' })
-  styleExport('.tool-explanation', { height: 'auto', 'block-size': 'auto', 'min-height': '28px', 'line-height': '24px' })
-  onProgress(88)
-  await yieldFrame()
-  const padding = 28
-  const exportWidth = width + padding * 2, exportHeight = height + padding * 2 + 80
+  // All layout/style reads are complete. Everything below uses detached data.
+  onProgress(65)
+  await document.fonts.ready
+  const padding = 20,
+    exportWidth = width + padding * 2,
+    exportHeight = height + padding * 2
   const wrapper = document.createElement('div')
   wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml')
-  wrapper.style.cssText = `width:${exportWidth}px;height:${exportHeight}px;padding:${padding}px;box-sizing:border-box;background:linear-gradient(135deg,#f0f6ff,#ffffff);font-family:Microsoft YaHei,Arial,sans-serif;`
+  wrapper.style.cssText = `width:${exportWidth}px;height:${exportHeight}px;padding:${padding}px;box-sizing:border-box;background:#f3f7ff;font-family:Microsoft YaHei,Arial,sans-serif;`
   wrapper.appendChild(content)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}"><foreignObject width="100%" height="100%">${new XMLSerializer().serializeToString(wrapper)}</foreignObject></svg>`
   const image = new Image()
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
   await image.decode()
-  onProgress(94)
-  await yieldFrame()
-  const scale = Math.min(2, 16000 / exportWidth, 16000 / exportHeight, Math.sqrt(48000000 / (exportWidth * exportHeight)))
+  onProgress(85)
+  const scale = Math.min(
+    2,
+    16000 / exportWidth,
+    16000 / exportHeight,
+    Math.sqrt(48000000 / (exportWidth * exportHeight)),
+  )
   const canvas = document.createElement('canvas')
   canvas.width = Math.ceil(exportWidth * scale)
   canvas.height = Math.ceil(exportHeight * scale)
@@ -251,7 +169,11 @@ export async function tracePagePng(root: HTMLElement, onProgress: (value: number
   if (!ctx) throw new Error('浏览器不支持图片导出')
   ctx.scale(scale, scale)
   ctx.drawImage(image, 0, 0)
-  onProgress(97)
-  await yieldFrame()
-  return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('页面图片生成失败')), 'image/png'))
+  onProgress(95)
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('页面图片生成失败'))),
+      'image/png',
+    ),
+  )
 }

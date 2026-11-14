@@ -63,6 +63,8 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     pendingKeys.clear()
   }
   function message(e: unknown) {
+    const serverMessage = (e as { response?: { data?: { message?: unknown } } })?.response?.data?.message
+    if (typeof serverMessage === 'string') return serverMessage
     return e instanceof Error ? e.message : '请求失败，请重试'
   }
   async function load(q: Query = {}) {
@@ -70,6 +72,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     detailController?.abort()
     const current = ++generation
     detailGeneration++
+    listGeneration++
     controller = new AbortController()
     loading.value = true
     error.value = ''
@@ -87,6 +90,14 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
         sourceId: q.issueType ? undefined : s.sourceId || undefined,
         traceId: s.traceId || undefined,
       }
+      // Source identifies the displayed record; sample browsing spans the batch.
+      if (s.batchId && s.snapshotId) {
+        const samplePage = await api.samples(s.batchId, {
+          ...query.value, sourceId: undefined, page: q.page || 1,
+        }, controller.signal)
+        if (current !== generation) return
+        workspace.value = { ...w, samplePage }
+      }
       if (s.traceId) await select(s.traceId, q.eventId, q.eventPage || 1, q.eventTypes)
       if (current === generation) resume()
     } catch (e) {
@@ -102,7 +113,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     detailController?.abort()
     const current = ++detailGeneration
     detailController = new AbortController()
-    const q = { ...query.value, traceId, eventId, eventPage, eventTypes }
+    const q = { ...query.value, sourceId: undefined, traceId, eventId, eventPage, eventTypes }
     detail.value = null
     detailLoading.value = true
     detailError.value = ''
@@ -113,13 +124,13 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
       if (
         d.batchId !== q.batchId ||
         d.snapshotId !== q.snapshotId ||
-        d.traceId !== traceId ||
-        (q.sourceId && d.sourceId !== q.sourceId)
+        d.traceId !== traceId
       )
         throw new Error('详情上下文不匹配，未展示原文')
       detail.value = d
       query.value = {
         ...query.value,
+        sourceId: d.sourceId,
         traceId,
         eventId: d.selectedEventId || undefined,
         eventPage: d.selectedEventPage || d.events.page,
@@ -138,6 +149,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
       if (!query.value.batchId || !query.value.snapshotId) return
       const p = await api.samples(query.value.batchId, {
         ...query.value,
+        sourceId: undefined,
         page,
         q: q ?? query.value.q,
       })
@@ -209,6 +221,31 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
       key({ name: file.name, size: file.size, lastModified: file.lastModified }),
     )
   }
+  async function deleteBatch() {
+    const b = workspace.value?.batch
+    if (!b) return
+    await action(async () => {
+      const mode = modeGeneration
+      const payload = { deleteBatch: b.batchId, version: b.batchVersion }
+      await api.deleteBatch(b.batchId, b.batchVersion, key(payload))
+      if (mode !== modeGeneration) return
+      pendingKeys.delete(JSON.stringify(payload))
+      task.value = null
+      await load({})
+    })
+  }
+  async function removeFile(fileId: string) {
+    const b = workspace.value?.batch
+    if (!b) return
+    await action(async () => {
+      const mode = modeGeneration
+      const payload = { batchId: b.batchId, removeFile: fileId, version: b.batchVersion }
+      await api.removeFile(b.batchId, fileId, b.batchVersion, key(payload))
+      if (mode !== modeGeneration) return
+      pendingKeys.delete(JSON.stringify(payload))
+      await load({ batchId: b.batchId })
+    })
+  }
   async function submit(command: Command) {
     await action(async () => {
       const current = generation
@@ -276,6 +313,8 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     options,
     action,
     create,
+    deleteBatch,
+    removeFile,
     bind,
     upload,
     submit,

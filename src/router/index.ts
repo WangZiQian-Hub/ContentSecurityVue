@@ -29,6 +29,7 @@ export const router = createRouter({
         { path: 'evaluation', name: 'model-evaluation', component: () => import('../views/model-train/EvaluationPage.vue') },
         { path: 'deploy', name: 'model-deploy', component: () => import('../views/model-train/DeployPage.vue') },
         { path: 'invoke', name: 'model-invoke', component: () => import('../views/model-train/InvokePage.vue') },
+        { path: 'agent-tasks', name: 'model-agent-tasks', component: () => import('../views/model-train/AgentTasksPage.vue') },
         { path: ':pathMatch(.*)*', redirect: '/model-train' },
       ],
     },

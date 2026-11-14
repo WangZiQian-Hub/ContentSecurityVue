@@ -1,4 +1,5 @@
 /* Every selector is conditional on this view. Shared screens keep their original styles. */
+.at-execution .execution-view .ex-columns>main>.ex-card.ex-provenance{height:auto;min-height:120px;padding:12px;overflow:hidden}
 .at-execution .execution-view{font-size:15px;color:#193451}
 .at-execution .ex-query{gap:18px;padding:10px 8px 7px 16px;min-height:130px;border:2px solid #dce9fb;margin-bottom:12px;border-radius:11px}
 .at-execution .ex-query>label{font-size:22px;line-height:42px}
@@ -7,7 +8,10 @@
 .at-execution .ex-query .el-select__selected-item{font-size:22px;font-weight:700;color:#2a496b}
 .at-execution .ex-query>.el-button{height:42px;min-width:94px;font-size:22px;font-weight:700;border-radius:6px}
 .at-execution .ex-result{padding:6px 14px;line-height:29px;font-size:18px;border-radius:6px;color:#35557c;background:#eaf4ff}
-.at-execution .ex-columns{grid-template-columns:minmax(0,20%) minmax(0,52%) minmax(0,28%);gap:10px;padding:0 20px 0 0;align-items:stretch}
+.at-execution .ex-columns{grid-template-columns:minmax(0,17fr) minmax(0,45fr) minmax(0,38fr);gap:12px;padding:0;align-items:stretch}
+.at-execution .ex-columns>main{display:flex;flex-direction:column;min-width:0}
+.at-execution .ex-columns>main>.ex-card{flex-shrink:0}
+.at-execution .ex-columns>aside{min-width:0}
 .at-execution .ex-card{border:2px solid #dce9fb;border-radius:10px;background:linear-gradient(120deg,#fff,#f9fcff);padding:10px 12px;margin:0 0 9px;min-width:0}
 .at-execution .ex-card h3{font-size:18px;line-height:24px;margin:0 0 10px;color:#102f51;font-weight:750;white-space:nowrap}
 .at-execution .ex-card h3 small{font-size:14px;color:#6c84a0;font-weight:600}
@@ -33,31 +37,40 @@
 .at-execution .ex-chain button:not(:last-child)::after{content:'➜';position:absolute;right:-28px;color:#8bbcea;font-size:26px}
 .at-execution .ex-chain button>.el-icon{font-size:24px;color:#1677ff}
 .at-execution .ex-chain button>b{font-size:14px}
+.at-execution .ex-chain button>span{min-width:0;overflow:hidden}
+.at-execution .ex-chain button>span>b{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .at-execution .ex-columns>main>.ex-card:nth-child(3){height:175px;padding:5px 12px 10px}
 .at-execution .ex-toolbar{margin-bottom:5px;min-height:28px}
 .at-execution .ex-toolbar h3{margin:0}
-.at-execution .ex-content{grid-template-columns:46% 54%;gap:10px;padding-right:10px}
+.at-execution .ex-content{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:0;flex:1;min-height:0}
 .at-execution .ex-content article{height:118px;padding:6px 10px;overflow:auto;background:linear-gradient(#f8fafc,#f5f8fc);border-color:#e7edf5}
 .at-execution .ex-content article>b{font-size:14px;color:#152e49}
 .at-execution .ex-content p{font-size:14px;line-height:25px;margin:4px 0 0;color:#243a51}
 .at-execution .ex-content small{font-size:12px;color:#6f84a0}
 .at-execution .el-radio-button__inner{padding:5px 15px;font-size:13px;font-weight:600}
-.at-execution .ex-columns>aside:last-child>.ex-card:first-child{height:224px;padding:8px 10px}
+.at-execution .ex-columns>aside:last-child>.ex-card:first-child{height:256px;padding:8px 10px}
 .at-execution .ex-columns>aside:last-child>.ex-card:nth-child(2){height:133px;padding:6px 12px}
 .at-execution .ex-columns>aside:last-child>.ex-card:nth-child(3){height:179px;padding:7px 10px}
 .at-execution .ex-columns>aside:last-child h3{margin:0 0 6px}
 .at-execution dl{grid-template-columns:130px 1fr;font-size:14px;margin:0;line-height:18px}
 .at-execution dt,.at-execution dd{padding:4px 10px;height:29px;border-color:#e0e9f5;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .at-execution dt{background:#f0f6ff;color:#5b7390;font-weight:600}.at-execution dd{background:#fcfdff;color:#2a405d}.at-execution dd.high{background:#fcfdff!important;font-weight:700;color:#dc2428!important}
-.at-execution .ex-bar{grid-template-columns:155px 1fr;gap:8px;margin:9px 0;line-height:18px;font-size:14px}
+.at-execution .ex-bar{grid-template-columns:max-content minmax(0,1fr);gap:8px;margin:9px 0;line-height:18px;font-size:14px}
 .at-execution .ex-bar .el-progress-bar__outer{height:11px!important;background:#dfe8f2}.at-execution .ex-bar .el-progress-bar__inner{background:#147cff}
 .at-execution .ex-distribution-note{display:none}
-.at-execution .ex-pattern-heading,.at-execution .ex-pattern{display:grid;grid-template-columns:42px 105px minmax(0,1fr) 72px;gap:0;align-items:center;line-height:20px;font-size:13px}
+.at-execution .ex-pattern-heading,.at-execution .ex-pattern{display:grid;grid-template-columns:40px minmax(0,0.9fr) minmax(0,1.4fr) 82px;gap:0;align-items:center;line-height:20px;font-size:13px}
 .at-execution .ex-pattern-heading{height:32px;background:#e5f0fd;color:#58718f;font-weight:700;border:1px solid #dbe7f5;border-radius:6px 6px 0 0}
-.at-execution .ex-pattern{height:37px;padding:0;background:#fcfdff;border-color:#e1ebf7;border-radius:0}
+.at-execution .ex-pattern{min-height:64px;height:auto;padding:8px 0;background:#fcfdff;border-color:#e1ebf7;border-radius:0;cursor:pointer}
 .at-execution .ex-pattern>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 5px}
 .at-execution .ex-pattern>span:first-child,.at-execution .ex-pattern-heading>span:first-child{text-align:center}
 .at-execution .ex-pattern small{font-size:13px;color:#293f59}.at-execution .ex-pattern b{font-size:13px;font-weight:500}.at-execution .ex-pattern .el-tag{height:22px;padding:0 4px;margin:0 3px;font-size:12px;font-weight:700}
+.at-execution .ex-pattern>b,.at-execution .ex-pattern>small{white-space:normal;overflow-wrap:anywhere}
+.at-execution .ex-pattern>small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.at-execution .ex-pattern:hover{background:#edf5ff}
+.at-execution .ex-pattern-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.at-execution .ex-pattern-panel>h3{flex-shrink:0}
+.at-execution .ex-pattern-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.at-execution .ex-pattern-scroll>.ex-pattern-heading{position:sticky;top:0;z-index:1}
 .at-execution .ex-log{height:295px;margin-top:4px;padding:8px 10px 10px}
 .at-execution .ex-log>.ex-toolbar{margin:0 0 6px;min-height:38px}.at-execution .ex-log>.ex-toolbar h3{font-size:18px}.at-execution .ex-log .ex-toolbar>div{display:flex;gap:12px}.at-execution .ex-log .el-button{height:38px;min-width:112px;font-size:15px;font-weight:600;border-radius:8px;margin:0}.at-execution .ex-log>small{font-size:12px;position:absolute;transform:translate(322px,-31px)}
 .at-execution .ex-table{height:228px;max-height:228px;overflow:auto;position:relative;border:1px solid #dce7f5}
@@ -68,10 +81,10 @@
 /* Parent-scoped legacy rules load after the child. Keep these overrides explicit. */
 .at-execution .ex-query{row-gap:6px;padding-top:8px;padding-bottom:6px}
 .at-execution .ex-result{line-height:27px;padding-top:4px;padding-bottom:4px}
-.at-execution .ex-columns>main>.ex-card:nth-child(3){height:160px}
-.at-execution .ex-content article{height:106px}
-.at-execution .ex-columns>aside:first-child{height:546px}
-.at-execution .ex-columns>aside:last-child>.ex-card:nth-child(3){height:171px}
+.at-execution .ex-columns>main>.ex-card:nth-child(3){height:auto;min-height:160px;flex:1;display:flex;flex-direction:column}
+.at-execution .ex-content article{height:auto;min-height:106px;max-height:280px;min-width:0}
+.at-execution .ex-columns>aside:first-child{height:auto;min-height:546px}
+.at-execution .ex-columns>aside:last-child>.ex-card:nth-child(3){height:280px}
 .at-execution .ex-log th:nth-child(1){width:60px}.at-execution .ex-log th:nth-child(2){width:140px}.at-execution .ex-log th:nth-child(3){width:130px}.at-execution .ex-log th:nth-child(4){width:160px}.at-execution .ex-log th:nth-child(5){width:auto}.at-execution .ex-log th:nth-child(6){width:29%}
 .at-execution .ex-chain:has(button:nth-child(5)) button:last-child{background:#fff0f1;color:#d52c35;border-color:#ffc5c8}.at-execution .ex-chain:has(button:nth-child(5)) button:last-child>.el-icon{color:#ef4850}
 .at-execution .ex-card h3 .el-tag{vertical-align:2px;margin-left:5px}
@@ -94,5 +107,23 @@
 .at-execution .ex-sample-footer{display:flex;align-items:center;flex:0 0 36px;height:36px;min-height:36px;margin-top:6px;padding:0;border-top:1px solid #e5edf8;background:#fbfdff;overflow:hidden}
 .at-execution .ex-sample-footer .el-pagination{display:flex;justify-content:center;margin:0;width:100%;height:26px;opacity:1}
 .at-execution .ex-sample-footer .el-pager li{min-width:24px}
-.at-execution .ex-sample-panel .ex-sample{height:60px;min-height:60px;margin-bottom:6px}
-.at-execution .ex-sample-panel .ex-sample small{margin-top:6px}
+/* Give the ID, tags and summary separate rows; long IDs cannot cover badges. */
+.at-execution .ex-sample-panel .ex-sample{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:5px 8px;align-items:center;height:auto;min-height:88px;margin-bottom:6px}
+.at-execution .ex-sample-panel .ex-sample>b{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:20px}
+.at-execution .ex-sample-panel .ex-sample>.el-tag{grid-column:1;grid-row:2;margin:0;justify-self:start;white-space:nowrap}
+.at-execution .ex-sample-panel .ex-sample>span:last-of-type{grid-column:2;grid-row:2;position:static;float:none;justify-self:end;white-space:nowrap;margin:0;line-height:19px;padding:0 7px}
+.at-execution .ex-sample-panel .ex-sample small{grid-column:1/-1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis}
+/* Keep the evidence list readable when three columns no longer fit. */
+@media (max-width:1450px){
+  .at-execution .ex-columns{grid-template-columns:240px minmax(0,1fr)}
+  .at-execution .ex-columns>aside:last-child{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+  .at-execution .ex-columns>aside:last-child>.ex-pattern-panel{grid-column:1/-1}
+  .at-execution .ex-columns>aside:last-child>.ex-card:nth-child(2){height:256px}
+}
+@media (max-width:760px){
+  .at-execution .ex-columns{display:block}
+  .at-execution .ex-columns>aside:last-child{display:block}
+  .at-execution .ex-columns>.ex-sample-panel{height:320px;min-height:0}
+  .at-execution .ex-content{grid-template-columns:minmax(0,1fr)}
+  .at-execution .ex-content article{height:160px}
+}

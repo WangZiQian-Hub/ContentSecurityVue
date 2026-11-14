@@ -14,6 +14,14 @@ export const agentTraceHttp: AgentTraceApi = {
       headers: headers(key),
       silent: true,
     }),
+  deleteBatch: (batchId, expectedVersion, key) => request({
+    url: `${root}/batches/${id(batchId)}`, method: 'DELETE',
+    data: { expectedVersion }, headers: headers(key), silent: true,
+  }),
+  removeFile: (batchId, fileId, expectedVersion, key) => request({
+    url: `${root}/batches/${id(batchId)}/files/${id(fileId)}`, method: 'DELETE',
+    data: { expectedVersion }, headers: headers(key), silent: true,
+  }),
   upload: (file, key) => {
     const data = new FormData()
     data.append('file', file)

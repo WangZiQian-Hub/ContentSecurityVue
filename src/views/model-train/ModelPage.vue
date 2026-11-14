@@ -16,6 +16,7 @@ const tabs = [
   { path: 'evaluation', title: '模型评估', icon: 'Histogram' },
   { path: 'deploy', title: '模型部署', icon: 'Box' },
   { path: 'invoke', title: '模型调用', icon: 'Link' },
+  { path: 'agent-tasks', title: '智能体任务', icon: 'Connection' },
 ]
 const hasRunningTraining = computed(
   () => !isMock && store.data.training.some((task) => task.status === 'running'),

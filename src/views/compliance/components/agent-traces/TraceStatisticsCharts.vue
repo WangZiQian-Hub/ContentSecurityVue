@@ -66,23 +66,18 @@ const available = (s: string) => ['available', 'partial'].includes(s)
       <template
         v-if="available(c.tokenComposition.availability) && c.tokenComposition.mutuallyExclusive"
       >
-        <div class="ats-token-stack">
+        <div class="ats-token-tracks">
           <div
             v-for="(part, i) in c.tokenComposition.components"
             :key="part.code"
-            :style="{ flex: part.count || 0, background: ['#378fff', '#78b8fb', '#60c68a'][i] }"
-            :title="`${part.label}：${num(part.count)}；覆盖 ${part.validSampleCount}/${part.eligibleSampleCount}`"
+            class="ats-token-track"
+            :title="`${part.label}；覆盖 ${part.validSampleCount}/${part.eligibleSampleCount}`"
           >
-            <b>{{ num(part.count) }}</b
-            ><span>{{ num(part.ratioPercent, 1) }}%</span>
-          </div>
-        </div>
-        <div class="ats-token-legend">
-          <div v-for="(part, i) in c.tokenComposition.components" :key="part.code">
-            <i :style="{ background: ['#378fff', '#78b8fb', '#60c68a'][i] }" />{{
-              part.label
-            }}：<b>{{ num(part.count) }}</b
-            >（{{ num(part.ratioPercent, 1) }}%）
+            <span class="ats-token-fill" aria-hidden="true" :style="{ width: `${Math.max(0, Math.min(100, part.ratioPercent || 0))}%`, background: ['#1677ff', '#f59e0b', '#10b981'][i] }" />
+            <div class="ats-token-track-text">
+              <span>{{ part.label }}</span>
+              <span class="ats-token-track-value"><b>{{ num(part.count) }}</b><span>{{ num(part.ratioPercent, 1) }}%</span></span>
+            </div>
           </div>
         </div>
         <small :title="c.tokenComposition.normalizedPolicy"

@@ -260,7 +260,7 @@ export function createAgentTraceMock(): AgentTraceApi {
     artifacts = new Map<string, { blob: Blob; filename: string }>(),
     memo = new Map<string, { payload: string; promise: Promise<unknown> }>(),
     urls: string[] = []
-  const permissions = ['upload', 'bind_files', 'parse', 'view_raw', 'export_view', 'export_package']
+  const permissions = ['upload', 'bind_files', 'parse', 'view_raw', 'export_view', 'export_package', 'delete_batch', 'remove_file']
   const makeBatch = (name: string, id = `mock_batch_${crypto.randomUUID()}`): State => ({
     batch: {
       batchId: id,
@@ -503,7 +503,7 @@ export function createAgentTraceMock(): AgentTraceApi {
           ? state(q.batchId)
           : q.sourceId
             ? batches.find((b) => b.files.some((f) => f.fileId === q.sourceId)) || state('missing')
-            : state(),
+            : batches.length ? state() : makeBatch(''),
         rows = rowsFor(s, q)
       if (q.sourceId && !s.files.some((f) => f.fileId === q.sourceId))
         throw new Error('来源与批次不匹配')
@@ -581,7 +581,7 @@ export function createAgentTraceMock(): AgentTraceApi {
       }
       return structuredClone({
         resolvedSelection: {
-          batchId: s.batch.batchId,
+          batchId: batches.length ? s.batch.batchId : null,
           snapshotId: q.snapshotId || s.batch.activeSnapshotId,
           sourceId: sourceId || null,
           traceId: selected?.traceId || null,
@@ -611,7 +611,7 @@ export function createAgentTraceMock(): AgentTraceApi {
           q.batchOptionPage || 1,
           50,
         ),
-        batch: s.batch,
+        batch: batches.length ? s.batch : null,
         files: page(s.files, q.filesPage || 1, 20),
         summary,
         validation: {
@@ -649,6 +649,29 @@ export function createAgentTraceMock(): AgentTraceApi {
         batches.push(s)
         return structuredClone(s.batch)
       }),
+    deleteBatch: (batchId, version, key) => once(key, { deleteBatch: batchId, version }, async () => {
+      const s = state(batchId)
+      if (s.batch.batchVersion !== version) throw new Error('批次版本冲突，请刷新后重试')
+      if (s.files.length) throw new Error('批次中还有文件，请先删除文件后再删除空批次')
+      if ([...jobs.values()].some(j => j.task.result?.batchId === batchId && ['pending', 'running'].includes(j.task.status)))
+        throw new Error('当前批次有任务进行中')
+      batches.splice(batches.indexOf(s), 1)
+      return { deleted: true }
+    }),
+    removeFile: (batchId, fileId, version, key) => once(key, { batchId, removeFile: fileId, version }, async () => {
+      const s = state(batchId)
+      if (s.batch.batchVersion !== version) throw new Error('批次版本冲突，请刷新后重试')
+      if ([...jobs.values()].some(j => j.task.result?.batchId === batchId && ['pending', 'running'].includes(j.task.status)))
+        throw new Error('当前批次有任务进行中')
+      const f = s.files.find(f => f.fileId === fileId)
+      if (!f) throw new Error('文件不存在')
+      if (f.parseStatus !== 'pending' || [...s.snapshots.values()].some(rows => rows.some(r => r.sourceId === fileId)))
+        throw new Error('文件已开始解析或被历史结果引用，不能单独删除')
+      s.files.splice(s.files.indexOf(f), 1)
+      s.batch.batchVersion++
+      s.batch.stagingChanged = s.files.some(f => f.parseStatus === 'pending')
+      return { batch: structuredClone(s.batch) }
+    }),
     upload: (file, key) =>
       once(key, { name: file.name, size: file.size }, async () => {
         const fileId = `mock_file_${crypto.randomUUID()}`

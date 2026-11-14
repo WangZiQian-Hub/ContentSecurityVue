@@ -44,6 +44,7 @@ export interface ExecutionText {
 }
 export interface ExecutionSelection {
   eventId: string
+  toolName?: string | null
   displayId: string
   ordinal: number
   previousEventId: string | null
@@ -83,6 +84,7 @@ export interface ExecutionGraph {
   nextCursor: string | null
 }
 export interface ExecutionDetail {
+  riskProvenance?: RiskProvenance
   ruleFindings?: import('../utils/agent-trace-presentation').RuleFinding[]
   ruleAudit?: { version: string }
   scope: ExecutionScope
@@ -101,6 +103,45 @@ export interface ExecutionDetail {
     snippet: string
   }>
   permissions: { canViewRaw: boolean; canExport: boolean }
+}
+export interface RiskProvenanceNode {
+  id: string
+  eventId: string
+  displayId: string
+  kind: string
+  label: string
+  excerpt: string
+  sourceRef?: { sourceId?: string; sourcePath?: string; recordIndex?: number; lineStart?: number }
+}
+export interface RiskProvenanceEdge {
+  fromId: string
+  toId: string
+  relation: string
+  label: string
+  status: 'recorded' | 'candidate'
+  basis: string
+}
+export interface RiskProvenanceChain {
+  chainId: string
+  riskEventId: string
+  riskDisplayId: string
+  title: string
+  evidenceIds: string[]
+  riskEvidence: string[]
+  callId: string | null
+  outcome: string
+  nodes: RiskProvenanceNode[]
+  edges: RiskProvenanceEdge[]
+  gaps: string[]
+  attributionStatus: 'pending_review' | 'insufficient_evidence'
+}
+export interface RiskProvenance {
+  version: string
+  chains: RiskProvenanceChain[]
+  total: number
+  complete: boolean
+  dataOrigin: string
+  notice: string
 }
 export interface ExecutionWorkspace {
   activeSnapshotId?: string

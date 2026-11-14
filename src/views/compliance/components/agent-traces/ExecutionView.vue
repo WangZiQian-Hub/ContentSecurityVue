@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import ViewExportStatus from './ViewExportStatus.vue'
 import RuleFindings from './RuleFindings.vue'
-import { traceBatchLabel } from '../../../../utils/agent-trace-presentation'
+import { traceBatchLabel, traceRiskName, traceRiskSummary, traceEvidenceText } from '../../../../utils/agent-trace-presentation'
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import ExecutionGraph from './ExecutionGraph.vue'
 import ExecutionGlyph from './ExecutionGlyph.vue'
+import RiskProvenance from './RiskProvenance.vue'
 import AppIcon from '../../../../components/AppIcon.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useComplianceStore } from '../../../../stores/compliance'
@@ -12,7 +13,7 @@ import { useExecutionStore } from '../../../../stores/agent-trace-execution'
 import { useExecutionExport } from '../../../../composables/useExecutionExport'
 import { traceZip, tracePng } from '../../../../utils/agent-trace-export'
 import { executionSamples } from '../../../../mock/agent-trace-execution'
-import type { ExecutionText } from '../../../../types/agent-trace-execution'
+import { executionTextTokens as tokens } from '../../../../utils/execution-text-preview'
 const exportState = useExecutionExport()
 const {
   busy: exporting,
@@ -104,24 +105,6 @@ onUnmounted(() => {
   clearTimeout(debounce)
   store.dispose()
 })
-function tokens(content?: ExecutionText) {
-  if (!content) return [{ text: '未提供', mark: false }]
-  const ranges = [...content.highlights]
-    .filter((r) => r.start >= 0 && r.end <= content.text.length && r.end > r.start)
-    .sort((a, b) => a.start - b.start)
-  let start = 0
-  const out: { text: string; mark: boolean }[] = []
-  for (const r of ranges) {
-    if (r.start < start) continue
-    out.push(
-      { text: content.text.slice(start, r.start), mark: false },
-      { text: content.text.slice(r.start, r.end), mark: true },
-    )
-    start = r.end
-  }
-  out.push({ text: content.text.slice(start), mark: false })
-  return out
-}
 async function run() {
   search.value = ''
   await store.run(
@@ -314,7 +297,7 @@ defineExpose({
               : d.summary.language === 'zh'
                 ? '中文'
                 : d.summary.language
-          }}）· 风险类型： {{ d.summary.riskTypes.map((r) => r.label).join(' / ') }} ·
+          }}）· 风险类型： {{ traceRiskSummary(d.summary.riskTypes) }} ·
           {{ level(d.summary.riskLevel) }} · 步骤 {{ d.summary.eventCount }} steps · 工具调用
           {{ d.summary.callCount }} calls · 耗时 {{ duration(d.summary.durationMs) }}</template
         >
@@ -382,13 +365,13 @@ defineExpose({
             :aria-pressed="d?.traceId === sample.traceId"
             @click="store.choose(sample.traceId)"
           >
-            <b>{{ sample.displayId }}</b>
+            <b :title="sample.displayId">{{ sample.displayId }}</b>
             <el-tag size="small" :type="sample.language === 'zh' ? 'warning' : 'primary'">{{
               sample.language === 'en' ? 'EN' : sample.language === 'zh' ? '中文' : sample.language
             }}</el-tag
             ><span :class="sample.riskLevel">{{ level(sample.riskLevel) }}</span
             ><small
-              >{{ sample.riskTypes.map((r) => r.label).join(' / ') || '暂无风险类别' }} /
+              >{{ traceRiskSummary(sample.riskTypes) }} /
               {{ sample.eventCount }} steps / {{ sample.callCount }} calls /
               {{ duration(sample.durationMs) }}</small
             >
@@ -430,24 +413,13 @@ defineExpose({
               "
             /><el-button v-if="d.graph.nextCursor" @click="store.moreGraph">加载更多节点</el-button>
           </section>
-          <section class="ex-card">
-            <h3>
-              来源溯源链
-              <el-tag v-if="s?.lineage.nodes.length" size="small" type="success">可观察关联</el-tag>
-            </h3>
-            <div class="ex-chain">
-              <button
-                v-for="n in s?.lineage.nodes"
-                :key="n.id"
-                @click="n.eventId && store.select(n.eventId)"
-              >
-                <ExecutionGlyph :label="n.label" /><span
-                  ><b>{{ n.id.startsWith('mock_') ? s?.displayId : n.id }}</b
-                  ><br />{{ n.label }}</span
-                ></button
-              ><span v-if="!s?.lineage.nodes.length">暂无关联来源</span>
-            </div>
-          </section>
+          <RiskProvenance
+            :key="`${d.traceId}-${w?.scope?.snapshotId}`"
+            :provenance="d.riskProvenance"
+            :selection="s"
+            :busy="store.detailLoading"
+            @select="store.pause(); store.select($event)"
+          />
           <section class="ex-card">
             <div class="ex-toolbar">
               <h3>关键内容与推理摘要</h3>
@@ -459,7 +431,27 @@ defineExpose({
             </div>
             <div class="ex-content">
               <article>
-                <b>原始来源内容（节选）</b>
+                <b class="execution-content-heading">原始来源内容（节选）
+                  <el-popover placement="top-start" :width="360" :trigger="['hover', 'focus']" :show-after="150">
+                    <template #reference>
+                      <button type="button" class="execution-content-help-button" aria-label="说明：原始来源内容">!</button>
+                    </template>
+                    <div class="execution-content-help">
+                      <p>内容会随选中的步骤变化。</p>
+                      <table aria-label="步骤内容说明">
+                        <thead><tr><th scope="col">选中的步骤</th><th scope="col">这里显示什么</th></tr></thead>
+                        <tbody>
+                          <tr><td>用户消息</td><td>用户提出的要求</td></tr>
+                          <tr><td>已记录推理</td><td>日志中记录的思考说明或行动计划</td></tr>
+                          <tr><td>工具调用</td><td>工具名称及发给工具的请求参数</td></tr>
+                          <tr><td>工具返回</td><td>工具实际返回的结果</td></tr>
+                          <tr><td>模型回答</td><td>模型实际输出的文字</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </el-popover>
+                </b>
+                <p v-if="s?.toolName"><strong>工具名称：</strong>{{ s.toolName }}</p>
                 <p>
                   <template v-for="(t, i) in tokens(s?.content.sourceExcerpt)" :key="i"
                     ><mark v-if="t.mark">{{ t.text }}</mark
@@ -475,7 +467,7 @@ defineExpose({
                     ><span v-else>{{ t.text }}</span></template
                   >
                 </p>
-                <small>{{ s?.content.reasoningSummary.provenance }}</small>
+                <small>{{ ({ source_log: '来自原始日志', imported: '来自导入记录', derived_summary: '根据日志整理的摘要', not_provided: '日志中没有推理记录' } as Record<string, string>)[s?.content.reasoningSummary.provenance || ''] || '未标注摘要来源' }}</small>
               </article>
             </div>
           </section></template
@@ -485,27 +477,29 @@ defineExpose({
       <aside v-if="d">
         <section class="ex-card">
           <h3>
-            风险证据信息 <small>（选中节点：{{ s?.displayId || '未选节点' }}）</small>
+            风险详情 <small>（当前步骤：{{ s?.displayId || '尚未选择' }}）</small>
           </h3>
-          <el-select v-if="(s?.riskEvidence.items.length || 0) > 1" v-model="evidenceIndex"
+          <el-select
+            v-if="(s?.riskEvidence.items.length || 0) > 1"
+            v-model="evidenceIndex"
+            aria-label="选择风险证据"
             ><el-option
               v-for="(e, i) in s?.riskEvidence.items"
               :key="e.evidenceId"
               :value="i"
-              :label="e.matchPattern"
+              :label="`依据 ${i + 1}：${traceRiskName(e.riskType) || '未分类风险'}`"
           /></el-select>
           <dl v-if="evidence">
             <dt>风险类别</dt>
-            <dd>{{ evidence.riskType.label }}</dd>
-            <dt>匹配模式</dt>
-            <dd>{{ evidence.matchPattern }}</dd>
-            <dt>风险严重性</dt>
+            <dd>{{ traceRiskName(evidence.riskType) }}</dd>
+            <dt>判断依据</dt>
+            <dd :title="traceEvidenceText(evidence.matchPattern)">{{ traceEvidenceText(evidence.matchPattern) }}</dd>
+            <dt>风险等级</dt>
             <dd :class="evidence.severity">{{ level(evidence.severity) }}</dd>
-            <dt>规则命中</dt>
+            <dt>复核状态</dt>
             <dd>
-              <span :title="evidence.ruleId">规则命中</span> /
               <el-tag type="warning" size="small">{{
-                evidence.reviewStatus === 'pending' ? '待人工确认' : evidence.reviewStatus
+                ({ pending: '待人工核实', confirmed: '已确认', dismissed: '已排除' } as Record<string, string>)[evidence.reviewStatus] || evidence.reviewStatus
               }}</el-tag>
             </dd>
             <dt>置信度</dt>
@@ -515,44 +509,48 @@ defineExpose({
           </dl>
           <p v-else>
             {{
-              d.summary.auditDecision === 'pending' ? '尚未完成审计' : '当前节点暂无已记录风险证据'
+              d.summary.auditDecision === 'pending' ? '正在等待检查结果' : '这一步暂无风险记录'
             }}
           </p>
         </section>
         <section class="ex-card">
           <h3>风险事件分布（本样本）</h3>
-          <div v-for="r in d.riskDistribution.items" :key="r.code" class="ex-bar">
-            <span>{{ r.label }} {{ r.eventCount }}次</span
-            ><el-progress
-              :show-text="false"
-              :percentage="
-                (r.eventCount / Math.max(5, ...d.riskDistribution.items.map((i) => i.eventCount))) *
-                100
-              "
-            />
+          <div class="ex-distribution-list">
+            <div v-for="r in d.riskDistribution.items" :key="r.code" class="ex-bar">
+              <span>{{ traceRiskName(r) }} {{ r.eventCount }}次</span
+              ><el-progress
+                :show-text="false"
+                :percentage="
+                  (r.eventCount / Math.max(5, ...d.riskDistribution.items.map((i) => i.eventCount))) *
+                  100
+                "
+              />
+            </div>
           </div>
-          <small class="ex-distribution-note">各类别内按事件去重，类别之间可重叠</small>
+          <small class="ex-distribution-note">同一步骤可能涉及多种风险，各类次数不能直接相加。</small>
         </section>
-        <section class="ex-card">
+        <section class="ex-card ex-pattern-panel">
           <h3>
-            危险模式列表 <small>（共 {{ d.dangerPatterns.total }} 项）</small>
+            风险记录 <small>（共 {{ d.dangerPatterns.total }} 项）</small>
           </h3>
-          <div class="ex-pattern-heading">
-            <span>序号</span><span>危险模式</span><span>关键片段/特征</span><span>定位</span>
+          <div class="ex-pattern-scroll">
+            <div class="ex-pattern-heading">
+              <span>序号</span><span>问题类型</span><span>相关内容</span><span>所在步骤</span>
+            </div>
+            <button
+              v-for="(p, pi) in d.dangerPatterns.items"
+              :key="p.patternId"
+              class="ex-pattern"
+              @click="
+                store.pause(); store.select(p.eventId)
+              "
+            >
+              <span>{{ pi + 1 }}</span
+              ><b :title="traceRiskName({ code: '', label: p.label })">{{ traceRiskName({ code: '', label: p.label }) }}</b
+              ><small :title="p.snippet">{{ p.snippet }}</small
+              ><el-tag>{{ p.eventDisplayId }}</el-tag>
+            </button>
           </div>
-          <button
-            v-for="(p, pi) in d.dangerPatterns.items"
-            :key="p.patternId"
-            class="ex-pattern"
-            @click="
-              store.pause(); store.select(p.eventId)
-            "
-          >
-            <span>{{ pi + 1 }}</span
-            ><b>{{ p.label }}</b
-            ><small>{{ p.snippet }}</small
-            ><el-tag>{{ p.eventDisplayId }}</el-tag>
-          </button>
         </section>
       </aside>
     </div>
@@ -588,7 +586,7 @@ defineExpose({
           >
         </div>
       </div>
-      <small>仅回放已记录事件，不执行外部调用。时间缺失仍可按序查看。</small>
+      <small>回放只查看日志，不会重新调用工具。没有时间记录的步骤也可按顺序查看。</small>
       <div class="ex-table">
         <table>
           <thead>
@@ -650,17 +648,17 @@ defineExpose({
       append-to-body
       class="trace-package-dialog"
       ><h3 class="trace-package-section">思维路径 · 导出范围</h3>
-      <p>已查询批次 {{ w?.scope?.batchId }}，固定快照 {{ w?.scope?.snapshotId }}</p>
+      <p>批次 {{ w?.scope?.batchId }} · 数据版本 {{ w?.scope?.snapshotId }}</p>
       <el-select v-model="packageScope" aria-label="导出范围"
         ><el-option value="batch" label="整个批次（忽略局部筛选）" /><el-option
           value="filtered"
-          label="筛选命中全部样本（不受分页限制）" /><el-option value="sample" label="当前样本"
+          label="符合筛选条件的全部样本" /><el-option value="sample" label="当前样本"
       /></el-select>
       <h3 class="trace-package-section">结果包内容</h3>
       <div class="trace-package-files">
         <span>标准化数据</span><span>证据索引</span><span>manifest 清单</span>
       </div>
-      <p>用于回溯当前范围内的思维步骤与证据关联；按当前授权脱敏策略生成。</p>
+      <p>导出所选样本的执行步骤和相关证据。敏感内容按当前权限脱敏。</p>
       <template #footer
         ><el-button :disabled="exporting" @click="packageDialog = false">取消</el-button
         ><el-button type="primary" :loading="exporting" @click="exportResult('package')"
@@ -808,11 +806,23 @@ dd {
   padding: 8px;
   border: 1px solid #e3ecf8;
 }
-.ex-bar {
+.ex-distribution-list {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  margin: 12px 0;
+  gap: 9px 8px;
+  margin: 9px 0;
+}
+.ex-distribution-list > .ex-bar {
+  display: contents;
+}
+.ex-bar > span {
+  max-width: 16em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ex-bar > .el-progress {
+  min-width: 0;
 }
 .ex-pattern {
   display: block;
@@ -889,3 +899,12 @@ small {
 }
 </style>
 <style src="./execution-reference.css"></style>
+<style scoped>
+.execution-content-heading{display:inline-flex;align-items:center;gap:6px}
+.execution-content-help-button{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:17px;height:17px;padding:0;border:1px solid #6e88b0;border-radius:50%;background:transparent;color:#5476a5;font:700 12px/1 Arial,sans-serif;cursor:help;vertical-align:middle}
+.execution-content-help-button:hover,.execution-content-help-button:focus-visible{color:#2778fa;border-color:#2778fa;outline:2px solid #dbe8ff;outline-offset:2px}
+.execution-content-help p{margin:0 0 9px;color:#526681;font-size:13px}
+.execution-content-help table{width:100%;border-collapse:collapse;font-size:13px;color:#263d58}
+.execution-content-help th,.execution-content-help td{padding:8px 10px;border:1px solid #dce6f3;text-align:left;line-height:1.6;white-space:normal}
+.execution-content-help th{background:#edf4ff;font-weight:600}.execution-content-help th:first-child{width:32%}
+</style>

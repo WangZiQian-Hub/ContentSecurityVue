@@ -112,13 +112,12 @@ watch(
       mode ? createAgentTraceStatisticsMock((q) => source.statisticsSource(q), true) : undefined,
     )
     const q = old === undefined ? initialQuery() : {}
-    const trace =
-      old === undefined && typeof route.query.traceId === 'string' ? route.query.traceId : ''
     if (!alive || version !== modeVersion) return
     await store.load(q)
     if (!alive || version !== modeVersion) return
     draft.value = { batchId: store.query.batchId || '', language: store.query.language || 'all' }
-    if (trace && store.workspace?.scope) await store.select(trace)
+    // Shared URL sample context must not open the drawer on page entry.
+    // Details are opened only by an explicit sample/JSON click.
   },
   { immediate: true },
 )
