@@ -13,7 +13,7 @@ const outcome: Record<string, string> = { blocked: '已拦截', executed: '已�
     <article v-for="f in items" :key="f.findingId">
       <el-tag :type="f.category === 'security' ? 'danger' : f.category === 'policy' ? 'warning' : 'info'">{{ group[f.category] }}</el-tag>
       <strong>{{ f.label }}</strong><span>{{ outcome[f.outcome] || f.outcome }}</span>
-      <el-button link type="primary" @click="$emit('locate', f.eventId, f.callId)">{{ f.eventDisplayId }} · 定位</el-button>
+      <el-button link type="primary" @click="$emit('locate', f.eventId, f.callId)">{{ f.competitionStep ? `赛题第 ${f.competitionStep} 步 · ` : '' }}{{ f.eventDisplayId }} · 定位</el-button>
       <pre>{{ f.evidenceText }}</pre><small>规则 {{ f.ruleId }} · {{ f.ruleVersion }}</small>
     </article>
   </section>

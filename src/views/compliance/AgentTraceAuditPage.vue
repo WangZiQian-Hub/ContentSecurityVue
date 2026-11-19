@@ -14,6 +14,7 @@ import TraceFormatIcon from './components/TraceFormatIcon.vue'
 import TraceStatisticsPage from './components/agent-traces/TraceStatisticsPage.vue'
 import ToolsView from './components/agent-traces/ToolsView.vue'
 import ExecutionView from './components/agent-traces/ExecutionView.vue'
+import TraceCompetitionReport from './components/agent-traces/TraceCompetitionReport.vue'
 import { agentTraceTabQuery } from '../../utils/agent-trace-navigation'
 import type { Command, Format, View } from '../../types/agent-traces'
 const parent = useComplianceStore(),
@@ -33,6 +34,7 @@ const index = computed(() => views.findIndex((v) => v.code === view.value))
 const toolsPage = ref<InstanceType<typeof ToolsView>>()
 const executionPage = ref<InstanceType<typeof ExecutionView>>()
 const statisticsPage = ref<InstanceType<typeof TraceStatisticsPage>>()
+const competitionOpen = ref(false)
 // Text-only highlighting: preserve source bytes and never inject log HTML.
 function sourceTokens(line: string) {
   const tokens: { text: string; kind: string }[] = []
@@ -402,6 +404,10 @@ onUnmounted(() => {
   >
     <header class="at-heading">
       <h1>智能体轨迹审计</h1>
+      <el-button
+        v-if="view === 'ingest' && !parent.demo && w?.batch?.activeSnapshotId"
+        @click="competitionOpen = true"
+      >赛题二审计报告</el-button>
       <div>
         <el-button
           :type="
@@ -456,6 +462,12 @@ onUnmounted(() => {
         >
       </div>
     </header>
+    <TraceCompetitionReport
+      v-if="!parent.demo && w?.batch && (store.query.snapshotId || w.batch.activeSnapshotId)"
+      v-model="competitionOpen"
+      :batch-id="w.batch.batchId"
+      :snapshot-id="store.query.snapshotId || w.batch.activeSnapshotId || ''"
+    />
     <nav class="at-tabs" aria-label="智能体轨迹审计页面">
       <button
         v-for="v in views"

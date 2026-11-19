@@ -608,7 +608,7 @@ onUnmounted(() => {
                       <button @click.stop="selectCall(c.callId)">{{ c.displayId }}</button>
                     </td>
                     <td>{{ c.toolName.split('.').at(-1) }}</td>
-                    <td>{{ c.stepDisplayId }}</td>
+                    <td>{{ c.competitionStep ? `赛题第 ${c.competitionStep} 步` : c.stepDisplayId }}</td>
                     <td>{{ c.durationMs ?? '—' }}</td>
                     <td>
                       <span :class="c.executionStatus">{{ status(c.executionStatus) }}</span>
@@ -661,7 +661,7 @@ onUnmounted(() => {
                   <tr
                     v-for="(value, label) in {
                       工具名称: selected.toolName,
-                      关联步骤: selected.stepDisplayId,
+                      关联步骤: selected.competitionStep ? `赛题第 ${selected.competitionStep} 步（${selected.stepDisplayId}）` : selected.stepDisplayId,
                       工具授权范围: selected.grantedScopes.join(', ') || '未提供',
                       请求权限: selected.requestedScopes.join(', ') || '未提供',
                       权限校验结果:

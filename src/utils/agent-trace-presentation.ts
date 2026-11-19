@@ -1,4 +1,5 @@
 export interface RuleFinding {
+  competitionStep?: number
   findingId: string
   ruleId: string
   ruleVersion: string

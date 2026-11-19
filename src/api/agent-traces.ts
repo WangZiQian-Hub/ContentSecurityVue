@@ -3,6 +3,14 @@ import type { AgentTraceApi } from '../types/agent-traces'
 const root = '/compliance/agent-traces'
 const id = encodeURIComponent
 const headers = (key: string) => ({ 'X-Request-Id': key })
+export function fetchCompetitionReport(batchId: string, snapshotId: string, signal: AbortSignal) {
+  return request<{ jsonl: string }>({
+    url: `${root}/batches/${id(batchId)}/competition-report`,
+    params: { snapshotId },
+    signal,
+    silent: true,
+  })
+}
 export const agentTraceHttp: AgentTraceApi = {
   workspace: (params, signal) =>
     request({ url: `${root}/workspace`, params, signal, silent: true }),

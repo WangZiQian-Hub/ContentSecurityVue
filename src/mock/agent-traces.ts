@@ -164,7 +164,7 @@ export function parseTraceRecord(
   else
     messages.forEach((m, i) => {
       const msg = record(m)
-      if (!['user', 'assistant', 'tool', 'system'].includes(String(msg.role)))
+      if (!['user', 'assistant', 'tool', 'system', 'developer'].includes(String(msg.role)))
         throw new Error('消息 role 不合法')
       const calls = arr(msg.tool_calls)
       if (calls.length)
