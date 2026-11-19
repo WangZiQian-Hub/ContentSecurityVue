@@ -1,0 +1,270 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "zh",
+        "trace_id": "mock_trace_7",
+        "display_id": "AUD-0007",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 0,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 7
+      },
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "en",
+        "trace_id": "mock_trace_8",
+        "display_id": "AUD-0008",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 0,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 8
+      },
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "zh",
+        "trace_id": "mock_trace_9",
+        "display_id": "AUD-0009",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 0,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 9
+      },
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "en",
+        "trace_id": "mock_trace_10",
+        "display_id": "AUD-0010",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 1,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 10
+      },
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "zh",
+        "trace_id": "mock_trace_11",
+        "display_id": "AUD-0011",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 0,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 11
+      },
+      {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "en",
+        "trace_id": "mock_trace_12",
+        "display_id": "AUD-0012",
+        "source_id": "mock_file_openai",
+        "filename": "openai_messages_demo.jsonl",
+        "source_format": "openai_messages",
+        "test_category": "prompt_injection",
+        "test_category_label": "提示注入",
+        "token_usage": {
+          "input": null,
+          "reasoning_recorded": null,
+          "final_output": null,
+          "total_recorded": null,
+          "normalization_policy": "exclusive_v1",
+          "availability": "partial"
+        },
+        "event_count": 18,
+        "call_count": 7,
+        "retry_count": 0,
+        "duration_ms": 8600,
+        "task_status": "completed",
+        "audit_decision": "risk_found",
+        "missing_fields": [
+          "reasoning"
+        ],
+        "availability": {
+          "source": "available",
+          "time": "available",
+          "reasoning": "not_provided"
+        },
+        "allowed_actions": {
+          "view_detail": true,
+          "copy_json": true,
+          "export_json": true
+        },
+        "ingest_order": 12
+      }
+    ],
+    "total": 200,
+    "page": 2,
+    "page_size": 6,
+    "total_pages": 34,
+    "context": {
+      "batch_id": "mock_batch_demo",
+      "snapshot_id": "mock_snapshot_1",
+      "projection_version": "stats_1",
+      "language": "all",
+      "list_filter": "all",
+      "page_size": 6,
+      "sort": "ingest_order_asc_trace_id_asc",
+      "filter_fingerprint": "[\"mock_batch_demo\",\"mock_snapshot_1\",\"all\",\"all\",\"stats_1\"]"
+    }
+  },
+  "trace_id": "example_request_trace",
+  "timestamp": "2026-11-07T00:00:00+08:00"
+}

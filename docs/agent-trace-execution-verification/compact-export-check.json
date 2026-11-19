@@ -1,0 +1,71 @@
+{
+  "fonts": {
+    ".ex-query>label": "14px",
+    ".ex-query .el-select__selected-item": "14px",
+    ".ex-query>.el-button": "14px",
+    ".ex-result": "14px"
+  },
+  "progressBeforeDownload": true,
+  "completedProgressHidden": true,
+  "executionStyle": {
+    "container": {
+      "display": "flex",
+      "alignItems": "center",
+      "flexWrap": "wrap",
+      "gap": "8px",
+      "backgroundColor": "rgb(237, 246, 255)",
+      "color": "rgb(82, 109, 152)",
+      "borderTopWidth": "0px",
+      "borderRadius": "8px",
+      "padding": "10px",
+      "margin": "12px 0px 10px",
+      "fontSize": "14px",
+      "fontFamily": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "wordBreak": "break-word"
+    },
+    "button": {
+      "fontSize": "14px",
+      "fontFamily": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "fontWeight": "500",
+      "padding": "8px 15px",
+      "height": "32px",
+      "borderRadius": "6px",
+      "borderTopWidth": "1px",
+      "borderTopColor": "rgb(220, 223, 230)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(96, 98, 102)"
+    }
+  },
+  "statisticsStyle": {
+    "container": {
+      "display": "flex",
+      "alignItems": "center",
+      "flexWrap": "wrap",
+      "gap": "8px",
+      "backgroundColor": "rgb(237, 246, 255)",
+      "color": "rgb(82, 109, 152)",
+      "borderTopWidth": "0px",
+      "borderRadius": "8px",
+      "padding": "10px",
+      "margin": "12px 0px 10px",
+      "fontSize": "14px",
+      "fontFamily": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "wordBreak": "break-word"
+    },
+    "button": {
+      "fontSize": "14px",
+      "fontFamily": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "fontWeight": "500",
+      "padding": "8px 15px",
+      "height": "32px",
+      "borderRadius": "6px",
+      "borderTopWidth": "1px",
+      "borderTopColor": "rgb(220, 223, 230)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(96, 98, 102)"
+    }
+  },
+  "validPng": true,
+  "downloads": 1,
+  "passed": true
+}

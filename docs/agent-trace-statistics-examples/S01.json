@@ -1,0 +1,1013 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "resolution": "defaulted",
+    "resolved_selection": {
+      "batch_id": "mock_batch_demo",
+      "snapshot_id": "mock_snapshot_1",
+      "projection_version": "stats_1",
+      "language": "all",
+      "list_filter": "all",
+      "page_size": 6,
+      "sort": "ingest_order_asc_trace_id_asc",
+      "filter_fingerprint": "[\"mock_batch_demo\",\"mock_snapshot_1\",\"all\",\"all\",\"stats_1\"]"
+    },
+    "scope": {
+      "batch_id": "mock_batch_demo",
+      "snapshot_id": "mock_snapshot_1",
+      "projection_version": "stats_1",
+      "language": "all",
+      "list_filter": "all",
+      "page_size": 6,
+      "sort": "ingest_order_asc_trace_id_asc",
+      "filter_fingerprint": "[\"mock_batch_demo\",\"mock_snapshot_1\",\"all\",\"all\",\"stats_1\"]",
+      "sample_count": 200,
+      "schema_version": "1",
+      "policy_version": "demo_1"
+    },
+    "batch_options": {
+      "items": [
+        {
+          "batch_id": "mock_batch_demo",
+          "display_id": "AUD-2026-001",
+          "name": "轨迹审计示例",
+          "batch_version": 1,
+          "active_snapshot_id": "mock_snapshot_1",
+          "allowed_actions": [
+            "upload",
+            "bind_files",
+            "parse",
+            "view_raw",
+            "export_view",
+            "export_package"
+          ],
+          "staging_changed": false,
+          "sample_count": 200,
+          "languages": [
+            {
+              "code": "zh",
+              "count": 100
+            },
+            {
+              "code": "en",
+              "count": 100
+            }
+          ]
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "page_size": 50,
+      "total_pages": 1
+    },
+    "language_options": [
+      {
+        "code": "all",
+        "label": "全部语言",
+        "count": 200
+      },
+      {
+        "code": "zh",
+        "label": "中文",
+        "count": 100
+      },
+      {
+        "code": "en",
+        "label": "English",
+        "count": 100
+      },
+      {
+        "code": "other",
+        "label": "其他",
+        "count": 0
+      },
+      {
+        "code": "unknown",
+        "label": "未知",
+        "count": 0
+      }
+    ],
+    "kpis": {
+      "sample_count": {
+        "value": 200,
+        "unit": "count",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      },
+      "risk_sample_count": {
+        "value": 128,
+        "unit": "count",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      },
+      "recorded_tokens": {
+        "value": 382400,
+        "unit": "token",
+        "availability": "partial",
+        "valid_sample_count": 160,
+        "eligible_sample_count": 200
+      },
+      "reasoning_output_ratio": {
+        "value": 0.51,
+        "unit": "ratio",
+        "availability": "partial",
+        "valid_sample_count": 160,
+        "eligible_sample_count": 200,
+        "numerator": 64000,
+        "denominator": 126400,
+        "reason": null
+      },
+      "tool_call_count": {
+        "value": 1400,
+        "unit": "count",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      },
+      "tool_type_count": {
+        "value": 1,
+        "unit": "count",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      },
+      "average_steps": {
+        "value": 18,
+        "unit": "step",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      },
+      "task_success_rate": {
+        "value": 86,
+        "unit": "percent",
+        "availability": "available",
+        "valid_sample_count": 200,
+        "eligible_sample_count": 200
+      }
+    },
+    "charts": {
+      "test_category_distribution": {
+        "availability": "available",
+        "denominator": 200,
+        "items": [
+          {
+            "code": "prompt_injection",
+            "label": "提示注入",
+            "count": 40,
+            "ratio_percent": 20
+          },
+          {
+            "code": "unauthorized_access",
+            "label": "越权访问",
+            "count": 36,
+            "ratio_percent": 18
+          },
+          {
+            "code": "privacy_leak",
+            "label": "隐私泄露",
+            "count": 32,
+            "ratio_percent": 16
+          },
+          {
+            "code": "harmful_content",
+            "label": "有害内容",
+            "count": 28,
+            "ratio_percent": 14
+          },
+          {
+            "code": "tool_misuse",
+            "label": "工具滥用",
+            "count": 34,
+            "ratio_percent": 17
+          },
+          {
+            "code": "other",
+            "label": "其他",
+            "count": 30,
+            "ratio_percent": 15
+          }
+        ]
+      },
+      "token_composition": {
+        "availability": "partial",
+        "mutually_exclusive": true,
+        "normalized_policy": "exclusive_v1：输出按源标志排除推理，未知分量不补零",
+        "compatible_sample_count": 160,
+        "incompatible_sample_count": 40,
+        "total_recorded": 382400,
+        "components": [
+          {
+            "code": "input",
+            "label": "输入 Token",
+            "count": 192000,
+            "valid_sample_count": 160,
+            "eligible_sample_count": 200,
+            "ratio_percent": 50.21
+          },
+          {
+            "code": "reasoningRecorded",
+            "label": "已记录推理 Token",
+            "count": 64000,
+            "valid_sample_count": 160,
+            "eligible_sample_count": 200,
+            "ratio_percent": 16.74
+          },
+          {
+            "code": "finalOutput",
+            "label": "最终输出 Token",
+            "count": 126400,
+            "valid_sample_count": 160,
+            "eligible_sample_count": 200,
+            "ratio_percent": 33.05
+          }
+        ]
+      },
+      "tool_ranking": {
+        "availability": "available",
+        "total_call_count": 1400,
+        "tool_type_count": 1,
+        "ranking_order": "count_desc",
+        "items": [
+          {
+            "tool_code": "web.search",
+            "label": "web.search",
+            "count": 1400,
+            "is_other": false
+          }
+        ]
+      },
+      "duration_distribution": {
+        "availability": "available",
+        "reason": null,
+        "valid_count": 192,
+        "missing_count": 8,
+        "invalid_count": 0,
+        "total_count": 200,
+        "unit": "ms",
+        "quantile_method": "nearest_rank",
+        "p50_ms": 8600,
+        "p95_ms": 8600,
+        "buckets": [
+          {
+            "code": "bucket_0",
+            "label": "≤1",
+            "lower_ms": 0,
+            "upper_ms": 1000,
+            "lower_inclusive": true,
+            "upper_inclusive": true,
+            "count": 0
+          },
+          {
+            "code": "bucket_1",
+            "label": "(1,2]",
+            "lower_ms": 1000,
+            "upper_ms": 2000,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 0
+          },
+          {
+            "code": "bucket_2",
+            "label": "(2,4]",
+            "lower_ms": 2000,
+            "upper_ms": 4000,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 0
+          },
+          {
+            "code": "bucket_3",
+            "label": "(4,6]",
+            "lower_ms": 4000,
+            "upper_ms": 6000,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 0
+          },
+          {
+            "code": "bucket_4",
+            "label": "(6,8]",
+            "lower_ms": 6000,
+            "upper_ms": 8000,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 0
+          },
+          {
+            "code": "bucket_5",
+            "label": "(8,10]",
+            "lower_ms": 8000,
+            "upper_ms": 10000,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 192
+          },
+          {
+            "code": "bucket_6",
+            "label": ">10",
+            "lower_ms": 10000,
+            "upper_ms": null,
+            "lower_inclusive": false,
+            "upper_inclusive": true,
+            "count": 0
+          }
+        ]
+      },
+      "tool_result_distribution": {
+        "availability": "available",
+        "denominator": 1400,
+        "items": [
+          {
+            "code": "succeeded",
+            "label": "成功",
+            "count": 1162,
+            "ratio_percent": 83
+          },
+          {
+            "code": "failed",
+            "label": "错误",
+            "count": 168,
+            "ratio_percent": 12
+          },
+          {
+            "code": "blocked",
+            "label": "拦截",
+            "count": 70,
+            "ratio_percent": 5
+          }
+        ],
+        "total_call_count": 1400,
+        "terminal_count": 1400,
+        "non_terminal_count": 0,
+        "unknown_count": 0
+      },
+      "behavior_matrix": {
+        "availability": "available",
+        "reason": "未采集异常行为事件时不能按零解释",
+        "row_dimension": "test_category",
+        "unit": "event_occurrence",
+        "overlap_allowed": true,
+        "columns": [
+          {
+            "code": "unauthorized",
+            "label": "越权"
+          },
+          {
+            "code": "argument_error",
+            "label": "参数错误"
+          },
+          {
+            "code": "timeout",
+            "label": "超时"
+          },
+          {
+            "code": "duplicate",
+            "label": "重复"
+          },
+          {
+            "code": "retry",
+            "label": "重试"
+          }
+        ],
+        "rows": [
+          {
+            "category_code": "prompt_injection",
+            "label": "提示注入",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 8
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 8
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 8
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 8
+              },
+              {
+                "behavior_code": "retry",
+                "count": 8
+              }
+            ]
+          },
+          {
+            "category_code": "unauthorized_access",
+            "label": "越权访问",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 8
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 7
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 7
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 7
+              },
+              {
+                "behavior_code": "retry",
+                "count": 7
+              }
+            ]
+          },
+          {
+            "category_code": "privacy_leak",
+            "label": "隐私泄露",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 6
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 7
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 7
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 6
+              },
+              {
+                "behavior_code": "retry",
+                "count": 6
+              }
+            ]
+          },
+          {
+            "category_code": "harmful_content",
+            "label": "有害内容",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 6
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 5
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 5
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 6
+              },
+              {
+                "behavior_code": "retry",
+                "count": 6
+              }
+            ]
+          },
+          {
+            "category_code": "tool_misuse",
+            "label": "工具滥用",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 6
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 7
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 7
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 7
+              },
+              {
+                "behavior_code": "retry",
+                "count": 7
+              }
+            ]
+          },
+          {
+            "category_code": "other",
+            "label": "其他",
+            "cells": [
+              {
+                "behavior_code": "unauthorized",
+                "count": 6
+              },
+              {
+                "behavior_code": "argument_error",
+                "count": 6
+              },
+              {
+                "behavior_code": "timeout",
+                "count": 6
+              },
+              {
+                "behavior_code": "duplicate",
+                "count": 6
+              },
+              {
+                "behavior_code": "retry",
+                "count": 6
+              }
+            ]
+          }
+        ]
+      },
+      "source_distribution": {
+        "availability": "available",
+        "denominator": 200,
+        "items": [
+          {
+            "code": "platform",
+            "label": "平台调用",
+            "count": 80,
+            "ratio_percent": 40
+          },
+          {
+            "code": "scenario",
+            "label": "场景应用",
+            "count": 70,
+            "ratio_percent": 35
+          },
+          {
+            "code": "external_import",
+            "label": "外部导入",
+            "count": 50,
+            "ratio_percent": 25
+          },
+          {
+            "code": "unknown",
+            "label": "未知来源",
+            "count": 0,
+            "ratio_percent": 0
+          }
+        ]
+      },
+      "language_distribution": {
+        "availability": "available",
+        "denominator": 200,
+        "items": [
+          {
+            "code": "zh",
+            "label": "中文",
+            "count": 100,
+            "ratio_percent": 50
+          },
+          {
+            "code": "en",
+            "label": "English",
+            "count": 100,
+            "ratio_percent": 50
+          },
+          {
+            "code": "other",
+            "label": "其他",
+            "count": 0,
+            "ratio_percent": 0
+          },
+          {
+            "code": "unknown",
+            "label": "未知",
+            "count": 0,
+            "ratio_percent": 0
+          }
+        ]
+      }
+    },
+    "completeness": {
+      "source": {
+        "available_count": 200,
+        "missing_count": 0,
+        "invalid_count": 0,
+        "not_applicable_count": 0,
+        "applicable_count": 200,
+        "total_count": 200,
+        "rate_percent": 100,
+        "availability": "available"
+      },
+      "time": {
+        "available_count": 192,
+        "missing_count": 8,
+        "invalid_count": 0,
+        "not_applicable_count": 0,
+        "applicable_count": 200,
+        "total_count": 200,
+        "rate_percent": 96,
+        "availability": "available"
+      },
+      "reasoning": {
+        "available_count": 160,
+        "missing_count": 40,
+        "invalid_count": 0,
+        "not_applicable_count": 0,
+        "applicable_count": 200,
+        "total_count": 200,
+        "rate_percent": 80,
+        "availability": "available"
+      },
+      "required_fields": [
+        "source",
+        "time",
+        "reasoning"
+      ],
+      "missing_union_count": 44,
+      "overlap_summary": {
+        "source_missing_count": 0,
+        "time_missing_count": 8,
+        "reasoning_missing_count": 40,
+        "time_and_reasoning_count": 4
+      }
+    },
+    "list_counts": {
+      "all": 200,
+      "risk": 128,
+      "missing_fields": 44
+    },
+    "list_context": {
+      "batch_id": "mock_batch_demo",
+      "snapshot_id": "mock_snapshot_1",
+      "projection_version": "stats_1",
+      "language": "all",
+      "list_filter": "all",
+      "page_size": 6,
+      "sort": "ingest_order_asc_trace_id_asc",
+      "filter_fingerprint": "[\"mock_batch_demo\",\"mock_snapshot_1\",\"all\",\"all\",\"stats_1\"]"
+    },
+    "sample_page": {
+      "items": [
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "zh",
+          "trace_id": "mock_trace_1",
+          "display_id": "AUD-0001",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 0,
+          "duration_ms": null,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "time",
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "not_provided",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 1
+        },
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "en",
+          "trace_id": "mock_trace_2",
+          "display_id": "AUD-0002",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 0,
+          "duration_ms": null,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "time",
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "not_provided",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 2
+        },
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "zh",
+          "trace_id": "mock_trace_3",
+          "display_id": "AUD-0003",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 0,
+          "duration_ms": 8600,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "available",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 3
+        },
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "en",
+          "trace_id": "mock_trace_4",
+          "display_id": "AUD-0004",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 0,
+          "duration_ms": 8600,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "available",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 4
+        },
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "zh",
+          "trace_id": "mock_trace_5",
+          "display_id": "AUD-0005",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 1,
+          "duration_ms": 8600,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "available",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 5
+        },
+        {
+          "batch_id": "mock_batch_demo",
+          "snapshot_id": "mock_snapshot_1",
+          "projection_version": "stats_1",
+          "language": "en",
+          "trace_id": "mock_trace_6",
+          "display_id": "AUD-0006",
+          "source_id": "mock_file_openai",
+          "filename": "openai_messages_demo.jsonl",
+          "source_format": "openai_messages",
+          "test_category": "prompt_injection",
+          "test_category_label": "提示注入",
+          "token_usage": {
+            "input": null,
+            "reasoning_recorded": null,
+            "final_output": null,
+            "total_recorded": null,
+            "normalization_policy": "exclusive_v1",
+            "availability": "partial"
+          },
+          "event_count": 18,
+          "call_count": 7,
+          "retry_count": 0,
+          "duration_ms": 8600,
+          "task_status": "completed",
+          "audit_decision": "risk_found",
+          "missing_fields": [
+            "reasoning"
+          ],
+          "availability": {
+            "source": "available",
+            "time": "available",
+            "reasoning": "not_provided"
+          },
+          "allowed_actions": {
+            "view_detail": true,
+            "copy_json": true,
+            "export_json": true
+          },
+          "ingest_order": 6
+        }
+      ],
+      "total": 200,
+      "page": 1,
+      "page_size": 6,
+      "total_pages": 34,
+      "context": {
+        "batch_id": "mock_batch_demo",
+        "snapshot_id": "mock_snapshot_1",
+        "projection_version": "stats_1",
+        "language": "all",
+        "list_filter": "all",
+        "page_size": 6,
+        "sort": "ingest_order_asc_trace_id_asc",
+        "filter_fingerprint": "[\"mock_batch_demo\",\"mock_snapshot_1\",\"all\",\"all\",\"stats_1\"]"
+      }
+    },
+    "permissions": {
+      "can_view_statistics": true,
+      "can_list_samples": true,
+      "can_view_detail": true,
+      "can_copy_json": true,
+      "can_view_raw": true,
+      "can_export": true
+    },
+    "export_options": {
+      "kinds": [
+        {
+          "export_kind": "view",
+          "formats": [
+            "png"
+          ],
+          "availability": "available"
+        },
+        {
+          "export_kind": "package",
+          "formats": [
+            "zip"
+          ],
+          "availability": "available"
+        },
+        {
+          "export_kind": "sample_json",
+          "formats": [
+            "json"
+          ],
+          "availability": "available"
+        }
+      ],
+      "contents": [
+        {
+          "code": "stats_summary",
+          "label": "stats_summary",
+          "availability": "available"
+        },
+        {
+          "code": "sample_table",
+          "label": "sample_table",
+          "availability": "available"
+        },
+        {
+          "code": "normalized_json",
+          "label": "normalized_json",
+          "availability": "available"
+        },
+        {
+          "code": "manifest",
+          "label": "manifest",
+          "availability": "available"
+        },
+        {
+          "code": "statistics_png",
+          "label": "statistics_png",
+          "availability": "available"
+        }
+      ],
+      "required_contents": [
+        "manifest"
+      ],
+      "redaction_profiles": [
+        "standard"
+      ],
+      "default_scope": "filtered",
+      "max_selected_trace_ids": 100
+    },
+    "module_availability": {
+      "ingest": {
+        "availability": "available"
+      },
+      "statistics": {
+        "availability": "available"
+      },
+      "execution": {
+        "availability": "available"
+      },
+      "tools": {
+        "availability": "available"
+      }
+    },
+    "warnings": [
+      {
+        "code": "shared_mock_snapshot",
+        "panel": "all",
+        "message": "演示统计与接入页使用同一快照；数值按实际轨迹计算，未照抄截图。"
+      }
+    ]
+  },
+  "trace_id": "example_request_trace",
+  "timestamp": "2026-11-07T00:00:00+08:00"
+}

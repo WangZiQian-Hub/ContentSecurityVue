@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "checks": [
+    "8 KPIs, 7 panels, six-row pagination",
+    "cross-page JSON navigation",
+    "opaque JSON clipboard",
+    "three drawer tabs",
+    "sample JSON/ZIP/PNG actual downloads",
+    "main-vs-list scope separation",
+    "language draft requires query",
+    "1920/1366 and zoom drawer geometry",
+    "HTTP failure no mock fallback",
+    "mode reset without mock IDs",
+    "ingestion regression"
+  ],
+  "errors": []
+}

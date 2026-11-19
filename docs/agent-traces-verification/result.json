@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "errors": [],
+  "checks": [
+    "three formats",
+    "HTTP-first startup then switch to demo",
+    "three HTTP/demo round trips recover content",
+    "next sample",
+    "issue location",
+    "execution navigation",
+    "real ZIP download",
+    "900px layout",
+    "ingest marked controls removed; execution controls preserved",
+    "upload into selected batch",
+    "parse uploaded JSON",
+    "PNG export"
+  ]
+}

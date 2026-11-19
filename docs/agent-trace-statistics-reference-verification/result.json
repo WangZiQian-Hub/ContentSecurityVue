@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "reference KPI totals",
+    "inline task status below tabs with manual PNG download and no modal",
+    "reference drawer"
+  ],
+  "errors": []
+}
