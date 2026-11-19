@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { agentTraceTabQuery } from './agent-trace-navigation'
+import { agentTraceTabQuery, hasDemoTraceScope } from './agent-trace-navigation'
+describe('demo trace scope detection', () => {
+  it('detects stale demo links without treating real links as demo data', () => {
+    expect(hasDemoTraceScope({ batchId: 'mock_batch_demo', traceId: 'mock_trace_42' })).toBe(true)
+    expect(hasDemoTraceScope({ snapshotId: 'mock_batch_demo_snapshot' })).toBe(true)
+    expect(hasDemoTraceScope({ batchId: 'batch_86741716478c4270928b3864fe6674fc' })).toBe(false)
+    expect(hasDemoTraceScope({})).toBe(false)
+  })
+})
 describe('agent trace tab scope', () => {
   it('keeps shared snapshot/sample/event but removes projection and page filters', () => {
     const source = {

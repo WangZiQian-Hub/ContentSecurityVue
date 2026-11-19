@@ -12,7 +12,7 @@ import type {
   Workspace,
 } from '../types/agent-traces'
 import type { PageResult } from '../types'
-import { tracePng, traceZip } from '../utils/agent-trace-export'
+import { traceZip } from '../utils/agent-trace-export'
 const labels = ['提示注入', '越权访问', '隐私泄露', '有害内容', '工具滥用', '其他']
 const codes = [
   'prompt_injection',
@@ -980,14 +980,8 @@ export function createAgentTraceMock(): AgentTraceApi {
     }))
     let blob: Blob, filename: string
     if (input.exportKind === 'view') {
-      blob = await tracePng([
-        '智能体轨迹审计 · 示例演示',
-        `批次 ${s.batch.displayId} · 快照 ${input.snapshotId}`,
-        `视图 ${input.view} · 轨迹 ${rows.length}`,
-        ...safe.slice(0, 20).map((r) => `${r.trace_id}  ${r.language}  ${r.event_count} 个事件`),
-        '内容已脱敏；此图为本地演示报告',
-      ])
-      filename = 'agent-trace-view.png'
+      blob = new Blob([JSON.stringify(safe, null, 2)], { type: 'application/json' })
+      filename = 'agent-trace-view.json'
     } else {
       const allowed = [
         'normalized_json',

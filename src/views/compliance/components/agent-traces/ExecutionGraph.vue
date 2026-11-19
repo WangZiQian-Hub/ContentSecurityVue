@@ -1,9 +1,30 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import ExecutionGlyph from './ExecutionGlyph.vue'
 import type { ExecutionGraph } from '../../../../types/agent-trace-execution'
-const props = defineProps<{ graph: ExecutionGraph; selected?: string }>()
-defineEmits<{ select: [id: string] }>()
+const props = defineProps<{ graph: ExecutionGraph; selected?: string; highlighted?: string }>()
+const container = ref<HTMLElement>()
+const clickedEvent = ref('')
+const activeEvent = computed(() => props.selected &&
+  (props.selected === clickedEvent.value || props.selected === props.highlighted) ? props.selected : undefined)
+watch(() => props.highlighted, id => { if (id) clickedEvent.value = '' })
+watch(() => props.selected, id => { if (id !== clickedEvent.value) clickedEvent.value = '' })
+defineExpose({
+  async focusEvent(id: string) {
+    await nextTick()
+    const node = [...(container.value?.querySelectorAll<SVGElement>('[data-event-id]') || [])]
+      .find(element => element.dataset.eventId === id)
+    if (!node) return false
+    node.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    node.focus({ preventScroll: true })
+    return true
+  },
+})
+const emit = defineEmits<{ select: [id: string] }>()
+function pickEvent(id: string) {
+  clickedEvent.value = id
+  emit('select', id)
+}
 const nodes = computed(() =>
   props.graph.nodes.map((n, i) => ({ ...n, x: 8 + (i % 6) * 142, y: 12 + Math.floor(i / 6) * 72 })),
 )
@@ -30,7 +51,7 @@ const links = computed(() =>
 )
 </script>
 <template>
-  <div class="path-scroll">
+  <div ref="container" class="path-scroll">
     <svg
       :viewBox="'0 0 840 ' + Math.max(72, Math.ceil(nodes.length / 6) * 72)"
       role="group"
@@ -63,21 +84,24 @@ const links = computed(() =>
       <g
         v-for="n in nodes"
         :key="n.eventId"
+        :data-event-id="n.eventId"
         :transform="'translate(' + n.x + ',' + n.y + ')'"
-        :class="[n.riskLevel, { chosen: n.eventId === selected }]"
+        :class="[n.riskLevel, { chosen: n.eventId === activeEvent }]"
         role="button"
         tabindex="0"
         :aria-label="n.ordinal + ' ' + n.label"
         :aria-pressed="n.eventId === selected"
-        @click="$emit('select', n.eventId)"
-        @keydown.enter="$emit('select', n.eventId)"
+        @click="pickEvent(n.eventId)"
+        @keydown.enter="pickEvent(n.eventId)"
       >
-        <rect width="110" height="48" rx="7" />
+        <g :transform="n.eventId === activeEvent ? 'translate(-11,-4.8) scale(1.2)' : undefined" class="node-content">
+        <rect class="node-card" width="110" height="48" rx="7" />
         <foreignObject x="10" y="15" width="24" height="24"
           ><ExecutionGlyph :label="n.label"
         /></foreignObject>
         <text x="70" y="19" text-anchor="middle">{{ String(n.ordinal).padStart(2, '0') }}</text>
         <text x="70" y="36" text-anchor="middle">{{ n.label }}</text>
+        </g>
       </g>
     </svg>
   </div>
@@ -86,11 +110,13 @@ const links = computed(() =>
 .path-scroll {
   overflow: auto;
   max-height: 246px;
+  padding: 16px 26px;
 }
 .path-scroll > svg {
   width: 100%;
   min-width: 620px;
   display: block;
+  overflow: visible;
 }
 g {
   cursor: pointer;
@@ -126,18 +152,12 @@ text {
 .medium text {
   fill: #c17924;
 }
-.chosen rect {
-  stroke-width: 2.5;
-}
-.chosen:not(.high):not(.medium) rect {
-  stroke: #1677ff;
+.chosen .node-card {
+  stroke: #ef3340;
+  stroke-width: 3;
 }
 g:focus {
   outline: none;
-}
-g:focus-visible rect {
-  stroke: #146df5;
-  stroke-width: 3;
 }
 foreignObject :deep(.el-icon) {
   font-size: 23px;

@@ -23,7 +23,7 @@
 }
 .ats-kpis {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -60,7 +60,7 @@
 }
 .ats-primary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   gap: 12px;
 }
 .ats-secondary-grid {
@@ -607,4 +607,187 @@
   font-size: 28px;
   color: var(--el-color-primary);
   margin-top: 7px;
+}
+
+/* Larger type and more room for the two primary statistics panels. */
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-heading {
+  padding: 20px 22px 8px;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-heading h2 {
+  font-size: 22px;
+  line-height: 1.5;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-content {
+  padding: 8px 22px 22px;
+}
+.ats-statistics .ats-primary-grid .ats-token-stack {
+  min-height: 116px;
+  margin: 20px 0 24px;
+}
+.ats-statistics .ats-primary-grid .ats-token-stack > div {
+  gap: 5px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.ats-statistics .ats-primary-grid .ats-token-stack b {
+  font-size: 26px;
+}
+.ats-statistics .ats-primary-grid .ats-token-legend {
+  font-size: 19px;
+  line-height: 1.7;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.ats-statistics .ats-primary-grid .ats-token-legend b {
+  font-size: 24px;
+}
+.ats-statistics .ats-primary-grid small {
+  display: block;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.ats-statistics .ats-primary-grid .ats-ranking-with-total {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ats-statistics .ats-primary-grid .ats-tool-total {
+  order: -1;
+  flex: 1 0 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 12px 18px;
+  font-size: 18px;
+}
+.ats-statistics .ats-primary-grid .ats-tool-total b {
+  margin: 0;
+  font-size: 32px;
+}
+@media (max-width: 1100px) {
+  .ats-statistics .ats-primary-grid { grid-template-columns: minmax(0, 1fr); }
+  .ats-statistics .ats-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Keep typography and spacing consistent within this statistics page only. */
+.ats-statistics {
+  font-size: 16px;
+}
+.ats-statistics small { font-size: 14px; line-height: 1.7; }
+.ats-statistics .ats-filters { flex-wrap: wrap; gap: 14px; margin: 16px 0; }
+.ats-statistics .ats-kpis article { min-height: 88px; justify-content: center; padding: 14px; }
+.ats-statistics .ats-kpis span { font-size: 16px; }
+.ats-statistics .ats-kpis strong { font-size: 28px; line-height: 1.35; }
+.ats-statistics .ats-kpis small { font-size: 13px; }
+.compliance-workspace .agent-traces .ats-statistics .trace-audit-summary { font-size: 15px; padding: 16px; line-height: 1.7; }
+.ats-statistics .ats-primary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ats-statistics .ats-secondary-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 1.1fr); gap: 12px; margin-top: 16px; }
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid > .panel,
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid > .panel {
+  display: flex;
+  flex-direction: column;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-heading,
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-heading {
+  padding: 18px 20px 8px;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-heading h2,
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-heading h2 {
+  font-size: 20px;
+  line-height: 1.5;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-primary-grid .panel-content,
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 12px 20px 20px;
+}
+.ats-statistics .ats-primary-grid .ats-token-legend { font-size: 17px; gap: 12px; }
+.ats-statistics .ats-primary-grid .ats-token-legend b { font-size: 22px; }
+.ats-statistics .ats-primary-grid small { font-size: 14px; }
+.ats-statistics .ats-primary-grid .ats-tool-total { font-size: 17px; }
+.ats-statistics .ats-primary-grid .ats-tool-total b { font-size: 28px; }
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .ats-chart {
+  height: 240px;
+}
+.ats-statistics .ats-duration { justify-content: center; gap: 16px; }
+.ats-statistics .ats-duration .ats-chart { flex: 1; min-width: 0; width: auto; }
+.ats-statistics .ats-duration aside { width: 110px; flex-shrink: 0; }
+.ats-statistics .ats-duration aside > div { font-size: 15px; padding: 12px 6px; }
+.ats-statistics .ats-duration aside b { font-size: 24px; }
+.ats-statistics .ats-donut-pair { justify-content: center; gap: 20px; }
+.ats-statistics .ats-donut-legend { font-size: 15px; gap: 14px; }
+.ats-statistics .ats-donut-legend > div { flex-wrap: wrap; white-space: normal; }
+.ats-statistics .ats-matrix { min-width: 440px; font-size: 14px; }
+.ats-statistics .ats-matrix thead th { font-size: 13px; white-space: normal; padding: 8px 5px; }
+.ats-statistics .ats-matrix th,
+.ats-statistics .ats-matrix td { height: 32px; }
+.ats-statistics .ats-matrix-axis span { font-size: 12px; }
+.ats-statistics .ats-matrix-note { font-size: 13px; margin-top: 12px; }
+.ats-statistics .ats-distributions { font-size: 15px; gap: 24px; padding: 16px 0; }
+.ats-statistics .ats-distributions strong { font-size: 16px; }
+.ats-statistics .ats-distribution { margin-top: 24px; }
+.ats-statistics .ats-distribution > div { flex-wrap: wrap; gap: 8px; }
+.ats-statistics .ats-completeness { padding: 18px; margin: 16px 0; }
+.ats-statistics .ats-completeness header { gap: 16px; }
+.ats-statistics .ats-completeness header strong { font-size: 18px; }
+.ats-statistics .ats-coverage-card { padding: 16px; }
+.ats-statistics .ats-coverage-heading { font-size: 15px; gap: 12px; }
+.ats-statistics .ats-coverage-card p { font-size: 14px; line-height: 1.7; }
+.ats-statistics .ats-coverage-card p strong { font-size: 18px; }
+.ats-statistics .ats-coverage-card small { font-size: 13px; }
+.ats-statistics .ats-coverage-missing { font-size: 12px; line-height: 1.7; }
+.ats-statistics .ats-list-tabs { flex-wrap: wrap; gap: 8px; }
+.ats-statistics .ats-list-tabs small { margin-left: 0; }
+.ats-statistics .ats-sample-table .cell { font-size: 14px; line-height: 1.6; }
+.compliance-workspace .agent-traces .ats-statistics .ats-sample-table td.el-table__cell,
+.compliance-workspace .agent-traces .ats-statistics .ats-sample-table th.el-table__cell { padding: 9px 0; }
+.ats-statistics .ats-pagination { font-size: 14px; flex-wrap: wrap; gap: 16px; }
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-heading {
+  padding: 16px 14px 8px;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-heading h2 {
+  font-size: 18px;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .panel-content {
+  padding: 10px 12px 16px;
+  font-size: 14px;
+}
+.ats-statistics .ats-secondary-grid small { font-size: 13px; }
+.ats-statistics .ats-secondary-grid .ats-duration,
+.ats-statistics .ats-secondary-grid .ats-result-pair {
+  flex-direction: column;
+  gap: 14px;
+}
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .ats-duration .ats-chart,
+.compliance-workspace .agent-traces .ats-statistics .ats-secondary-grid .ats-result-pair > .ats-chart {
+  flex: none;
+  width: 100%;
+  height: 210px;
+}
+.ats-statistics .ats-secondary-grid .ats-duration aside {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  gap: 10px;
+}
+.ats-statistics .ats-secondary-grid .ats-duration aside > div { flex: 1; font-size: 14px; }
+.ats-statistics .ats-secondary-grid .ats-duration aside b { font-size: 22px; }
+.ats-statistics .ats-secondary-grid .ats-donut-legend { flex: none; font-size: 14px; gap: 12px; }
+.ats-statistics .ats-secondary-grid .ats-matrix { min-width: 380px; font-size: 13px; }
+.ats-statistics .ats-secondary-grid .ats-distributions { grid-template-columns: minmax(0, 1fr); font-size: 14px; gap: 20px; }
+.ats-statistics .ats-secondary-grid .ats-distributions strong { font-size: 15px; }
+.ats-statistics .ats-secondary-grid .ats-distributions > div + div { border-left: 0; padding-left: 0; }
+.ats-statistics .ats-secondary-grid .ats-distribution { margin-top: 16px; }
+@media (max-width: 1100px) {
+  .ats-statistics .ats-primary-grid,
+  .ats-statistics .ats-secondary-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 650px) {
+  .ats-statistics .ats-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ats-statistics .ats-distributions { grid-template-columns: minmax(0, 1fr); }
+  .ats-statistics .ats-distributions > div + div { border-left: 0; padding-left: 0; }
 }

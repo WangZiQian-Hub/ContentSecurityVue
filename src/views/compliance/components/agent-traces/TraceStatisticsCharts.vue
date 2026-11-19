@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { BarSeriesOption } from 'echarts'
 import PanelCard from '../../../../components/PanelCard.vue'
 import TraceStatisticChart from './TraceStatisticChart.vue'
 import type { AgentTraceStatisticsWorkspace } from '../../../../types/agent-trace-statistics'
@@ -13,6 +14,44 @@ import {
 } from '../../../../utils/agent-trace-statistics'
 const props = defineProps<{ data: AgentTraceStatisticsWorkspace }>()
 const c = computed(() => props.data.charts)
+const recordedReasoning = computed(() => c.value.tokenComposition.components.find(
+  part => part.code.replaceAll('_', '').toLowerCase() === 'reasoningrecorded',
+))
+const tokenParts = computed(() => {
+  const parts = c.value.tokenComposition.components
+  const input = parts.find(p => p.code === 'input')?.count || 0
+  // The source projection already separates reasoning from final output.
+  const output = parts.filter(p => ['reasoningrecorded', 'finaloutput'].includes(p.code.replaceAll('_', '').toLowerCase()))
+    .reduce((sum, p) => sum + (p.count || 0), 0)
+  const total = input + output
+  return [
+    { code: 'input', label: '输入 Token', count: input },
+    { code: 'output', label: '输出 Token', count: output },
+  ].map(p => ({ ...p, ratioPercent: total ? p.count / total * 100 : 0 }))
+})
+const tokenChartOption = computed(() => {
+  const option = rankingOption({
+    availability: c.value.tokenComposition.availability,
+    totalCallCount: c.value.tokenComposition.totalRecorded || 0,
+    toolTypeCount: tokenParts.value.length,
+    rankingOrder: 'source',
+    items: tokenParts.value.map(part => ({ toolCode: part.code, label: part.label, count: part.count, isOther: false })),
+  })
+  const series = (option.series as BarSeriesOption[])[0]!
+  series.data = tokenParts.value.map((part, i) => ({
+    value: part.count,
+    itemStyle: { color: ['#4381ff', '#35aa93'][i] },
+  }))
+  series.label = {
+    ...series.label,
+    formatter: params => {
+      const part = tokenParts.value[params.dataIndex]
+      return part ? `${num(part.count)}（${num(part.ratioPercent, 1)}%）` : ''
+    },
+  }
+  option.grid = { left: 8, right: 180, top: 16, bottom: 30, containLabel: true }
+  return option
+})
 const matrixRows = computed(() => c.value.behaviorMatrix.rows.filter(r => r.categoryCode !== 'normal' && r.label !== '正常任务'))
 const behaviorLabel = (code: string, fallback: string) => ({ unauthorized: '权限异常', policy_denied: '调用被拦截', argument_error: '参数错误', timeout: '调用超时', duplicate: '重复请求', retry: '调用重试' } as Record<string, string>)[code] || fallback
 const coverageFields = [
@@ -30,66 +69,29 @@ const available = (s: string) => ['available', 'partial'].includes(s)
 </script>
 <template>
   <div class="ats-primary-grid">
-    <PanelCard :title="`测试集类别分布（单标签 / ${data.listCounts.all}）`">
-      <small>测试标签，不代表检出风险</small>
-      <div
-        v-if="available(c.testCategoryDistribution.availability) && data.listCounts.all"
-        class="ats-donut-pair ats-category-pair"
-      >
-        <TraceStatisticChart
-          v-if="available(c.testCategoryDistribution.availability) && data.listCounts.all"
-          :option="
-            donutOption(c.testCategoryDistribution, data.listCounts.all, statisticColors, {
-              percentage: true,
-              centerLabel: '总样本',
-            })
-          "
-          label="测试集类别数量与占比"
-        />
-        <div class="ats-donut-legend">
-          <div v-for="(item, i) in c.testCategoryDistribution.items" :key="item.code">
-            <i :style="{ background: statisticColors[i % statisticColors.length] }" /><span>{{
-              item.label
-            }}</span
-            ><b>{{ num(item.count) }}</b
-            ><b>（{{ item.ratioPercent?.toFixed(1) ?? '—' }}%）</b>
-          </div>
-        </div>
-      </div>
-      <el-empty
-        v-else
-        :description="c.testCategoryDistribution.reason || '当前范围暂无样本'"
-        :image-size="45"
-      />
-    </PanelCard>
-    <PanelCard :title="`Token 组成分布（共 ${num(c.tokenComposition.totalRecorded)}）`">
+    <PanelCard class="ats-token-panel" :title="`Token 组成分布（共 ${num(c.tokenComposition.totalRecorded)}）`">
       <template
         v-if="available(c.tokenComposition.availability) && c.tokenComposition.mutuallyExclusive"
       >
-        <div class="ats-token-stack">
-          <div
-            v-for="(part, i) in c.tokenComposition.components"
-            :key="part.code"
-            :style="{ flex: part.count || 0, background: ['#378fff', '#78b8fb', '#60c68a'][i] }"
-            :title="`${part.label}：${num(part.count)}；覆盖 ${part.validSampleCount}/${part.eligibleSampleCount}`"
-          >
-            <b>{{ num(part.count) }}</b
-            ><span>{{ num(part.ratioPercent, 1) }}%</span>
-          </div>
-        </div>
+        <TraceStatisticChart
+          :option="tokenChartOption"
+          :style="{ height: '200px', marginBottom: '20px' }"
+          label="输入与输出 Token 数量"
+        />
         <div class="ats-token-legend">
-          <div v-for="(part, i) in c.tokenComposition.components" :key="part.code">
-            <i :style="{ background: ['#378fff', '#78b8fb', '#60c68a'][i] }" />{{
+          <div v-for="(part, i) in tokenParts" :key="part.code">
+            <i :style="{ background: ['#4381ff', '#35aa93'][i] }" />{{
               part.label
             }}：<b>{{ num(part.count) }}</b
             >（{{ num(part.ratioPercent, 1) }}%）
           </div>
+          <div title="已包含在输出 Token 中">
+            <i style="background: #78b8fb" />已记录推理 Token：<b>{{ num(recordedReasoning?.count) }}</b>
+            <span>（{{ num(recordedReasoning?.ratioPercent, 1) }}%）</span>
+          </div>
         </div>
         <small :title="c.tokenComposition.normalizedPolicy"
-          >{{
-            data.completeness.reasoning.missingCount
-          }}
-          条未提供推理字段；仅汇总可拆分的已记录分量。</small
+          >输出 Token 包含已记录推理与最终输出；仅统计已提供的用量。</small
         > </template
       ><el-empty
         v-else
@@ -97,7 +99,7 @@ const available = (s: string) => ['available', 'partial'].includes(s)
         :image-size="45"
       />
     </PanelCard>
-    <PanelCard :title="`工具调用排行（共 ${c.toolRanking.totalCallCount} 次）`">
+    <PanelCard class="ats-tools-panel" :title="`工具调用情况（共 ${c.toolRanking.totalCallCount} 次）`">
       <div
         v-if="available(c.toolRanking.availability) && c.toolRanking.items.length"
         class="ats-ranking-with-total"
@@ -105,6 +107,7 @@ const available = (s: string) => ['available', 'partial'].includes(s)
         <TraceStatisticChart
           v-if="available(c.toolRanking.availability) && c.toolRanking.items.length"
           :option="rankingOption(c.toolRanking)"
+          :style="{ height: `${Math.max(320, c.toolRanking.items.length * 34 + 48)}px` }"
           label="各工具调用次数"
         />
         <aside class="ats-tool-total">

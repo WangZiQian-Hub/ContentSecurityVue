@@ -18,7 +18,7 @@
 .at-execution .ex-search .el-input__inner{font-size:13px}
 .at-execution .ex-search>.el-button{width:42px;height:38px;background:#eaf3fd;border:none;color:#476a97;font-size:22px}
 .at-execution .ex-sample{position:relative;border:1px solid #dee8f3;height:65px;min-height:65px;padding:8px 12px;margin:0 0 9px;background:linear-gradient(110deg,#fff,#f8fbff);border-radius:8px;font-size:15px}
-.at-execution .ex-sample.selected{outline:none!important;border:2px solid #438cff!important;padding:7px 11px;background:#edf5ff!important}
+.at-execution .ex-sample.selected{outline:none!important;border:2px solid #ef3340!important;padding:7px 11px;background:#edf5ff!important}
 .at-execution .ex-sample>b{color:#142d47;font-size:16px}
 .at-execution .ex-sample .el-tag{height:21px;font-size:13px;font-weight:700;vertical-align:1px;padding:0 9px;margin-left:5px}
 .at-execution .ex-sample>span:last-of-type{position:absolute;right:10px;top:12px;font-size:13px;border:1px solid currentColor;border-radius:5px;font-weight:700;padding:2px 7px;line-height:19px}
@@ -64,6 +64,9 @@
 .at-execution table{font-size:13px;table-layout:fixed}.at-execution th{font-size:13px;font-weight:700;background:#e3effc;color:#1a304c;height:29px}.at-execution td{height:27px;color:#293f58;background:#fcfdff}.at-execution td,.at-execution th{padding:3px 9px;line-height:19px;border-color:#dfe9f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .at-execution th:nth-child(1){width:60px}.at-execution th:nth-child(2){width:140px}.at-execution th:nth-child(3){width:130px}.at-execution th:nth-child(4){width:160px}.at-execution th:nth-child(5){width:40%}
 .at-execution .ex-log tr.selected{outline:none!important}.at-execution .ex-log tr.selected td{background:#ffe6e8!important}.at-execution .ex-log tr.selected td:first-child{color:#dc2732;font-weight:700}
+.at-execution .ex-log tr.selected td{border-top:2px solid #ef3340;border-bottom:2px solid #ef3340}
+.at-execution .ex-log tr.selected td:first-child{border-left:2px solid #ef3340}
+.at-execution .ex-log tr.selected td:last-child{border-right:2px solid #ef3340}
 .at-execution .ex-log>.el-pagination{height:22px;margin-top:2px;display:none}.at-execution .ex-log:has(.el-pagination .number:nth-child(2))>.el-pagination{display:flex}
 /* Parent-scoped legacy rules load after the child. Keep these overrides explicit. */
 .at-execution .ex-query{row-gap:6px;padding-top:8px;padding-bottom:6px}
@@ -78,6 +81,11 @@
 .at-execution .ex-sample .el-tag--warning{background:#fff3df;border-color:#ffe1ba;color:#c97b20}
 .at-execution .ex-chain .execution-glyph{color:#1677ff}.at-execution .ex-chain:has(button:nth-child(5)) button:last-child .execution-glyph{color:#ef4850}
 /* Match the compact form typography used by the preceding audit views. */
+.at-execution .ex-log.ex-no-time th:nth-child(1){width:60px}
+.at-execution .ex-log.ex-no-time th:nth-child(2){width:130px}
+.at-execution .ex-log.ex-no-time th:nth-child(3){width:160px}
+.at-execution .ex-log.ex-no-time th:nth-child(4){width:auto}
+.at-execution .ex-log.ex-no-time th:nth-child(5){width:29%}
 .at-execution .ex-query{min-height:106px;row-gap:8px}
 .at-execution .ex-query>label{font-size:14px;line-height:32px}
 .at-execution .ex-query .el-select__wrapper{height:32px;min-height:32px}
@@ -96,3 +104,13 @@
 .at-execution .ex-sample-footer .el-pager li{min-width:24px}
 .at-execution .ex-sample-panel .ex-sample{height:60px;min-height:60px;margin-bottom:6px}
 .at-execution .ex-sample-panel .ex-sample small{margin-top:6px}
+.at-execution .ex-sample-panel .ex-sample{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;height:auto;min-height:76px;box-sizing:border-box;padding:10px;overflow:hidden}
+.at-execution .ex-sample-panel .ex-sample.selected{padding:9px}
+.at-execution .ex-sample-panel .ex-sample>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;grid-column:1;grid-row:1}
+.at-execution .ex-sample-panel .ex-sample>.el-tag{grid-column:1;grid-row:2;justify-self:start;max-width:100%;margin:0;overflow:hidden;text-overflow:ellipsis}
+.at-execution .ex-sample-panel .ex-sample>span:last-of-type{position:static;float:none;grid-column:2;grid-row:1 / 3;align-self:start;max-width:100%;box-sizing:border-box}
+.at-execution .ex-sample-panel .ex-sample small{grid-column:1 / -1;min-width:0;margin:0;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.at-execution .ex-columns>main>.ex-card.ex-path-panel{display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden}
+.at-execution .ex-path-panel>h3{flex-shrink:0}
+.at-execution .ex-path-panel .path-scroll{flex:1;min-height:0;max-height:none;box-sizing:border-box;overflow:auto;width:100%}
+.at-execution .ex-path-panel>.el-button{flex-shrink:0;align-self:flex-start}

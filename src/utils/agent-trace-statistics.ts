@@ -67,7 +67,7 @@ export function donutOption(
                 align: 'center',
               },
               caption: {
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 400,
                 lineHeight: 18,
                 color: '#64799a',
@@ -114,23 +114,23 @@ export function donutOption(
 export function rankingOption(d: AgentTraceStatisticsCharts['toolRanking']): EChartsOption {
   return {
     animation: false,
-    grid: { left: 8, right: 40, top: 12, bottom: 25, containLabel: true },
-    tooltip: { trigger: 'axis', renderMode: 'richText' },
-    xAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#edf3fb' } } },
+    grid: { left: 8, right: 60, top: 16, bottom: 30, containLabel: true },
+    tooltip: { trigger: 'axis', renderMode: 'richText', textStyle: { fontSize: 16 } },
+    xAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 15 }, splitLine: { lineStyle: { color: '#edf3fb' } } },
     yAxis: {
       type: 'category',
       inverse: true,
       data: d.items.map((i) => i.label),
-      axisLabel: { interval: 0, fontSize: 11, margin: 10 },
+      axisLabel: { interval: 0, fontSize: 16, margin: 14 },
       axisTick: { show: false },
       axisLine: { show: false },
     },
     series: [
       {
         type: 'bar',
-        barMaxWidth: 17,
+        barMaxWidth: 22,
         itemStyle: { color: '#4381ff', borderRadius: [0, 4, 4, 0] },
-        label: { show: true, position: 'right' },
+        label: { show: true, position: 'right', fontSize: 17, fontWeight: 600 },
         data: d.items.map((i) => i.count),
       },
     ],
@@ -141,20 +141,20 @@ export function durationOption(
 ): EChartsOption {
   return {
     animation: false,
-    grid: { left: 35, right: 8, top: 25, bottom: 30 },
-    tooltip: { trigger: 'axis', renderMode: 'richText' },
+    grid: { left: 48, right: 18, top: 32, bottom: 38 },
+    tooltip: { trigger: 'axis', renderMode: 'richText', textStyle: { fontSize: 15 } },
     xAxis: {
       type: 'category',
       data: d.buckets.map((b) => b.label),
-      axisLabel: { fontSize: 10, interval: 0 },
+      axisLabel: { fontSize: 13, interval: 0 },
       axisTick: { show: false },
     },
-    yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#edf3fb' } } },
+    yAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 13 }, splitLine: { lineStyle: { color: '#edf3fb' } } },
     series: [
       {
         type: 'bar',
         barMaxWidth: 29,
-        label: { show: true, position: 'top', fontSize: 11 },
+        label: { show: true, position: 'top', fontSize: 14 },
         itemStyle: { color: '#79b4fa', borderRadius: [3, 3, 0, 0] },
         data: d.buckets.map((b) => b.count),
       },

@@ -39,23 +39,19 @@ const labels = [
   '样本',
   '安全风险样本',
   '已记录 Token',
-  '推理/输出比',
   '工具调用',
   '工具种类',
   '平均步骤',
-  '流程完成率',
 ]
 const keys = [
   'sampleCount',
   'riskSampleCount',
   'recordedTokens',
-  'reasoningOutputRatio',
   'toolCallCount',
   'toolTypeCount',
   'averageSteps',
-  'taskSuccessRate',
 ] as const
-const icons = ['Coin', 'Warning', 'Files', 'DataAnalysis', 'SetUp', 'Box', 'Share', 'Aim']
+const icons = ['Coin', 'Warning', 'Files', 'SetUp', 'Box', 'Share']
 const tabs: { code: AgentTraceListFilter; label: string }[] = [
   { code: 'all', label: '全部样本' },
   { code: 'risk', label: '安全风险' },
@@ -112,13 +108,10 @@ watch(
       mode ? createAgentTraceStatisticsMock((q) => source.statisticsSource(q), true) : undefined,
     )
     const q = old === undefined ? initialQuery() : {}
-    const trace =
-      old === undefined && typeof route.query.traceId === 'string' ? route.query.traceId : ''
     if (!alive || version !== modeVersion) return
     await store.load(q)
     if (!alive || version !== modeVersion) return
     draft.value = { batchId: store.query.batchId || '', language: store.query.language || 'all' }
-    if (trace && store.workspace?.scope) await store.select(trace)
   },
   { immediate: true },
 )
@@ -169,7 +162,8 @@ function select(id: string, event: Event) {
   void store.select(id)
 }
 async function exportPackage() {
-  autoViewExport.value = false
+  autoViewExport.value = true
+  store.task = null
   await store.exportResult('package', subset.value, contents.value)
   if (!store.exportError) packageDialog.value = false
 }
@@ -193,7 +187,7 @@ defineExpose({
           ['stats_summary', 'sample_table', 'normalized_json', 'manifest'].includes(c.code),
       )
       .map((c) => c.code)
-    packageDialog.value = true
+    return exportPackage()
   },
   canView: computed(() => store.exportAllowed('view') && !store.exportBusy),
   canPackage: computed(() => store.exportAllowed('package') && !store.exportBusy),
@@ -211,42 +205,6 @@ onUnmounted(() => {
       :error="store.exportError"
       :download="(a) => store.download(a.artifactId)"
     />
-    <div
-      v-if="!autoViewExport && (exportStarting || store.task || store.exportError)"
-      class="ats-export-status"
-      role="status"
-      aria-live="polite"
-    >
-      <span
-        >导出任务 · {{ exportStarting ? 'pending' : store.task?.status || 'failed' }} ·
-        {{ store.exportScope?.batchId || store.query.batchId }}</span
-      >
-      <el-progress
-        v-if="exportStarting || store.exportBusy"
-        :percentage="exportStarting ? 0 : store.task?.progress || 0"
-        :indeterminate="exportStarting || store.task?.progress == null"
-      />
-      <el-button
-        v-if="
-          !exportStarting &&
-          store.task &&
-          ['pending', 'running'].includes(store.task.status) &&
-          !store.exportBusy
-        "
-        @click="store.resume"
-        >恢复进度查询</el-button
-      >
-      <template v-if="!exportStarting && store.task?.status === 'succeeded'"
-        ><el-button
-          v-for="a in store.task.result?.artifacts || []"
-          :key="a.artifactId"
-          @click="store.download(a.artifactId)"
-          >下载 {{ a.filename }}</el-button
-        ></template
-      >
-      <span v-if="store.exportError" class="ats-export-error">{{ store.exportError }}</span>
-      <el-button v-if="store.exportError" @click="store.retryExport">重试导出</el-button>
-    </div>
     <form class="ats-filters" @submit.prevent="query">
       <label for="ats-batch">批次</label
       ><el-select
@@ -309,7 +267,7 @@ onUnmounted(() => {
             ><strong :class="{ risk: i === 1 }">{{ i === 1 && w.kpis[key].value == null ? '尚未审计' : statisticMetric(w.kpis[key]) }}</strong
             ><small v-if="i === 2 && w.kpis[key].estimatedSampleCount"
               >含估算 {{ w.kpis[key].estimatedSampleCount }} 条</small
-            ><small v-if="i === 3">同口径 {{ w.kpis[key].validSampleCount }} 条</small>
+            >
           </div>
         </article>
       </div>
@@ -318,8 +276,7 @@ onUnmounted(() => {
         <span>策略拒绝样本 {{ w.auditSummary.policySamples }}</span><span>运行异常样本 {{ w.auditSummary.operationSamples }}</span><span>效率线索样本 {{ w.auditSummary.efficiencySamples }}</span>
         <small>{{ w.auditSummary.scope }}；各项按样本去重，可重叠。{{ w.auditSummary.version }}</small>
       </section>
-      <TraceStatisticsCharts :data="w" />
-      <section class="ats-samples">
+      <section class="ats-samples" style="margin-bottom: 16px">
         <div class="ats-list-tabs">
           <el-button
             v-for="t in tabs"
@@ -368,11 +325,9 @@ onUnmounted(() => {
               ></template
             ></el-table-column
           >
-          <el-table-column label="语言" width="80"
+          <el-table-column label="思考内容字符数" min-width="134"
             ><template #default="{ row }">{{
-              { zh: '中文', en: 'English', other: '其他', unknown: '未知' }[
-                row.language as string
-              ] || '未知'
+              row.reasoningCharCount === 0 ? '缺少正文' : num(row.reasoningCharCount)
             }}</template></el-table-column
           >
           <el-table-column prop="testCategoryLabel" label="测试集类别" min-width="105" />
@@ -439,6 +394,7 @@ onUnmounted(() => {
           />
         </div>
       </section>
+      <TraceStatisticsCharts :data="w" />
       <small v-for="warning in w.warnings" :key="warning.code" class="ats-warning">{{
         warning.message
       }}</small> </template

@@ -179,7 +179,6 @@ const glyph = (id: string) =>
 }
 .tool-sequence-svg g[role='button']:focus {
   outline: none;
-  filter: drop-shadow(0 0 2px #7ca9ff);
 }
 .return-caption {
   text-align: center;

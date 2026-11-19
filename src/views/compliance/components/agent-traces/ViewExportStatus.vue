@@ -65,6 +65,7 @@ watch(
     try {
       // Download the server artifact frozen at submission; never recapture live DOM.
       await props.download(artifacts[0]!)
+      if (props.error) throw new Error(props.error)
       if (version === generation) completed.value = true
     } catch (error) {
       if (version === generation)
@@ -82,12 +83,12 @@ watch(
       error || localError
         ? '导出失败：' + (error || localError)
         : saving
-          ? '正在下载固定快照图片…'
+          ? '正在下载文件…'
           : completed
             ? '导出成功，已自动发起下载'
             : task?.status === 'failed' || task?.status === 'cancelled'
               ? '导出失败，请重新导出'
-              : '正在导出当前视图…'
+              : '正在生成导出文件…'
     }}</span>
     <el-progress
       :percentage="displayedProgress"

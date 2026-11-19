@@ -12,7 +12,6 @@ import type {
 } from '../types/agent-trace-statistics'
 import type { TraceTask } from '../types/agent-traces'
 import { traceZip } from '../utils/agent-trace-export'
-import { statisticsPng } from '../utils/agent-trace-statistics-export'
 import { statisticsReference } from './agent-trace-statistics-reference'
 
 const categories = [
@@ -74,6 +73,13 @@ export function projectStatistics(source: Source, q: Query) {
               ? output - reasoning
               : null
       const duration = number(obj(raw.metadata).duration_ms)
+      const reasoningTexts = r.sourceFormat === 'agent_trajectory'
+        ? array(raw.events).map((event) => event.reasoning || (event.type === 'thought' ? event.content : ''))
+        : array(raw.messages).map((message) => message.reasoning_content || message.reasoning)
+      const reasoningCharCount = reasoningTexts.reduce<number>(
+        (count, text) => count + (typeof text === 'string' && text.trim() ? [...text].length : 0),
+        0,
+      )
       return {
         ...scope,
         traceId: r.traceId,
@@ -84,6 +90,7 @@ export function projectStatistics(source: Source, q: Query) {
         language: ['zh', 'en', 'other'].includes(r.language) ? r.language : 'unknown',
         testCategory: r.testCategory,
         testCategoryLabel: traceCategoryLabel(r.testCategory),
+        reasoningCharCount,
         tokenUsage: {
           input,
           reasoningRecorded: reasoning,
@@ -427,7 +434,7 @@ export function aggregateStatistics(source: Source, q: Query): Workspace {
     exportOptions: {
       kinds: ['view', 'package', 'sample_json'].map((exportKind, i) => ({
         exportKind,
-        formats: [['png'], ['zip'], ['json']][i],
+        formats: [['json', 'png'], ['zip'], ['json']][i],
         availability: 'available',
       })),
       contents: [
@@ -764,20 +771,10 @@ export function createAgentTraceStatisticsMock(
               { type: 'application/json' },
             )
           else if (input.exportKind === 'view')
-            job.blob = await statisticsPng(
-              JSON.parse(
-                anonymize(
-                  JSON.stringify(
-                    aggregateStatistics(s, {
-                      ...q,
-                      listFilter: input.uiState?.listFilter,
-                      page: input.uiState?.page,
-                      pageSize: input.uiState?.pageSize,
-                    }),
-                  ),
-                ),
-              ),
-            )
+            job.blob = new Blob([anonymize(JSON.stringify(aggregateStatistics(s, {
+              ...q, listFilter: input.uiState?.listFilter,
+              page: input.uiState?.page, pageSize: input.uiState?.pageSize,
+            }), null, 2))], { type: 'application/json' })
           else {
             const files: { name: string; text: string }[] = []
             if (input.contents.includes('stats_summary'))

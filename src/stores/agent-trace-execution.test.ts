@@ -172,4 +172,29 @@ describe('execution lifecycle', () => {
     expect(s.playing).toBe(false)
     s.dispose()
   })
+  it('locates an event beyond both the log and initial graph page', async () => {
+    const s = useExecutionStore()
+    await s.configure(true, 'mock_batch_demo', 'mock_trace_6')
+    expect(s.detail?.graph.nodes).toHaveLength(500)
+    expect(await s.locate('mock_trace_6_event_601')).toBe(true)
+    expect(s.selection?.ordinal).toBe(601)
+    expect(s.detail?.graph.nodes.some(n => n.eventId === 'mock_trace_6_event_601')).toBe(true)
+    expect(s.playing).toBe(false)
+    s.dispose()
+  })
+  it('uses the server graph locator to load a remote target segment directly', async () => {
+    const mock = createExecutionMock()
+    vi.spyOn(executionHttp, 'workspace').mockImplementation(q => mock.workspace(q))
+    const request = vi.spyOn(executionHttp, 'detail').mockImplementation(async (b, t, q) => {
+      const result = await mock.detail(b, t, q)
+      if (result.selection?.ordinal === 601) result.selection.graphLocator = { cursor: '500' }
+      return result
+    })
+    const s = useExecutionStore()
+    await s.configure(false, 'mock_batch_demo', 'mock_trace_6')
+    expect(await s.locate('mock_trace_6_event_601')).toBe(true)
+    expect(request.mock.calls.some(([, , q]) => q.section === 'graph' && q.graphCursor === '500')).toBe(true)
+    expect(s.detail?.graph.nodes.some(n => n.ordinal === 601)).toBe(true)
+    s.dispose()
+  })
 })

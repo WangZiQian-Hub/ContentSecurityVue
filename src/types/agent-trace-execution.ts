@@ -48,7 +48,8 @@ export interface ExecutionSelection {
   ordinal: number
   previousEventId: string | null
   nextEventId: string | null
-  content: { sourceExcerpt: ExecutionText; reasoningSummary: ExecutionText }
+  graphLocator?: { cursor: string | null }
+  content: { sourceExcerpt: ExecutionText; reasoningSummary: ExecutionText; reasoningOriginal?: ExecutionText }
   riskEvidence: {
     items: {
       evidenceId: string
@@ -83,6 +84,7 @@ export interface ExecutionGraph {
   nextCursor: string | null
 }
 export interface ExecutionDetail {
+  hasEventTime?: boolean
   ruleFindings?: import('../utils/agent-trace-presentation').RuleFinding[]
   ruleAudit?: { version: string }
   scope: ExecutionScope
@@ -107,6 +109,7 @@ export interface ExecutionWorkspace {
   scope: ExecutionScope | null
   batchOptions: PageResult<{ batchId: string; displayId: string; name?: string }>
   batchSummary: { sampleCount: number; byLanguage: { code: string; count: number }[] }
+  toolCallSummary?: { totalCallCount: number; items: { toolName: string; callCount: number }[] }
   queriedAt: string
   samplePage: PageResult<ExecutionSample>
   selectedTraceId: string | null

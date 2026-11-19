@@ -70,6 +70,7 @@ export interface AgentTraceStatisticsSample extends AgentTraceScope {
   sourceFormat: string
   testCategory: string
   testCategoryLabel: string
+  reasoningCharCount?: number
   tokenUsage: {
     estimated?: boolean
     input: number | null

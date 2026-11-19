@@ -116,7 +116,17 @@ export function createExecutionMock() {
   async function workspace(q: ExecutionQuery): Promise<ExecutionWorkspace> {
     const batchId = executionMockBatchId(q.batchId)
     const p = await samples(batchId, q)
+    const toolNames = ['web.search', 'fetch_page', 'query_database', 'export_report']
+    const counts = new Map<string, number>()
+    if (batchId !== 'mock_empty') executionSamples.forEach(sample => {
+      for (let i = 0; i < sample.callCount; i++) {
+        const name = toolNames[i % toolNames.length]!
+        counts.set(name, (counts.get(name) || 0) + 1)
+      }
+    })
     return {
+      toolCallSummary: { totalCallCount: [...counts.values()].reduce((sum, n) => sum + n, 0),
+        items: [...counts].map(([toolName, callCount]) => ({ toolName, callCount })) },
       scope: q.include === 'dashboard' ? scope(batchId) : null,
       batchOptions: executionPage([
         { batchId: 'mock_batch_demo', displayId: 'AUD-2026-001' },
@@ -162,6 +172,7 @@ export function createExecutionMock() {
         previousEventId: i ? `${traceId}_event_${i}` : null,
         nextEventId: ordinal < sample.eventCount ? `${traceId}_event_${ordinal + 1}` : null,
         content: {
+          reasoningOriginal: { text: '', highlights: [], provenance: 'not_provided', truncated: false },
           sourceExcerpt: {
             text,
             highlights: risk

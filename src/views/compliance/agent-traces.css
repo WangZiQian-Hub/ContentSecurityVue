@@ -1050,3 +1050,42 @@ button:focus-visible {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Match the typography of the other audit pages, within ingestion only. */
+.agent-traces.at-ingest { font-size: 15px; }
+.at-ingest .at-format h3 { font-size: 18px; line-height: 1.4; }
+.at-ingest .at-format p,
+.at-ingest .at-format .at-format-description,
+.agent-traces.at-ingest .at-formats .at-format-description { font-size: 14px; line-height: 1.6; }
+.at-ingest .at-format-bottom,
+.at-ingest .at-format-bottom .el-button { font-size: 14px; line-height: 1.5; }
+.agent-traces.at-ingest :deep(.panel-heading h2) { font-size: 19px; line-height: 1.5; }
+.agent-traces.at-ingest :deep(.el-button),
+.agent-traces.at-ingest :deep(.el-input__inner),
+.agent-traces.at-ingest :deep(.el-select__selected-item) { font-size: 15px; }
+.at-ingest .at-file-actions :deep(.el-select__selected-item) { font-size: 15px; }
+.at-ingest .at-file strong,
+.at-ingest .at-recognition-label,
+.at-ingest .at-parse-status { font-size: 15px; line-height: 1.6; }
+.at-ingest .at-recognition :deep(.el-tag) { font-size: 14px; }
+.at-ingest .at-ingest-grid p { font-size: 15px; line-height: 1.7; }
+.at-ingest .at-ingest-grid h4 { font-size: 16px; line-height: 1.5; }
+.at-ingest .at-ingest-grid small { font-size: 13px; line-height: 1.6; }
+.at-ingest .at-categories span { font-size: 14px; line-height: 1.6; }
+.at-ingest .at-context label { font-size: 15px; }
+.at-ingest .at-code.at-structured-json { font-size: 14px; line-height: 1.7; }
+.at-ingest .at-structured-json code > span { line-height: 1.7; }
+.at-ingest .at-normalized-field > span { font-size: 14px; }
+.at-ingest .at-normalized-field > code { font-size: 14px; line-height: 1.7; }
+.at-ingest .at-fields { font-size: 14px; line-height: 1.6; }
+.at-ingest .at-mapping-title strong { font-size: 15px; }
+.agent-traces.at-ingest .at-preview-grid :deep(.el-table .cell) { font-size: 14px; line-height: 22px; }
+.at-ingest .at-preview-grid small { font-size: 13px; line-height: 1.6; }
+.at-ingest .at-metrics span,
+.at-ingest .at-metrics strong small { font-size: 14px; }
+.at-ingest .at-metrics strong { font-size: 28px; }
+.at-ingest .at-bottom p { font-size: 14px; line-height: 1.7; }
+.at-ingest .at-issue strong { font-size: 15px; line-height: 1.5; }
+.at-ingest .at-issue small { font-size: 13px; line-height: 1.6; }
+.at-ingest .at-issue .el-button { font-size: 14px; }
+.at-ingest .at-issue :deep(.el-tag) { font-size: 13px; }

@@ -233,6 +233,46 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     if (target) await select(target)
     else pause()
   }
+  async function locate(eventId: string) {
+    pause()
+    const scope = detail.value?.scope
+    const traceId = detail.value?.traceId
+    await select(eventId)
+    if (!scope || !traceId || selection.value?.eventId !== eventId) return false
+    if (!detail.value?.graph.nodes.some(n => n.eventId === eventId)) {
+      const cursor = selection.value.graphLocator?.cursor
+      if (cursor) {
+        const version = detailGeneration
+        try {
+          const part = await api.detail(scope.batchId, traceId, {
+            ...scope, section: 'graph', graphCursor: cursor,
+            redactionMode: raw.value ? 'raw' : 'redacted',
+          }, detailController?.signal)
+          if (version !== detailGeneration || detail.value?.traceId !== traceId) return false
+          if (part.scope.snapshotId !== scope.snapshotId || part.scope.batchId !== scope.batchId ||
+              part.scope.projectionVersion !== scope.projectionVersion || part.traceId !== traceId) throw Error('图节点上下文不匹配')
+          const graph = detail.value.graph
+          const nodes = [...new Map([...graph.nodes, ...part.graph.nodes].map(n => [n.eventId, n])).values()]
+            .sort((a, b) => a.ordinal - b.ordinal)
+          detail.value = { ...detail.value, graph: {
+            ...graph, nodes, complete: nodes.length === graph.totalNodes,
+            edges: [...new Map([...graph.edges, ...part.graph.edges].map(e => [e.edgeId, e])).values()],
+          } }
+        } catch (e) {
+          if (version === detailGeneration) detailError.value = String(e)
+          return false
+        }
+      } else {
+        while (detail.value?.traceId === traceId && !detail.value.graph.nodes.some(n => n.eventId === eventId)) {
+          const previous = detail.value.graph.nextCursor
+          if (!previous) return false
+          await moreGraph()
+          if (detail.value?.graph.nextCursor === previous) return false
+        }
+      }
+    }
+    return selection.value?.eventId === eventId && !!detail.value?.graph.nodes.some(n => n.eventId === eventId)
+  }
   async function eventPage(page: number) {
     pause()
     const d = detail.value
@@ -325,6 +365,7 @@ export const useExecutionStore = defineStore('agent-trace-execution', () => {
     choose,
     search,
     select,
+    locate,
     step,
     eventPage,
     play,

@@ -3,6 +3,7 @@ import ViewExportStatus from './ViewExportStatus.vue'
 import RuleFindings from './RuleFindings.vue'
 import { traceBatchLabel } from '../../../../utils/agent-trace-presentation'
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
 import ExecutionGraph from './ExecutionGraph.vue'
 import ExecutionGlyph from './ExecutionGlyph.vue'
 import AppIcon from '../../../../components/AppIcon.vue'
@@ -10,7 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useComplianceStore } from '../../../../stores/compliance'
 import { useExecutionStore } from '../../../../stores/agent-trace-execution'
 import { useExecutionExport } from '../../../../composables/useExecutionExport'
-import { traceZip, tracePng } from '../../../../utils/agent-trace-export'
+import { traceZip } from '../../../../utils/agent-trace-export'
 import { executionSamples } from '../../../../mock/agent-trace-execution'
 import type { ExecutionText } from '../../../../types/agent-trace-execution'
 const exportState = useExecutionExport()
@@ -18,12 +19,8 @@ const {
   busy: exporting,
   error: exportError,
   task: exportTask,
-  progress: exportProgress,
-  artifacts: exportArtifacts,
-  batchId: exportBatchId,
   downloading: exportDownloading,
 } = exportState
-const lastExportKind = ref<'view' | 'package'>('view')
 const store = useExecutionStore(),
   parent = useComplianceStore(),
   route = useRoute(),
@@ -40,6 +37,31 @@ const d = computed(() => store.detail),
   s = computed(() => store.selection),
   evidence = computed(() => s.value?.riskEvidence.items[evidenceIndex.value]),
   w = computed(() => store.workspace)
+const graph = ref<InstanceType<typeof ExecutionGraph>>()
+const highlightedEvent = ref('')
+const showEventTime = computed(() => d.value?.hasEventTime ??
+  !!d.value?.events.items.some(event => typeof event.relativeTimeMs === 'number' && Number.isFinite(event.relativeTimeMs)))
+const reasoningOriginal = computed(() => {
+  const original = s.value?.content.reasoningOriginal
+  return original?.text.trim() && original.provenance === 'source_log' ? original : undefined
+})
+watch(() => d.value?.traceId, () => { highlightedEvent.value = '' })
+async function locateEvent(id: string) {
+  highlightedEvent.value = ''
+  if (!await store.locate(id)) return
+  highlightedEvent.value = id
+  await nextTick()
+  await graph.value?.focusEvent(id)
+}
+async function copySnippet(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('已复制全文')
+  } catch {
+    ElMessage.error('复制失败，请在弹窗中选择全文复制')
+  }
+}
+const eventDescription = (text: unknown) => typeof text === 'string' && text.trim() ? text : ''
 const duration = (n: number | null) => (n === null ? '未提供' : `${(n / 1000).toFixed(1)} s`)
 const relativeTime = (n: number | null) =>
   n === null
@@ -48,18 +70,22 @@ const relativeTime = (n: number | null) =>
 const level = (v: string) =>
   ({ high: '高风险', medium: '中风险', low: '低风险', none: '无风险', unknown: '待审计' })[v] || v
 let debounce: ReturnType<typeof setTimeout> | undefined
+let navigationVersion = 0
 watch(
   () => parent.demo,
-  (mode) => {
+  async (mode) => {
+    const version = ++navigationVersion
+    const target = typeof route.query.locateEventId === 'string' ? route.query.locateEventId : undefined
     exportState.reset()
     packageDialog.value = false
-    void store.configure(
+    await store.configure(
       mode,
       typeof route.query.batchId === 'string' ? route.query.batchId : undefined,
       typeof route.query.traceId === 'string' ? route.query.traceId : undefined,
       typeof route.query.eventId === 'string' ? route.query.eventId : undefined,
       typeof route.query.snapshotId === 'string' ? route.query.snapshotId : undefined,
     )
+    if (version === navigationVersion && target && s.value?.eventId === target) await locateEvent(target)
   },
   { immediate: true },
 )
@@ -100,6 +126,7 @@ watch(
   },
 )
 onUnmounted(() => {
+  navigationVersion++
   exportState.reset()
   clearTimeout(debounce)
   store.dispose()
@@ -148,18 +175,16 @@ async function exportResult(kind: 'view' | 'package') {
   if (!store.canExport || !d.value || !w.value?.scope || exporting.value || exportDownloading.value)
     return
   store.pause()
-  lastExportKind.value = kind
   const detail = d.value,
     scope = { ...w.value.scope },
     filters = { ...store.query },
     selectedEvent = s.value?.eventId,
-    eventLabel = s.value?.displayId || '',
     scopeType = kind === 'view' ? 'sample' : packageScope.value
   const input = {
     ...scope,
     view: 'execution',
     exportKind: kind,
-    format: kind === 'view' ? 'png' : 'zip',
+    format: kind === 'view' ? 'json' : 'zip',
     selectedTraceId: detail.traceId,
     selectedEventId: selectedEvent,
     scope: {
@@ -174,7 +199,7 @@ async function exportResult(kind: 'view' | 'package') {
       redactionMode: store.raw ? 'raw' : 'redacted',
     },
     contents:
-      kind === 'view' ? ['execution_png'] : ['normalized_json', 'evidence_index', 'manifest'],
+      kind === 'view' ? ['normalized_json'] : ['normalized_json', 'evidence_index', 'manifest'],
     redactionProfile: store.raw ? 'none' : 'standard',
     anonymizeIds: true,
     timezone: 'Asia/Shanghai',
@@ -183,13 +208,7 @@ async function exportResult(kind: 'view' | 'package') {
   }
   await exportState.start(input, parent.demo, async () => {
     if (kind === 'view')
-      return tracePng([
-        '智能体轨迹审计 · 思维路径',
-        JSON.stringify(scope),
-        detail.summary.displayId,
-        '当前事件 ' + eventLabel,
-        ...detail.graph.nodes.map((n) => n.ordinal + ' ' + n.label),
-      ])
+      return new Blob([JSON.stringify(detail, null, 2)], { type: 'application/json' })
     const rows =
       scopeType === 'sample'
         ? [detail.summary]
@@ -233,50 +252,18 @@ defineExpose({
   canPackage: computed(() => store.canExport && !exporting.value && !exportDownloading.value),
   exportView: () => exportResult('view'),
   openPackage: () => {
-    packageDialog.value = true
+    return exportResult('package')
   },
 })
 </script>
 <template>
   <section class="execution-view">
     <ViewExportStatus
-      v-if="lastExportKind === 'view' && exportTask"
+      v-if="exportTask || exportError"
       :task="exportTask"
       :error="exportError"
       :download="exportState.download"
     />
-    <div
-      v-if="lastExportKind !== 'view' && (exportTask || exportError)"
-      class="ex-export-status"
-      role="status"
-      aria-live="polite"
-    >
-      <span>导出任务 · {{ exportTask?.status || 'failed' }} · {{ exportBatchId }}</span>
-      <el-progress
-        v-if="exporting"
-        :percentage="exportProgress ?? 0"
-        :indeterminate="exportProgress == null"
-      />
-      <el-button
-        v-if="!exporting && exportTask && ['pending', 'running'].includes(exportTask.status)"
-        @click="exportState.resume"
-        >恢复进度查询</el-button
-      >
-      <el-button
-        v-for="artifact in exportArtifacts"
-        :key="artifact.artifactId"
-        :loading="exportDownloading"
-        @click="exportState.download(artifact)"
-        >下载 {{ artifact.filename }}</el-button
-      >
-      <span v-if="exportError" class="ex-export-error">{{ exportError }}</span>
-      <el-button
-        v-if="exportError && exportTask?.status === 'failed'"
-        :disabled="!store.canExport"
-        @click="exportResult(lastExportKind)"
-        >重新导出</el-button
-      >
-    </div>
     <div class="ex-query">
       <label>批次</label
       ><el-select
@@ -319,6 +306,15 @@ defineExpose({
           {{ d.summary.callCount }} calls · 耗时 {{ duration(d.summary.durationMs) }}</template
         >
       </div>
+      <section v-if="w?.scope" class="ex-tool-summary" aria-label="批次工具调用统计">
+        <div class="ex-tool-summary-total"><span>工具调用总次数</span><div><strong>{{ w.toolCallSummary?.totalCallCount?.toLocaleString('zh-CN') ?? '未提供' }}</strong><small>次</small></div></div>
+        <div class="ex-tool-counts">
+          <article v-for="tool in w.toolCallSummary?.items || []" :key="tool.toolName">
+            <span>{{ tool.toolName }}</span><div><b>{{ tool.callCount.toLocaleString('zh-CN') }}</b><small>次</small></div>
+          </article>
+          <span v-if="w.toolCallSummary?.totalCallCount === 0">本批次暂无工具调用</span>
+        </div>
+      </section>
     </div>
     <el-alert
       v-if="store.dirty && w"
@@ -338,7 +334,7 @@ defineExpose({
       "
     />
     <el-alert v-if="w?.activeSnapshotId && w.scope && w.activeSnapshotId !== w.scope.snapshotId" title="当前为历史快照，后台已有新的审计结果。" type="info" :closable="false"><el-button link @click="store.run(d?.traceId)">查看最新结果</el-button></el-alert>
-    <RuleFindings v-if="d" :items="d.ruleFindings" :version="d.ruleAudit?.version" @locate="id => { store.pause(); store.select(id) }" />
+    <RuleFindings v-if="d" :items="d.ruleFindings" :version="d.ruleAudit?.version" @locate="locateEvent" />
     <div v-if="w" v-loading="store.loading" class="ex-columns">
       <aside class="ex-card ex-sample-panel">
         <h3 :title="`当前页 ${w.samplePage.items.length} 条，筛选命中 ${w.samplePage.total} 条`">
@@ -413,7 +409,7 @@ defineExpose({
           >重试详情</el-button
         >
         <template v-if="d"
-          ><section class="ex-card">
+          ><section class="ex-card ex-path-panel">
             <h3>
               思维路径
               <small
@@ -423,10 +419,12 @@ defineExpose({
               >
             </h3>
             <ExecutionGraph
+              ref="graph"
               :graph="d.graph"
               :selected="s?.eventId"
+              :highlighted="highlightedEvent"
               @select="
-                store.pause();   store.select($event)
+                highlightedEvent = ''; store.pause(); store.select($event)
               "
             /><el-button v-if="d.graph.nextCursor" @click="store.moreGraph">加载更多节点</el-button>
           </section>
@@ -450,7 +448,7 @@ defineExpose({
           </section>
           <section class="ex-card">
             <div class="ex-toolbar">
-              <h3>关键内容与推理摘要</h3>
+              <h3>关键内容与推理</h3>
               <el-radio-group :model-value="store.raw" @change="store.toggleRaw(Boolean($event))"
                 ><el-radio-button :value="true" :disabled="!d.permissions.canViewRaw"
                   >原文</el-radio-button
@@ -459,7 +457,7 @@ defineExpose({
             </div>
             <div class="ex-content">
               <article>
-                <b>原始来源内容（节选）</b>
+                <b>原始来源内容</b>
                 <p>
                   <template v-for="(t, i) in tokens(s?.content.sourceExcerpt)" :key="i"
                     ><mark v-if="t.mark">{{ t.text }}</mark
@@ -468,14 +466,13 @@ defineExpose({
                 </p>
               </article>
               <article>
-                <b>已记录推理摘要</b>
+                <b>已记录推理原文</b>
                 <p>
-                  <template v-for="(t, i) in tokens(s?.content.reasoningSummary)" :key="i"
+                  <template v-if="reasoningOriginal"><template v-for="(t, i) in tokens(reasoningOriginal)" :key="i"
                     ><mark v-if="t.mark">{{ t.text }}</mark
                     ><span v-else>{{ t.text }}</span></template
-                  >
+                  ></template><span v-else>未提供思考原文</span>
                 </p>
-                <small>{{ s?.content.reasoningSummary.provenance }}</small>
               </article>
             </div>
           </section></template
@@ -550,13 +547,18 @@ defineExpose({
           >
             <span>{{ pi + 1 }}</span
             ><b>{{ p.label }}</b
-            ><small>{{ p.snippet }}</small
-            ><el-tag>{{ p.eventDisplayId }}</el-tag>
+            ><el-popover trigger="hover" placement="left" :width="420" :show-after="150">
+              <template #reference><small tabindex="0" @click.stop>{{ p.snippet }}</small></template>
+              <div class="ex-snippet-popup" @click.stop>
+                <div class="ex-snippet-toolbar"><b>关键片段/特征 · 全文</b><el-button size="small" type="primary" @click.stop="copySnippet(p.snippet)">复制全文</el-button></div>
+                <pre class="ex-snippet-full">{{ p.snippet }}</pre>
+              </div>
+            </el-popover><el-tag>{{ p.eventDisplayId }}</el-tag>
           </button>
         </section>
       </aside>
     </div>
-    <section v-if="d" class="ex-card ex-log">
+    <section v-if="d" class="ex-card ex-log" :class="{ 'ex-no-time': !showEventTime }">
       <div class="ex-toolbar">
         <h3>轨迹回放与事件日志（{{ d.events.total }} 个步骤）</h3>
         <div>
@@ -594,7 +596,7 @@ defineExpose({
           <thead>
             <tr>
               <th>步骤</th>
-              <th>时间（相对）</th>
+              <th v-if="showEventTime">时间（相对）</th>
               <th>事件ID</th>
               <th>事件类型</th>
               <th>事件描述</th>
@@ -616,10 +618,18 @@ defineExpose({
               "
             >
               <td>{{ e.ordinal }}</td>
-              <td>{{ relativeTime(e.relativeTimeMs) }}</td>
+              <td v-if="showEventTime">{{ relativeTime(e.relativeTimeMs) }}</td>
               <td>{{ e.displayId }}</td>
               <td>{{ e.label }}</td>
-              <td>{{ e.description }}</td>
+              <td>
+                <el-popover :key="e.eventId" trigger="hover" placement="top" :width="520" :show-after="150" :persistent="false">
+                  <template #reference><span class="ex-event-description" tabindex="0">{{ eventDescription(e.description) }}</span></template>
+                  <div @click.stop>
+                    <div class="ex-snippet-toolbar"><b>事件描述 · {{ e.displayId }}</b><el-button size="small" type="primary" @click.stop="copySnippet(eventDescription(e.description))">复制全文</el-button></div>
+                    <pre class="ex-snippet-full">{{ eventDescription(e.description) }}</pre>
+                  </div>
+                </el-popover>
+              </td>
               <td>
                 {{
                   e.evidenceSummary ||
@@ -701,6 +711,18 @@ defineExpose({
   width: 100%;
   line-height: 1.8;
 }
+.ex-tool-summary { width: 100%; display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; padding: 14px; border: 1px solid #dce9fb; border-radius: 10px; background: #f7faff; box-sizing: border-box; }
+.ex-tool-summary-total { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 16px; border-radius: 8px; background: #e7f0ff; font-size: 16px; font-weight: 700; }
+.ex-tool-summary-total strong { font-size: 36px; color: #146df5; line-height: 1.2; }
+.ex-tool-summary small { font-size: 13px; margin-left: 6px; }
+.ex-tool-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-content: center; min-width: 0; }
+.ex-tool-counts > article { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; background: white; border: 1px solid #dce9fb; border-radius: 8px; padding: 12px 14px; }
+.ex-tool-counts > article > span { font-size: 14px; color: #456084; overflow-wrap: anywhere; }
+.ex-tool-counts b { color: #193a6b; font-size: 24px; line-height: 1.2; }
+@media (max-width: 760px) { .ex-tool-summary { grid-template-columns: minmax(0, 1fr); } }
+.ex-snippet-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ex-snippet-full { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; font: 14px/1.7 Consolas, 'Microsoft YaHei', monospace; margin-bottom: 0; }
+.ex-event-description { display: block; min-height: 1.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
 .ex-columns {
   display: grid;
   grid-template-columns: 20% minmax(0, 52%) minmax(0, 28%);

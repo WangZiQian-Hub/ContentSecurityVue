@@ -144,7 +144,7 @@ export function useExecutionExport(api: ExportTransport = transport) {
             artifacts: [
               {
                 artifactId: id,
-                filename: captured.exportKind === 'view' ? 'agent-trace-view.png' : `execution.${captured.format}`,
+                filename: captured.exportKind === 'view' ? `agent-trace-view.${captured.format}` : `execution.${captured.format}`,
                 mimeType: result.type,
                 batchId: captured.batchId,
                 snapshotId: captured.snapshotId,

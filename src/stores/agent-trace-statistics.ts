@@ -292,7 +292,7 @@ export const useAgentTraceStatisticsStore = defineStore('agent-trace-statistics'
         (k) =>
           k.exportKind === kind &&
           k.availability === 'available' &&
-          k.formats.includes(kind === 'view' ? 'png' : kind === 'package' ? 'zip' : 'json'),
+          k.formats.includes(kind === 'view' ? 'json' : kind === 'package' ? 'zip' : 'json'),
       )
     )
   }
@@ -373,7 +373,7 @@ export const useAgentTraceStatisticsStore = defineStore('agent-trace-statistics'
         ...w.scope,
         view: 'statistics',
         exportKind: kind,
-        format: kind === 'view' ? 'png' : kind === 'package' ? 'zip' : 'json',
+        format: kind === 'view' ? 'json' : kind === 'package' ? 'zip' : 'json',
         scope: {
           type: kind === 'sample_json' ? 'sample' : 'filtered',
           language: w.scope.language,
@@ -383,7 +383,7 @@ export const useAgentTraceStatisticsStore = defineStore('agent-trace-statistics'
         },
         contents:
           kind === 'view'
-            ? ['statistics_png']
+            ? ['normalized_json']
             : kind === 'sample_json'
               ? ['normalized_json']
               : selectedContents,

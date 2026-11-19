@@ -15,7 +15,7 @@ import TraceStatisticsPage from './components/agent-traces/TraceStatisticsPage.v
 import ToolsView from './components/agent-traces/ToolsView.vue'
 import ExecutionView from './components/agent-traces/ExecutionView.vue'
 import TraceCompetitionReport from './components/agent-traces/TraceCompetitionReport.vue'
-import { agentTraceTabQuery } from '../../utils/agent-trace-navigation'
+import { agentTraceTabQuery, hasDemoTraceScope } from '../../utils/agent-trace-navigation'
 import type { Command, Format, View } from '../../types/agent-traces'
 const parent = useComplianceStore(),
   store = useAgentTraceStore(),
@@ -155,7 +155,7 @@ watch(
     search.value = ''
     if (view.value === 'statistics' || view.value === 'execution' || view.value === 'tools') return
     // IDs from the other execution mode do not refer to objects in this mode.
-    if (previousMode !== undefined) {
+    if (previousMode !== undefined || (!mode && hasDemoTraceScope(route.query))) {
       await router.replace({ query: { view: view.value } })
       if (!pageAlive || currentModeVersion !== modeVersion) return
       await store.load({})
@@ -300,9 +300,6 @@ function retryUpload(row: { error: string }) {
   row.error = ''
   return uploadPending()
 }
-async function override(fileId: string, formatOverride: string) {
-  await store.action(() => store.bind([{ fileId, formatOverride }]))
-}
 async function parse(mode = 'parse_pending') {
   autoViewExport.value = false
   const b = w.value?.batch
@@ -325,14 +322,14 @@ const canExport = computed(
 )
 async function exportResult(kind: 'view' | 'package') {
   store.task = null
-  autoViewExport.value = kind === 'view'
+  autoViewExport.value = true
   const b = w.value?.batch
   if (!b?.activeSnapshotId) return
   const input: Command['input'] = {
     batchId: b.batchId,
     snapshotId: store.query.snapshotId,
     exportKind: kind,
-    format: kind === 'view' ? 'png' : 'zip',
+    format: kind === 'view' ? 'json' : 'zip',
     view: view.value,
     selectedTraceId: store.query.traceId,
     selectedEventId: store.query.eventId,
@@ -345,9 +342,7 @@ async function exportResult(kind: 'view' | 'package') {
     },
     contents:
       kind === 'view'
-        ? [
-            `${view.value === 'ingest' ? 'ingest' : view.value === 'execution' ? 'execution' : view.value === 'tools' ? 'tools' : 'statistics'}_png`,
-          ]
+        ? ['normalized_json']
         : [...new Set([...contents.value, 'manifest'])],
     redactionProfile: 'standard',
     anonymizeIds: true,
@@ -357,7 +352,7 @@ async function exportResult(kind: 'view' | 'package') {
   }
   await store.submit({
     capabilityCode: 'agent_trace_export',
-    name: kind === 'view' ? '当前视图导出' : '轨迹结果包导出',
+    name: kind === 'view' ? '当前JSON文件导出' : '轨迹结果包导出',
     input,
   })
   if (!store.actionError) exportDialog.value = false
@@ -376,16 +371,14 @@ async function copy(text: string) {
   })
 }
 async function download(id: string) {
-  await store.action(async () => {
-    await downloadTraceTicket(await store.ticket(id), store.demo)
-  })
+  await downloadTraceTicket(await store.ticket(id), store.demo)
 }
 const pngAllowed = computed(
   () =>
     store.demo ||
     w.value?.exportOptions.contents.some(
       (c) =>
-        c.code === `${view.value === 'ingest' ? 'ingest' : view.value}_png` &&
+        c.code === 'normalized_json' &&
         c.availability === 'available',
     ),
 )
@@ -427,7 +420,7 @@ onUnmounted(() => {
                   ? !statisticsPage?.canView
                   : !canExport || !pngAllowed || working
           "
-          title="按当前快照和筛选导出完整分析画布；渲染器不可用时禁用"
+          title="按当前快照和筛选导出JSON文件"
           @click="
             view === 'tools'
               ? toolsPage?.exportView()
@@ -437,7 +430,7 @@ onUnmounted(() => {
                   ? statisticsPage?.exportView()
                   : exportResult('view')
           "
-          ><AppIcon name="Download" />导出当前视图</el-button
+          ><AppIcon name="Download" />导出当前JSON文件</el-button
         ><el-button
           type="primary"
           :disabled="
@@ -456,7 +449,7 @@ onUnmounted(() => {
                 ? executionPage?.openPackage()
                 : view === 'statistics'
                   ? statisticsPage?.openPackage()
-                  : (exportDialog = true)
+                  : exportResult('package')
           "
           >导出结果包</el-button
         >
@@ -505,12 +498,12 @@ onUnmounted(() => {
         show-icon
       /><el-button v-if="store.error" @click="refresh">重试工作区</el-button>
       <ViewExportStatus
-        v-if="autoViewExport && (store.task || working || store.actionError)"
+        v-if="(autoViewExport || store.task?.result?.kind === 'agent_trace_export') && (store.task || working || store.actionError)"
         :task="store.task"
         :error="store.actionError"
         :download="(a) => download(a.artifactId)"
       />
-      <div v-if="store.task && !autoViewExport" class="at-task" role="status">
+      <div v-if="store.task && !autoViewExport && store.task.result?.kind !== 'agent_trace_export'" class="at-task" role="status">
         <span
           >{{ store.task.result?.kind === 'agent_trace_ingest' ? '解析与规则审计' : '导出任务' }} ·
           {{ store.task.status }} · {{ store.task.result?.batchId }}</span
@@ -522,11 +515,6 @@ onUnmounted(() => {
           text
           @click="store.resume"
           >恢复进度查询</el-button
-        ><el-button
-          v-for="a in store.task.result?.artifacts || []"
-          :key="a.artifactId"
-          @click="download(a.artifactId)"
-          >下载 {{ a.filename }}</el-button
         >
       </div>
       <div v-if="store.loading" class="at-loading" aria-busy="true">正在加载批次与来源…</div>
@@ -619,23 +607,11 @@ onUnmounted(() => {
                 <AppIcon name="Document" /><strong>{{ f.filename }}</strong>
                 <div class="at-recognition">
                   <span class="at-recognition-label">识别结果：</span
-                  ><el-select
-                    :model-value="f.formatOverride"
-                    :disabled="working || !w.batch?.allowedActions.includes('bind_files')"
-                    aria-label="文件格式覆盖"
-                    @change="override(f.fileId, $event)"
-                    ><el-option
-                      value="auto"
-                      :label="
-                        f.detectedFormat
-                          ? w.formats.find((x) => x.code === f.detectedFormat)?.label
-                          : '自动识别'
-                      " /><el-option
-                      v-for="format in w.formats"
-                      :key="format.code"
-                      :value="format.code"
-                      :label="format.label"
-                  /></el-select>
+                  ><el-tag size="large" aria-label="文件格式识别结果">{{
+                    f.detectedFormat
+                      ? w.formats.find((format) => format.code === f.detectedFormat)?.label || f.detectedFormat
+                      : '未识别'
+                  }}</el-tag>
                 </div>
                 <span
                   class="at-parse-status"

@@ -15,12 +15,11 @@ import type {
   ToolSelection,
   ToolsParams,
 } from '../../../../types/agent-trace-tools'
-import { traceZip, tracePng } from '../../../../utils/agent-trace-export'
+import { traceZip } from '../../../../utils/agent-trace-export'
 import { useExecutionExport } from '../../../../composables/useExecutionExport'
 const packageDialog = ref(false),
   packageScope = ref('sample'),
   packageContents = ref(['normalized_json', 'evidence_index', 'manifest'])
-const lastExportKind = ref<'view' | 'package'>('view')
 const initializing = ref(false)
 const parent = useComplianceStore(),
   router = useRouter(),
@@ -252,6 +251,10 @@ async function showRaw() {
 }
 function locate() {
   if (!result.value || !selected.value) return
+  locateEvent(selected.value.eventId)
+}
+function locateEvent(eventId: string) {
+  if (!result.value) return
   router.replace({
     query: {
       view: 'execution',
@@ -259,7 +262,8 @@ function locate() {
       snapshotId: result.value.scope.snapshotId,
       projectionVersion: result.value.scope.projectionVersion,
       traceId: result.value.traceId,
-      eventId: selected.value.eventId,
+      eventId,
+      locateEventId: eventId,
     },
   })
 }
@@ -274,6 +278,8 @@ const riskLabel = (s: string) =>
     s
   ] || '未审计'
 const seconds = (n: number | null) => (n == null ? '—' : `${(n / 1000).toFixed(1)} s`)
+const returnContent = (value: unknown) =>
+  typeof value === 'string' && value.trim() ? value : '返回内容为空'
 const color = (c: ToolSelection) =>
   c.permissionDecision === 'denied' || c.executionStatus === 'failed'
     ? '#f23e53'
@@ -296,7 +302,6 @@ const cards = computed(() => {
 async function exportFile(kind: 'view' | 'package') {
   const d = result.value
   if (!d || !canView.value) return
-  lastExportKind.value = kind
   await exporter.start(
     {
       ...d.scope,
@@ -304,23 +309,16 @@ async function exportFile(kind: 'view' | 'package') {
       selectedTraceId: d.traceId,
       selectedCallId: selected.value?.callId,
       exportKind: kind,
-      format: kind === 'view' ? 'png' : 'zip',
+      format: kind === 'view' ? 'json' : 'zip',
       scope: { type: 'sample', traceIds: [d.traceId], sourceId: null, issueType: null, q: null },
-      contents: kind === 'view' ? ['tools_png'] : [...packageContents.value],
+      contents: kind === 'view' ? ['normalized_json'] : [...packageContents.value],
       redactionProfile: 'standard',
       anonymizeIds: true,
     },
     parent.demo,
     async () =>
       kind === 'view'
-        ? tracePng([
-            '智能体轨迹审计 · 工具交互',
-            d.summary.traceDisplayId,
-            ...d.calls.items.map(
-              (c) =>
-                `${c.displayId} ${c.toolName} ${status(c.executionStatus)} ${c.durationMs ?? '—'}ms`,
-            ),
-          ])
+        ? new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })
         : traceZip([
             {
               name: 'manifest.json',
@@ -358,7 +356,7 @@ async function exportFile(kind: 'view' | 'package') {
         ...exporter.task.value.result,
         artifacts: exporter.task.value.result.artifacts.map((artifact) => ({
           ...artifact,
-          filename: kind === 'view' ? 'agent-trace-view.png' : 'agent-trace-results.zip',
+          filename: kind === 'view' ? 'agent-trace-tools.json' : 'agent-trace-results.zip',
         })),
       },
     }
@@ -371,7 +369,7 @@ function openPackage() {
   if (!canView.value) return
   packageScope.value = 'sample'
   packageContents.value = ['normalized_json', 'evidence_index', 'manifest']
-  packageDialog.value = true
+  return exportFile('package')
 }
 async function confirmPackage() {
   await exportFile('package')
@@ -417,53 +415,12 @@ onUnmounted(() => {
 <template>
   <section class="tools-view">
     <ViewExportStatus
-      v-if="lastExportKind === 'view' && exporter.task.value"
+      v-if="exporter.task.value || exporter.error.value"
       :task="exporter.task.value"
       :error="exporter.error.value"
       :download="exporter.download"
     />
-    <div
-      v-if="lastExportKind !== 'view' && (exporter.task.value || exporter.error.value)"
-      class="tools-export-status"
-      role="status"
-      aria-live="polite"
-    >
-      <span
-        >导出任务 · {{ exporter.task.value?.status || 'failed' }} ·
-        {{ exporter.batchId.value }}</span
-      >
-      <el-progress
-        v-if="exporter.busy.value"
-        :percentage="exporter.progress.value ?? 0"
-        :indeterminate="exporter.progress.value == null"
-        :status="exporter.task.value?.status === 'succeeded' ? 'success' : undefined"
-      />
-      <span v-if="exporter.downloading.value">正在下载…</span>
-      <el-button
-        v-if="
-          !exporter.busy.value &&
-          exporter.task.value &&
-          ['pending', 'running'].includes(exporter.task.value.status)
-        "
-        @click="exporter.resume"
-        >恢复进度查询</el-button
-      >
-      <el-button
-        class="tools-download-button"
-        v-for="artifact in exporter.artifacts.value"
-        :key="artifact.artifactId"
-        :loading="exporter.downloading.value"
-        @click="exporter.download(artifact)"
-        >下载 {{ artifact.filename }}</el-button
-      >
-      <span v-if="exporter.error.value" class="tools-export-error">{{ exporter.error.value }}</span>
-      <el-button
-        v-if="exporter.error.value && exporter.task.value?.status === 'failed'"
-        :disabled="!canView"
-        @click="exportFile(lastExportKind)"
-        >重新导出</el-button
-      >
-    </div>
+
     <div class="tools-query">
       <b>批次</b
       ><el-select v-model="batch" placeholder="请选择批次" @change="changeBatch"
@@ -543,7 +500,7 @@ onUnmounted(() => {
         </div>
       </div>
       <el-alert v-if="options?.batchOptions.items.find(b => b.batchId === result?.scope.batchId)?.activeSnapshotId && options?.batchOptions.items.find(b => b.batchId === result?.scope.batchId)?.activeSnapshotId !== result.scope.snapshotId" title="当前为历史快照，后台已有新的审计结果。" type="info" :closable="false"><el-button link @click="latest">查看最新结果</el-button></el-alert>
-      <RuleFindings :items="result.ruleFindings" :version="result.ruleAudit?.version" @locate="(id, callId) => callId ? selectCall(callId) : router.replace({query:{view:'execution',batchId:result!.scope.batchId,snapshotId:result!.scope.snapshotId,traceId:result!.traceId,eventId:id}})" />
+      <RuleFindings :items="result.ruleFindings" :version="result.ruleAudit?.version" @locate="locateEvent" />
       <div class="tools-columns">
         <div>
           <article class="tool-panel">
@@ -587,8 +544,8 @@ onUnmounted(() => {
                         '耗时（ms）',
                         '状态',
                         '行为标签',
-                        '请求参数（摘要）',
-                        '响应结果（摘要）',
+                        '请求参数',
+                        '返回内容',
                         '证据链',
                       ]"
                       :key="h"
@@ -620,7 +577,7 @@ onUnmounted(() => {
                       ><span v-if="!c.behaviorTags.length">未记录行为标签</span>
                     </td>
                     <td :title="c.inputSummary">{{ c.inputSummary }}</td>
-                    <td>{{ c.outputSummary }}</td>
+                    <td :title="returnContent(c.outputSummary)">{{ c.outputSummary }}</td>
                     <td>{{ c.evidenceChain.map((e) => e.displayId).join(' → ') }}</td>
                   </tr>
                 </tbody>
@@ -750,13 +707,9 @@ onUnmounted(() => {
                   </tr>
                 </tbody>
               </table>
-              <h4>2. 错误归因</h4>
+              <h4>2. 错误类型</h4>
               <p class="tool-explanation">
-                <ToolGlyph
-                  v-if="selected.analysis.errorAttribution"
-                  name="error"
-                  class="error-icon"
-                />{{ selected.analysis.errorAttribution?.message || '无已知异常' }}
+                {{ selected.analysis.errorAttribution?.message || '无已知异常' }}
               </p></template
             >
             <h4>3. 低效调用证据</h4>
