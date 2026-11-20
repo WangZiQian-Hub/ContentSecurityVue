@@ -11,9 +11,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useComplianceStore } from '../../../../stores/compliance'
 import { useExecutionStore } from '../../../../stores/agent-trace-execution'
 import { useExecutionExport } from '../../../../composables/useExecutionExport'
+import { executionEvidenceHttp } from '../../../../api/agent-trace-execution'
 import { traceZip } from '../../../../utils/agent-trace-export'
 import { executionSamples } from '../../../../mock/agent-trace-execution'
-import type { ExecutionText } from '../../../../types/agent-trace-execution'
+import type { ExecutionEvent, ExecutionEvidenceContext, ExecutionText } from '../../../../types/agent-trace-execution'
 const exportState = useExecutionExport()
 const {
   busy: exporting,
@@ -40,6 +41,12 @@ const d = computed(() => store.detail),
 const graph = ref<InstanceType<typeof ExecutionGraph>>()
 const sampleScroll = ref<HTMLDivElement | null>(null)
 const highlightedEvent = ref('')
+const originalEvidenceOpen = ref(false)
+const originalEvidenceLoading = ref(false)
+const originalEvidenceError = ref('')
+const originalEvidence = ref<ExecutionEvidenceContext | null>(null)
+const originalEvidenceEvent = ref('')
+let originalEvidenceController: AbortController | undefined
 const showEventTime = computed(() => d.value?.hasEventTime ??
   !!d.value?.events.items.some(event => typeof event.relativeTimeMs === 'number' && Number.isFinite(event.relativeTimeMs)))
 const reasoningOriginal = computed(() => {
@@ -54,6 +61,63 @@ async function locateEvent(id: string) {
   await nextTick()
   await graph.value?.focusEvent(id)
 }
+function scrollEventRow(id: string, scrollPage = false) {
+  const row = document.getElementById(`execution-log-${id}`)
+  const container = row?.closest('.ex-table')
+  if (!(row instanceof HTMLTableRowElement) || !(container instanceof HTMLElement)) return
+  container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top -
+    (container.clientHeight - row.clientHeight) / 2
+  if (scrollPage) row.closest('.ex-log')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+async function selectFirstRisk(scrollPage = true) {
+  const detail = d.value
+  const id = detail?.firstRiskEventId
+  if (!id) return
+  store.pause()
+  if (s.value?.eventId !== id || !detail.events.items.some(event => event.eventId === id))
+    await store.select(id, true)
+  if (d.value?.traceId !== detail.traceId || d.value.scope.snapshotId !== detail.scope.snapshotId || s.value?.eventId !== id) return
+  await nextTick()
+  scrollEventRow(id, scrollPage)
+}
+async function openOriginalEvidence(event: ExecutionEvent) {
+  const detail = d.value
+  if (!detail) return
+  store.pause()
+  void store.select(event.eventId)
+  originalEvidenceController?.abort()
+  const controller = new AbortController()
+  originalEvidenceController = controller
+  originalEvidenceEvent.value = event.displayId
+  originalEvidence.value = null
+  originalEvidenceError.value = ''
+  originalEvidenceLoading.value = true
+  originalEvidenceOpen.value = true
+  try {
+    const result = await executionEvidenceHttp(detail.scope.batchId, detail.traceId, {
+      ...detail.scope,
+      eventId: event.eventId,
+      redactionMode: store.raw ? 'raw' : 'redacted',
+    }, controller.signal)
+    if (controller.signal.aborted) return
+    if (result.scope.batchId !== detail.scope.batchId ||
+        result.scope.snapshotId !== detail.scope.snapshotId ||
+        result.scope.projectionVersion !== detail.scope.projectionVersion ||
+        result.traceId !== detail.traceId || result.eventId !== event.eventId ||
+        !result.complete || typeof result.originalText !== 'string' ||
+        typeof result.beforeText !== 'string' || typeof result.afterText !== 'string')
+      throw Error('原文证据不完整')
+    originalEvidence.value = result
+  } catch {
+    if (!controller.signal.aborted) originalEvidenceError.value = '暂时无法获取完整原文及前后文，请稍后重试。'
+  } finally {
+    if (!controller.signal.aborted) originalEvidenceLoading.value = false
+  }
+}
+function closeOriginalEvidence() {
+  originalEvidenceController?.abort()
+  originalEvidenceLoading.value = false
+}
 async function copySnippet(text: string) {
   try {
     await navigator.clipboard.writeText(text)
@@ -63,6 +127,14 @@ async function copySnippet(text: string) {
   }
 }
 const eventDescription = (text: unknown) => typeof text === 'string' && text.trim() ? text : ''
+const eventHasRisk = (event: ExecutionEvent) =>
+  event.hasRisk ?? ['high', 'medium', 'low'].includes(event.riskLevel)
+const eventEvidenceSummary = (event: ExecutionEvent) =>
+  event.evidenceSummary ||
+  event.selectionPreview.riskEvidence.items[0]?.matchPattern ||
+  (event.selectionPreview.lineage.nodes.length
+    ? '来源：' + event.selectionPreview.lineage.nodes[0]?.id
+    : '—')
 const duration = (n: number | null) => (n === null ? '未提供' : `${(n / 1000).toFixed(1)} s`)
 const relativeTime = (n: number | null) =>
   n === null
@@ -116,17 +188,22 @@ watch(search, () => {
   debounce = setTimeout(() => void store.search(1, { q: search.value }), 300)
 })
 watch(
+  () => d.value ? `${d.value.scope.batchId}\u0000${d.value.scope.snapshotId}\u0000${d.value.traceId}` : '',
+  (key) => {
+    if (key && !route.query.locateEventId) void selectFirstRisk(false)
+  },
+  { flush: 'post' },
+)
+watch(
   () => s.value?.eventId,
   async () => {
     evidenceIndex.value = 0
     await nextTick()
-    const row = document.getElementById(`execution-log-${s.value?.eventId}`)
-    const container = row?.closest('.ex-table')
-    if (row instanceof HTMLTableRowElement && container)
-      container.scrollTop = Math.max(0, row.sectionRowIndex - 1) * row.offsetHeight
+    if (s.value?.eventId) scrollEventRow(s.value.eventId)
   },
 )
 onUnmounted(() => {
+  closeOriginalEvidence()
   navigationVersion++
   exportState.reset()
   clearTimeout(debounce)
@@ -253,6 +330,7 @@ async function exportResult(kind: 'view' | 'package') {
 }
 
 defineExpose({
+  reportScope: computed(() => w.value?.scope ? { batchId: w.value.scope.batchId, snapshotId: w.value.scope.snapshotId } : null),
   canView: computed(() => store.canExport && !exporting.value && !exportDownloading.value),
   canPackage: computed(() => store.canExport && !exporting.value && !exportDownloading.value),
   exportView: () => exportResult('view'),
@@ -416,7 +494,7 @@ defineExpose({
         <template v-if="d"
           ><section class="ex-card ex-path-panel">
             <h3>
-              思维路径
+              思维轨迹
               <small
                 >（{{ d.graph.nodes.length === d.graph.totalNodes ? '完整' : '已加载' }}
                 {{ d.graph.totalNodes }} 个节点，已解析 {{ d.graph.nodes.length }} /
@@ -588,9 +666,7 @@ defineExpose({
             type="danger"
             plain
             :disabled="!d.firstRiskEventId"
-            @click="
-              store.pause(); d.firstRiskEventId && store.select(d.firstRiskEventId)
-            "
+            @click="selectFirstRisk()"
             >⚑ 首个风险</el-button
           >
         </div>
@@ -605,7 +681,8 @@ defineExpose({
               <th>事件ID</th>
               <th>事件类型</th>
               <th>事件描述</th>
-              <th>证据信息</th>
+              <th>是否有风险</th>
+              <th>原文证据</th>
             </tr>
           </thead>
           <tbody>
@@ -635,14 +712,20 @@ defineExpose({
                   </div>
                 </el-popover>
               </td>
+              <td>{{ eventHasRisk(e) ? '是' : '否' }}</td>
               <td>
-                {{
-                  e.evidenceSummary ||
-                  e.selectionPreview.riskEvidence.items[0]?.matchPattern ||
-                  (e.selectionPreview.lineage.nodes.length
-                    ? '来源：' + e.selectionPreview.lineage.nodes[0]?.id
-                    : '—')
-                }}
+                <div v-if="eventHasRisk(e)" class="ex-evidence-cell">
+                  <el-popover v-if="eventEvidenceSummary(e) !== '—'" trigger="hover" placement="top" :width="520" :show-after="150" :persistent="false">
+                    <template #reference><span class="ex-evidence-preview" tabindex="0">{{ eventEvidenceSummary(e) }}</span></template>
+                    <div @click.stop>
+                      <div class="ex-snippet-toolbar"><b>证据摘要 · {{ e.displayId }}</b><el-button size="small" type="primary" @click.stop="copySnippet(eventEvidenceSummary(e))">复制全文</el-button></div>
+                      <pre class="ex-snippet-full">{{ eventEvidenceSummary(e) }}</pre>
+                    </div>
+                  </el-popover>
+                  <span v-else class="ex-evidence-preview">—</span>
+                  <el-button link type="primary" @click.stop="openOriginalEvidence(e)">查看原文</el-button>
+                </div>
+                <span v-else>无风险</span>
               </td>
             </tr>
           </tbody>
@@ -658,13 +741,30 @@ defineExpose({
       />
     </section>
     <el-dialog
+      v-model="originalEvidenceOpen"
+      :title="`原文证据 · ${originalEvidenceEvent}`"
+      width="min(760px, 92vw)"
+      append-to-body
+      @closed="closeOriginalEvidence"
+    >
+      <div v-loading="originalEvidenceLoading" class="ex-original-evidence">
+        <p v-if="originalEvidenceError" role="alert">{{ originalEvidenceError }}</p>
+        <template v-else-if="originalEvidence">
+          <p v-if="originalEvidence.sourceRef">来源：{{ originalEvidence.sourceRef }}</p>
+          <section><h4>前文</h4><pre>{{ originalEvidence.beforeText || '无' }}</pre></section>
+          <section><h4>完整原文</h4><pre>{{ originalEvidence.originalText }}</pre></section>
+          <section><h4>后文</h4><pre>{{ originalEvidence.afterText || '无' }}</pre></section>
+        </template>
+      </div>
+    </el-dialog>
+    <el-dialog
       v-model="packageDialog"
       title="导出结果包"
       width="640px"
       align-center
       append-to-body
       class="trace-package-dialog"
-      ><h3 class="trace-package-section">思维路径 · 导出范围</h3>
+      ><h3 class="trace-package-section">思维轨迹 · 导出范围</h3>
       <p>已查询批次 {{ w?.scope?.batchId }}，固定快照 {{ w?.scope?.snapshotId }}</p>
       <el-select v-model="packageScope" aria-label="导出范围"
         ><el-option value="batch" label="整个批次（忽略局部筛选）" /><el-option
@@ -882,6 +982,13 @@ tr {
 .ex-log {
   margin-top: 10px;
 }
+.ex-original-evidence { min-height: 72px; max-height: 70vh; overflow: auto; }
+.ex-original-evidence section { margin-top: 16px; }
+.ex-original-evidence h4 { margin: 0 0 6px; }
+.ex-original-evidence pre { margin: 0; padding: 10px; background: #f7faff; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.ex-evidence-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ex-evidence-preview { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-evidence-cell .el-button { flex: none; }
 small {
   color: #7186a1;
 }

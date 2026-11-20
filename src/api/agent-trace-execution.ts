@@ -4,6 +4,7 @@ import type {
   ExecutionWorkspace,
   ExecutionSample,
   ExecutionDetail,
+  ExecutionEvidenceContext,
 } from '../types/agent-trace-execution'
 import type { PageResult } from '../types'
 const root = '/compliance/agent-traces'
@@ -30,3 +31,10 @@ export const executionHttp = {
       silent: true,
     }),
 }
+export const executionEvidenceHttp = (batchId: string, traceId: string, params: ExecutionQuery, signal?: AbortSignal) =>
+  request<ExecutionEvidenceContext>({
+    url: `${root}/batches/${encodeURIComponent(batchId)}/samples/${encodeURIComponent(traceId)}`,
+    params: { ...params, view: 'execution', section: 'evidence' },
+    signal,
+    silent: true,
+  })

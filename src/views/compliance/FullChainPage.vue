@@ -5,7 +5,7 @@ import PanelCard from '../../components/PanelCard.vue'
 import StateBadge from './components/StateBadge.vue'
 import AuditSnapshotPanel from './components/AuditSnapshotPanel.vue'
 import { complianceApi } from '../../api/compliance'
-import { request } from '../../api/request'
+import { listTaskPage } from '../../api/task'
 import { describeError, isNotFound, useComplianceStore } from '../../stores/compliance'
 import { demoTraceEvidences, demoTraceTasks } from '../../mock/compliance'
 import { getTaskCategory, TASK_STATUS } from '../../utils/enums'
@@ -97,17 +97,11 @@ async function loadTasks() {
   }
   try {
     // 后端 /tasks 的 page_size 上限为 100（back/app/routers/tasks.py:276），任务多于一页时逐页取回。
-    const first = await request<{ items: TaskItem[]; total: number }>({
-      url: '/tasks',
-      params: { page: 1, pageSize: 100 },
-    })
+    const first = await listTaskPage<TaskItem>(1, 100)
     const all = [...(first.items ?? [])]
     const pages = Math.ceil((first.total ?? all.length) / 100)
     for (let page = 2; page <= pages; page += 1) {
-      const next = await request<{ items: TaskItem[] }>({
-        url: '/tasks',
-        params: { page, pageSize: 100 },
-      })
+      const next = await listTaskPage<TaskItem>(page, 100)
       all.push(...(next.items ?? []))
     }
     tasks.value = all

@@ -203,6 +203,16 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     pendingKeys.delete(JSON.stringify(payload))
     await load({ batchId: b.batchId, sourceId: query.value.sourceId })
   }
+  async function deleteItem(fileId: string | null) {
+    await action(async () => {
+      const batch = workspace.value?.batch
+      if (!batch) throw new Error('请先选择批次')
+      const payload = { batchId: batch.batchId, expectedVersion: batch.batchVersion, fileId }
+      await api.deleteItem(batch.batchId, batch.batchVersion, fileId, key(payload))
+      pendingKeys.delete(JSON.stringify(payload))
+      await load(fileId ? { batchId: batch.batchId } : {})
+    })
+  }
   async function upload(file: File) {
     return api.upload(
       file,
@@ -277,6 +287,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     action,
     create,
     bind,
+    deleteItem,
     upload,
     submit,
     resume,

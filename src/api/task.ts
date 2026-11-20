@@ -15,6 +15,10 @@ export async function listTasks(): Promise<PageResult<Task>> {
     })),
   }
 }
+/** 全链路追踪按页读取任务，避免只显示第一页。 */
+export function listTaskPage<T>(page: number, pageSize: number): Promise<PageResult<T>> {
+  return request<PageResult<T>>({ url: '/tasks', params: { page, pageSize } })
+}
 export function getTask(taskId: string): Promise<Task> {
   if (isMock) {
     const task = tasks.find((item) => item.taskId === taskId)

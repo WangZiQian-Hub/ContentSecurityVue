@@ -103,12 +103,12 @@ function print(value: unknown) {
 </script>
 
 <template>
-  <el-dialog v-model="open" title="赛题二 · 批次审计报告" width="min(1120px, 94vw)" destroy-on-close>
+  <el-dialog v-model="open" title="赛题二 · 批次审计报告" width="min(1120px, 94vw)" class="competition-report-dialog" destroy-on-close>
     <el-alert v-if="error" type="error" :closable="false" :title="error" />
     <p v-else-if="loading" role="status">正在读取批次审计报告…</p>
     <div v-else-if="result" class="competition-report">
       <div class="report-controls">
-        <el-select v-model="selected" aria-label="赛题轨迹" filterable>
+        <el-select v-model="selected" aria-label="赛题轨迹" popper-class="competition-report-select-popper" filterable>
           <el-option v-for="row in samples" :key="row.trajectory_id" :value="row.trajectory_id" :label="row.trajectory_id" />
         </el-select>
         <el-button
@@ -116,18 +116,18 @@ function print(value: unknown) {
           @click="download(jsonl, 'submission.jsonl', 'application/x-ndjson')"
         >下载 submission.jsonl</el-button>
       </div>
-      <el-tabs v-model="active">
+      <el-tabs v-model="active" class="report-tabs">
         <el-tab-pane name="statistics" label="统计指标">
-          <p>本轨迹输入 {{ result.A1.input_tokens }} Token，输出 {{ result.A1.output_tokens }} Token。</p>
-          <p>已保存思考正文 {{ result.A2.known_characters }} 字符。工具调用 {{ result.A3.tool_calls }} 次，涉及 {{ result.A3.tool_kinds }} 种工具。</p>
+          <p class="report-summary">本轨迹输入 {{ result.A1.input_tokens }} Token，输出 {{ result.A1.output_tokens }} Token。</p>
+          <p class="report-summary">已保存思考正文 {{ result.A2.known_characters }} 字符。工具调用 {{ result.A3.tool_calls }} 次，涉及 {{ result.A3.tool_kinds }} 种工具。</p>
           <dl class="tool-counts">
-            <template v-for="(count, name) in result.A3.tool_counts" :key="name"><dt>{{ name }}</dt><dd>{{ count }} 次</dd></template>
+            <div v-for="(count, name) in result.A3.tool_counts" :key="name" class="report-tool-count"><dt>{{ name }}</dt><dd>{{ count }} 次</dd></div>
           </dl>
           <template v-if="summary">
             <h3>批次汇总</h3>
-            <p>{{ samples.length }} 条轨迹，共 {{ summary.tool_calls }} 次调用。</p>
+            <p class="report-summary">{{ samples.length }} 条轨迹，共 {{ summary.tool_calls }} 次调用。</p>
             <dl class="tool-counts">
-              <template v-for="(count, name) in summary.tool_counts" :key="name"><dt>{{ name }}</dt><dd>{{ count }} 次</dd></template>
+              <div v-for="(count, name) in summary.tool_counts" :key="name" class="report-tool-count"><dt>{{ name }}</dt><dd>{{ count }} 次</dd></div>
             </dl>
           </template>
         </el-tab-pane>
@@ -181,13 +181,37 @@ function print(value: unknown) {
 </template>
 
 <style scoped>
-.competition-report { max-height: 72vh; overflow: auto; padding-right: 8px; }
-.report-controls { display: flex; gap: 12px; flex-wrap: wrap; }
+:global(.competition-report-dialog) { border-radius: 12px; }
+:global(.competition-report-dialog .el-dialog__header) { padding: 20px 24px 16px; margin: 0; border-bottom: 1px solid #e2eaf6; }
+:global(.competition-report-dialog .el-dialog__title) { color: #17345e; font-size: 24px; font-weight: 700; }
+:global(.competition-report-dialog .el-dialog__body) { padding: 20px 24px 24px; }
+:global(.competition-report-dialog .el-dialog__body > p) { font-size: 16px; line-height: 1.7; }
+:global(.competition-report-select-popper .el-select-dropdown__item) { font-size: 16px; }
+.competition-report { max-height: 72vh; overflow: auto; padding-right: 4px; color: #263b5a; font-size: 16px; line-height: 1.7; }
+.report-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
 .report-controls .el-select { width: min(380px, 100%); }
-.tool-counts { display: grid; grid-template-columns: minmax(100px, 240px) auto; gap: 6px 12px; }
-.tool-counts dd { margin: 0; }
-details { padding-block: 6px; }
-summary { cursor: pointer; }
-pre { max-height: 32vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #f5f8fc; padding: 10px; }
-.report-json { max-height: 52vh; tab-size: 2; }
+.report-controls .el-button, .report-controls :deep(.el-select__selected-item) { font-size: 17px; }
+.report-controls span { color: #6d7f9c; font-size: 14px; }
+.report-tabs :deep(.el-tabs__header) { margin-bottom: 18px; }
+.report-tabs :deep(.el-tabs__item) { font-size: 17px; }
+.report-tabs :deep(.el-collapse-item__header) { font-size: 16px; font-weight: 600; }
+.report-tabs :deep(.el-collapse-item__content) { font-size: 16px; line-height: 1.7; }
+.report-summary { margin: 0 0 10px; padding: 12px 16px; border: 1px solid #e2eafa; border-radius: 8px; background: #f7faff; font-size: 18px; line-height: 1.6; }
+.competition-report h3 { margin: 24px 0 12px; color: #17345e; font-size: 20px; line-height: 1.4; }
+.tool-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 10px; margin: 14px 0 20px; }
+.report-tool-count { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid #e1eaf8; border-radius: 8px; background: #fff; }
+.report-tool-count dt { min-width: 0; color: #61789d; font-size: 16px; overflow-wrap: anywhere; }
+.report-tool-count dd { flex: none; margin: 0; color: #254ed7; font-size: 18px; font-weight: 700; }
+details { margin: 10px 0; padding: 10px 14px; border: 1px solid #e2eafa; border-radius: 8px; background: #fbfdff; }
+summary { cursor: pointer; color: #17345e; font-size: 17px; font-weight: 600; }
+details[open] summary { margin-bottom: 10px; }
+.competition-report p { overflow-wrap: anywhere; }
+pre { max-height: 32vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; padding: 12px 14px; border-radius: 6px; background: #f3f7fc; color: #213a5c; font: 15px/1.65 Consolas, monospace; }
+.report-json { max-height: 52vh; tab-size: 2; font-size: 14.5px; }
+@media (max-width: 640px) {
+  :global(.competition-report-dialog .el-dialog__header) { padding: 16px; }
+  :global(.competition-report-dialog .el-dialog__body) { padding: 16px; }
+  .report-controls .el-select { width: 100%; }
+  .tool-counts { grid-template-columns: minmax(0, 1fr); }
+}
 </style>

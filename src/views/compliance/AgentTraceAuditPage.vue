@@ -4,6 +4,7 @@ import { traceBatchLabel } from '../../utils/agent-trace-presentation'
 import ViewExportStatus from './components/agent-traces/ViewExportStatus.vue'
 const autoViewExport = ref(false)
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { useComplianceStore } from '../../stores/compliance'
 import { useAgentTraceStore } from '../../stores/agent-traces'
@@ -58,6 +59,15 @@ const toolsPage = ref<InstanceType<typeof ToolsView>>()
 const executionPage = ref<InstanceType<typeof ExecutionView>>()
 const statisticsPage = ref<InstanceType<typeof TraceStatisticsPage>>()
 const competitionOpen = ref(false)
+const competitionScope = computed(() => {
+  if (view.value === 'statistics') return statisticsPage.value?.reportScope
+  if (view.value === 'execution') return executionPage.value?.reportScope
+  if (view.value === 'tools') return toolsPage.value?.reportScope
+  const batch = w.value?.batch
+  return batch?.activeSnapshotId
+    ? { batchId: batch.batchId, snapshotId: store.query.snapshotId || batch.activeSnapshotId }
+    : null
+})
 // Text-only highlighting: preserve source bytes and never inject log HTML.
 function sourceTokens(line: string) {
   const tokens: { text: string; kind: string }[] = []
@@ -233,6 +243,22 @@ async function createBatch() {
     batchDialog.value = false
     syncUrl()
   }
+}
+async function deleteItem(fileId: string | null) {
+  const batch = w.value?.batch
+  if (!batch) return
+  const file = fileId ? w.value?.files.items.find((item) => item.fileId === fileId) : null
+  try {
+    await ElMessageBox.confirm(
+      file ? `确定删除文件“${file.filename}”吗？` : `确定删除空批次“${batch.name}”吗？`,
+      '确认删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  await store.deleteItem(fileId)
+  if (!store.actionError) syncUrl()
 }
 async function changeSource(sourceId: string) {
   await store.load({ sourceId })
@@ -420,10 +446,6 @@ onUnmounted(() => {
   >
     <header class="at-heading">
       <h1>智能体轨迹审计</h1>
-      <el-button
-        v-if="view === 'ingest' && !parent.demo && w?.batch?.activeSnapshotId"
-        @click="competitionOpen = true"
-      >赛题二审计报告</el-button>
       <div>
         <el-button
           :type="
@@ -436,22 +458,26 @@ onUnmounted(() => {
           "
           :disabled="
             view === 'tools'
-              ? !toolsPage?.canView
+              ? !toolsPage?.canView || (!parent.demo && !competitionScope)
               : view === 'execution'
-                ? !executionPage?.canView
+                ? !executionPage?.canView || (!parent.demo && !competitionScope)
                 : view === 'statistics'
-                  ? !statisticsPage?.canView
-                  : !canExport || !pngAllowed || working
+                  ? !statisticsPage?.canView || (!parent.demo && !competitionScope)
+                  : parent.demo
+                    ? !canExport || !pngAllowed || working
+                    : !competitionScope
           "
-          title="按当前快照和筛选导出JSON文件"
+          :title="parent.demo ? '按当前快照和筛选导出JSON文件' : '查看赛题二批次审计报告'"
           @click="
-            view === 'tools'
-              ? toolsPage?.exportView()
-              : view === 'execution'
-                ? executionPage?.exportView()
-                : view === 'statistics'
-                  ? statisticsPage?.exportView()
-                  : exportResult('view')
+            !parent.demo
+              ? (competitionOpen = true)
+              : view === 'tools'
+                ? toolsPage?.exportView()
+                : view === 'execution'
+                  ? executionPage?.exportView()
+                  : view === 'statistics'
+                    ? statisticsPage?.exportView()
+                    : exportResult('view')
           "
           ><AppIcon name="Download" />导出当前JSON文件</el-button
         ><el-button
@@ -479,10 +505,10 @@ onUnmounted(() => {
       </div>
     </header>
     <TraceCompetitionReport
-      v-if="!parent.demo && w?.batch && (store.query.snapshotId || w.batch.activeSnapshotId)"
+      v-if="!parent.demo && competitionScope"
       v-model="competitionOpen"
-      :batch-id="w.batch.batchId"
-      :snapshot-id="store.query.snapshotId || w.batch.activeSnapshotId || ''"
+      :batch-id="competitionScope.batchId"
+      :snapshot-id="competitionScope.snapshotId"
     />
     <nav class="at-tabs" aria-label="智能体轨迹审计页面">
       <button
@@ -627,6 +653,14 @@ onUnmounted(() => {
                 type="info"
                 :closable="false"
               />
+              <el-button
+                v-if="w.batch && !w.files.total && !queue.length && w.batch.allowedActions.includes('upload')"
+                type="danger"
+                plain
+                size="small"
+                :disabled="working"
+                @click="deleteItem(null)"
+              >删除批次</el-button>
               <div v-for="f in w.files.items" :key="f.fileId" class="at-file">
                 <AppIcon name="Document" /><strong>{{ f.filename }}</strong>
                 <div class="at-recognition">
@@ -648,6 +682,15 @@ onUnmounted(() => {
                     {{ labels[f.parseStatus] || f.parseStatus }}</span
                   ></span
                 >
+                <el-button
+                  v-if="['pending', 'failed'].includes(f.parseStatus) && f.parsedTraceCount === 0 && w.batch?.allowedActions.includes('bind_files')"
+                  class="at-delete-file"
+                  type="danger"
+                  plain
+                  size="small"
+                  :disabled="working"
+                  @click="deleteItem(f.fileId)"
+                >删除文件</el-button>
                 <p v-for="e in f.errorExamples" :key="e.lineStart" class="at-warning">
                   第 {{ e.lineStart }} 条：{{ e.message }}
                 </p>

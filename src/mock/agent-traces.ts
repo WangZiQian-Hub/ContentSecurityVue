@@ -700,6 +700,30 @@ export function createAgentTraceMock(): AgentTraceApi {
         }
         return { batch: structuredClone(s.batch) }
       }),
+    deleteItem: (batchId, version, fileId, key) =>
+      once(key, { batchId, version, fileId }, async () => {
+        const s = state(batchId)
+        if (s.batch.batchVersion !== version) throw new Error('批次版本冲突，请刷新后重试')
+        if (
+          [...jobs.values()].some(
+            (j) => ['pending', 'running'].includes(j.task.status) && j.task.result?.batchId === batchId,
+          )
+        ) throw new Error('正在解析，请稍后删除')
+        if (fileId) {
+          const index = s.files.findIndex((file) => file.fileId === fileId)
+          if (index < 0) throw new Error('文件不存在')
+          if (!['pending', 'failed'].includes(s.files[index]!.parseStatus) || s.files[index]!.parsedTraceCount !== 0)
+            throw new Error('只能删除待解析或解析失败的文件')
+          s.files.splice(index, 1)
+          uploads.delete(fileId)
+          s.batch.batchVersion++
+          s.batch.stagingChanged = true
+        } else {
+          if (s.files.length) throw new Error('只能删除没有文件的空批次')
+          batches.splice(batches.indexOf(s), 1)
+        }
+        return { deleted: true }
+      }),
     async samples(batchId, q) {
       return structuredClone(
         page(

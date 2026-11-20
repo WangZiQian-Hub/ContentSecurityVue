@@ -682,7 +682,7 @@ button:focus-visible {
 }
 .at-ingest .at-file {
   display: grid;
-  grid-template-columns: 22px minmax(170px, 38%) minmax(0, 1fr) max-content;
+  grid-template-columns: 22px minmax(170px, 38%) minmax(0, 1fr) max-content max-content;
   justify-content: start;
   padding: 4px 10px;
   min-height: 34px;
@@ -766,6 +766,11 @@ button:focus-visible {
 .at-ingest .at-parse-status.at-warning :deep(.el-icon) {
   color: #cf8c16;
   font-size: 18px;
+}
+.at-ingest .at-file .at-delete-file {
+  grid-column: 5;
+  margin: 0;
+  white-space: nowrap;
 }
 .at-ingest .at-file p {
   grid-column: 2 / -1;
@@ -902,13 +907,21 @@ button:focus-visible {
 }
 .at-normalized-field--wide {
   grid-column: 1 / -1;
-  grid-template-columns: 75px minmax(0, 1fr) 24px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: start;
   border-top: 1px solid #e5edf7;
   padding-top: 10px;
   gap: 8px;
 }
+.at-normalized-field--wide > span {
+  grid-column: 1 / -1;
+}
+.at-normalized-field--wide > code {
+  grid-column: 1;
+}
 .at-normalized-field--wide > .el-button {
+  grid-column: 2;
+  grid-row: 2;
   margin: 0;
 }
 .at-ingest .at-fields {

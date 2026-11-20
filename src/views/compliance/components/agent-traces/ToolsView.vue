@@ -375,7 +375,10 @@ async function confirmPackage() {
   await exportFile('package')
   if (!exporter.error.value) packageDialog.value = false
 }
-defineExpose({ canView, exportView, openPackage })
+defineExpose({
+  reportScope: computed(() => result.value ? { batchId: result.value.scope.batchId, snapshotId: result.value.scope.snapshotId } : null),
+  canView, exportView, openPackage,
+})
 watch(
   () => [batch.value, sample.value],
   () => {

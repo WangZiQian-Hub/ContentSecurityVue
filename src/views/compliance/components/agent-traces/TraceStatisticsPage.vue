@@ -174,6 +174,7 @@ async function exportPackage() {
   if (!store.exportError) packageDialog.value = false
 }
 defineExpose({
+  reportScope: computed(() => w.value?.scope ? { batchId: w.value.scope.batchId, snapshotId: w.value.scope.snapshotId } : null),
   exportView: async () => {
     store.task = null
     autoViewExport.value = true

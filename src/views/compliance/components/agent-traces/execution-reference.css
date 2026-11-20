@@ -87,6 +87,8 @@
 .at-execution .ex-log.ex-no-time th:nth-child(3){width:160px}
 .at-execution .ex-log.ex-no-time th:nth-child(4){width:auto}
 .at-execution .ex-log.ex-no-time th:nth-child(5){width:29%}
+.at-execution .ex-log:not(.ex-no-time) th:nth-child(6),.at-execution .ex-log.ex-no-time th:nth-child(5){width:90px}
+.at-execution .ex-log:not(.ex-no-time) th:nth-child(7),.at-execution .ex-log.ex-no-time th:nth-child(6){width:27%}
 .at-execution .ex-query{min-height:106px;row-gap:8px}
 .at-execution .ex-query>label{font-size:14px;line-height:32px}
 .at-execution .ex-query .el-select__wrapper{height:32px;min-height:32px}

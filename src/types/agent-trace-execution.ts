@@ -31,7 +31,7 @@ export interface ExecutionQuery {
   eventId?: string
   eventPage?: number
   eventPageSize?: number
-  section?: 'overview' | 'events' | 'selection' | 'graph'
+  section?: 'overview' | 'events' | 'selection' | 'graph' | 'evidence'
   redactionMode?: 'raw' | 'redacted'
   graphCursor?: string
   patternPage?: number
@@ -74,7 +74,18 @@ export interface ExecutionEvent {
   evidenceSummary?: string
   relativeTimeMs: number | null
   riskLevel: string
+  hasRisk?: boolean
   selectionPreview: ExecutionSelection
+}
+export interface ExecutionEvidenceContext {
+  scope: ExecutionScope
+  traceId: string
+  eventId: string
+  sourceRef: string | null
+  beforeText: string
+  originalText: string
+  afterText: string
+  complete: boolean
 }
 export interface ExecutionGraph {
   nodes: { eventId: string; displayId: string; ordinal: number; label: string; riskLevel: string }[]

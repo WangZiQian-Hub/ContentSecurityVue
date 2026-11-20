@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { request } from '../../../api/request'
+import { auditSnapshotHttp } from '../../../api/evaluation'
 import type { SourceContext, Sample } from '../../../types/evaluation'
 
 const props = withDefaults(
@@ -51,24 +51,16 @@ async function save() {
   rows.value = []
   error.value = ''
   try {
-    const source = await request<SourceContext>({
-      url: '/evaluation/audit-snapshots',
-      method: 'POST',
-      timeout: 180000,
-      data: {
-        kind: props.kind,
-        entityType: props.entityType,
-        entityId: props.entityId,
-        versionId: props.versionId,
-        direction: props.direction,
-      },
+    const source = await auditSnapshotHttp.create({
+      kind: props.kind,
+      entityType: props.entityType,
+      entityId: props.entityId,
+      versionId: props.versionId,
+      direction: props.direction,
     })
     if (current !== generation) return
     saved.value = source
-    const detail = await request<{ snapshot: { samples: Sample[] } }>({
-      url: `/evaluation/audit-snapshots/${encodeURIComponent(source.entityId)}`,
-      params: { versionId: source.versionId },
-    })
+    const detail = await auditSnapshotHttp.detail(source.entityId, source.versionId)
     if (current === generation) rows.value = detail.snapshot.samples
   } catch (cause) {
     if (current === generation)

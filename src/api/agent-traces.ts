@@ -35,6 +35,14 @@ export const agentTraceHttp: AgentTraceApi = {
       headers: headers(key),
       silent: true,
     }),
+  deleteItem: (batchId, expectedVersion, fileId, key) =>
+    request({
+      url: `${root}/batches/${id(batchId)}/deletions`,
+      method: 'POST',
+      data: { expectedVersion, fileId },
+      headers: headers(key),
+      silent: true,
+    }),
   samples: (batchId, params, signal) =>
     request({ url: `${root}/batches/${id(batchId)}/samples`, params, signal, silent: true }),
   detail: (batchId, traceId, params, signal) =>

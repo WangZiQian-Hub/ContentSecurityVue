@@ -55,7 +55,7 @@ const links = computed(() =>
     <svg
       :viewBox="'0 0 840 ' + Math.max(72, Math.ceil(nodes.length / 6) * 72)"
       role="group"
-      aria-label="思维路径图"
+      aria-label="思维轨迹图"
     >
       <defs>
         <marker

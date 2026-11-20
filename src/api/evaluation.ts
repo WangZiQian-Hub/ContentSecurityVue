@@ -25,8 +25,30 @@ import type {
   RecordResolution,
   RevisionDefinition,
   Sample,
+  SourceContext,
 } from '../types/evaluation'
 const id = encodeURIComponent
+/** 合规页保存评估快照，并读取生成后的样本明细。 */
+export const auditSnapshotHttp = {
+  create: (data: {
+    kind: 'lineage' | 'task' | 'checkpoints'
+    entityType: 'model' | 'dataset' | 'task' | 'training_task'
+    entityId: string
+    versionId: string
+    direction: 'upstream' | 'downstream' | 'both'
+  }) =>
+    platformRequest<SourceContext>({
+      url: '/evaluation/audit-snapshots',
+      method: 'POST',
+      timeout: 180000,
+      data,
+    }),
+  detail: (entityId: string, versionId: string) =>
+    platformRequest<{ snapshot: { samples: Sample[] } }>({
+      url: `/evaluation/audit-snapshots/${id(entityId)}`,
+      params: { versionId },
+    }),
+}
 function request<T>(
   config: Omit<AxiosRequestConfig, 'headers'> & { headers?: Record<string, string> },
 ): Promise<T> {
