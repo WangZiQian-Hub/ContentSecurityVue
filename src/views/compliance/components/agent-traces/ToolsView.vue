@@ -708,7 +708,7 @@ onUnmounted(() => {
                 </tbody>
               </table>
               <h4>2. 错误类型</h4>
-              <p class="tool-explanation">
+              <p class="tool-explanation" :class="{ 'has-error': !!selected.analysis.errorAttribution?.message }">
                 {{ selected.analysis.errorAttribution?.message || '无已知异常' }}
               </p></template
             >
@@ -1373,6 +1373,15 @@ button:not(.el-button) {
   font-size: 12px;
   padding: 3px 0 8px;
   color: #263950;
+}
+.tools-view .tool-explanation.has-error {
+  padding: 8px 10px;
+  border-left: 3px solid #e93d51;
+  border-radius: 4px;
+  background: #fff1f2;
+  color: #a91f32;
+  font-size: 13px;
+  font-weight: 700;
 }
 .tools-view .tool-explanation .tool-glyph {
   width: 19px;

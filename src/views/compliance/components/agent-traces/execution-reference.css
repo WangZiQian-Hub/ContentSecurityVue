@@ -49,7 +49,8 @@
 .at-execution dl{grid-template-columns:130px 1fr;font-size:14px;margin:0;line-height:18px}
 .at-execution dt,.at-execution dd{padding:4px 10px;height:29px;border-color:#e0e9f5;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .at-execution dt{background:#f0f6ff;color:#5b7390;font-weight:600}.at-execution dd{background:#fcfdff;color:#2a405d}.at-execution dd.high{background:#fcfdff!important;font-weight:700;color:#dc2428!important}
-.at-execution .ex-bar{grid-template-columns:155px 1fr;gap:8px;margin:9px 0;line-height:18px;font-size:14px}
+.at-execution .ex-bar{grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px;margin:9px 0;line-height:18px;font-size:14px}
+.at-execution .ex-bar>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .at-execution .ex-bar .el-progress-bar__outer{height:11px!important;background:#dfe8f2}.at-execution .ex-bar .el-progress-bar__inner{background:#147cff}
 .at-execution .ex-distribution-note{display:none}
 .at-execution .ex-pattern-heading,.at-execution .ex-pattern{display:grid;grid-template-columns:42px 105px minmax(0,1fr) 72px;gap:0;align-items:center;line-height:20px;font-size:13px}

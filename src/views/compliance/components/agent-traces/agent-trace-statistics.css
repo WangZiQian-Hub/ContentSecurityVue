@@ -743,6 +743,8 @@
 .ats-statistics .ats-list-tabs { flex-wrap: wrap; gap: 8px; }
 .ats-statistics .ats-list-tabs small { margin-left: 0; }
 .ats-statistics .ats-sample-table .cell { font-size: 14px; line-height: 1.6; }
+.ats-statistics .ats-sample-table .ats-sample-id .cell { white-space: normal; overflow-wrap: anywhere; }
+.ats-statistics .ats-sample-table .ats-sample-id .el-button { max-width: 100%; height: auto; white-space: normal; text-align: left; }
 .compliance-workspace .agent-traces .ats-statistics .ats-sample-table td.el-table__cell,
 .compliance-workspace .agent-traces .ats-statistics .ats-sample-table th.el-table__cell { padding: 9px 0; }
 .ats-statistics .ats-pagination { font-size: 14px; flex-wrap: wrap; gap: 16px; }

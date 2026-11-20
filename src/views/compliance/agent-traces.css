@@ -682,7 +682,7 @@ button:focus-visible {
 }
 .at-ingest .at-file {
   display: grid;
-  grid-template-columns: 22px minmax(170px, 38%) minmax(230px, 260px) max-content;
+  grid-template-columns: 22px minmax(170px, 38%) minmax(0, 1fr) max-content;
   justify-content: start;
   padding: 4px 10px;
   min-height: 34px;
@@ -706,9 +706,21 @@ button:focus-visible {
 }
 .at-ingest .at-recognition {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   min-width: 0;
+}
+.at-ingest .at-recognition :deep(.el-tag) {
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.at-ingest .at-recognition :deep(.el-tag__content) {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .at-ingest .at-recognition-label {
   flex: 0 0 auto;

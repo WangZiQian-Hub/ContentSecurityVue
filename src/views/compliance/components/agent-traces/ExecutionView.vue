@@ -38,6 +38,7 @@ const d = computed(() => store.detail),
   evidence = computed(() => s.value?.riskEvidence.items[evidenceIndex.value]),
   w = computed(() => store.workspace)
 const graph = ref<InstanceType<typeof ExecutionGraph>>()
+const sampleScroll = ref<HTMLDivElement | null>(null)
 const highlightedEvent = ref('')
 const showEventTime = computed(() => d.value?.hasEventTime ??
   !!d.value?.events.items.some(event => typeof event.relativeTimeMs === 'number' && Number.isFinite(event.relativeTimeMs)))
@@ -170,6 +171,10 @@ function applyFilters() {
     riskLevel: risk.value,
     auditDecision: audit.value,
   })
+}
+function toggleFilter() {
+  filter.value = !filter.value
+  if (filter.value && sampleScroll.value) sampleScroll.value.scrollTop = 0
 }
 async function exportResult(kind: 'view' | 'package') {
   if (!store.canExport || !d.value || !w.value?.scope || exporting.value || exportDownloading.value)
@@ -344,11 +349,11 @@ defineExpose({
           <el-input v-model="search" placeholder="搜索样本ID、风险类型或关键词" /><el-button
             aria-label="筛选"
             :aria-expanded="filter"
-            @click="filter = !filter"
+            @click="toggleFilter"
             ><AppIcon name="Filter"
           /></el-button>
         </div>
-        <div class="ex-sample-scroll">
+        <div ref="sampleScroll" class="ex-sample-scroll">
           <div v-if="filter">
             <el-select v-model="language"
               ><el-option
@@ -466,7 +471,7 @@ defineExpose({
                 </p>
               </article>
               <article>
-                <b>已记录推理原文</b>
+                <b>已记录思考原文</b>
                 <p>
                   <template v-if="reasoningOriginal"><template v-for="(t, i) in tokens(reasoningOriginal)" :key="i"
                     ><mark v-if="t.mark">{{ t.text }}</mark

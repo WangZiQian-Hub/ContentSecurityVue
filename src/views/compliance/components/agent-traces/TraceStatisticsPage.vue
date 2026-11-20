@@ -33,6 +33,12 @@ const draft = ref({ batchId: '', language: 'all' }),
   subset = ref(false),
   contents = ref(['stats_summary', 'sample_table', 'normalized_json', 'manifest'])
 const w = computed(() => store.workspace)
+const sampleIdColumnWidth = computed(() =>
+  Math.min(
+    360,
+    Math.max(102, ...(w.value?.samplePage.items ?? []).map((row) => row.displayId.length * 8 + 24)),
+  ),
+)
 const rowClass = ({ row }: { row: { traceId: string } }) =>
   row.traceId === store.selectedId ? 'ats-selected' : ''
 const labels = [
@@ -313,7 +319,7 @@ onUnmounted(() => {
           empty-text="当前筛选范围没有样本"
           class="ats-sample-table"
         >
-          <el-table-column label="样本 ID" min-width="102"
+          <el-table-column label="样本 ID" :min-width="sampleIdColumnWidth" class-name="ats-sample-id"
             ><template #default="{ row }"
               ><el-button
                 link

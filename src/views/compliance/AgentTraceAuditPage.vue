@@ -31,6 +31,29 @@ const view = computed(() =>
   views.some((v) => v.code === route.query.view) ? (String(route.query.view) as View) : 'ingest',
 )
 const index = computed(() => views.findIndex((v) => v.code === view.value))
+const returnPath = ref('')
+let returning = false
+watch(
+  () => route.fullPath,
+  (current, previous) => {
+    if (!previous) return
+    const from = router.resolve(previous).query.view || 'ingest'
+    const to = router.resolve(current).query.view || 'ingest'
+    if (from === to) return
+    if (returning) {
+      returning = false
+      return
+    }
+    returnPath.value = previous
+  },
+)
+function returnToPreviousView() {
+  if (!returnPath.value) return
+  const target = returnPath.value
+  returnPath.value = ''
+  returning = true
+  void router.replace(target)
+}
 const toolsPage = ref<InstanceType<typeof ToolsView>>()
 const executionPage = ref<InstanceType<typeof ExecutionView>>()
 const statisticsPage = ref<InstanceType<typeof TraceStatisticsPage>>()
@@ -181,7 +204,7 @@ watch(view, async (next, previous) => {
   if (previous === 'statistics' || previous === 'execution' || previous === 'tools') {
     await store.load(
       Object.fromEntries(
-        ['batchId', 'snapshotId', 'traceId', 'eventId'].flatMap((k) =>
+        ['batchId', 'sourceId', 'snapshotId', 'traceId', 'eventId', 'issueType'].flatMap((k) =>
           typeof route.query[k] === 'string' ? [[k, route.query[k]]] : [],
         ),
       ),
@@ -471,6 +494,7 @@ onUnmounted(() => {
       >
         {{ v.label }}</button
       ><span class="at-page"
+        ><el-button v-if="returnPath" text @click="returnToPreviousView">← 返回</el-button
         ><el-button
           text
           :disabled="index === 0"
