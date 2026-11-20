@@ -34,6 +34,12 @@ const parent = useComplianceStore(),
   drawer = ref(false),
   raw = ref(''),
   exporter = useExecutionExport()
+const expandedEvidence = ref<Record<string, boolean>>({})
+const evidenceCalls = ref<Record<string, ToolSelection>>({})
+const evidenceLoading = ref<Record<string, boolean>>({})
+const evidenceErrors = ref<Record<string, string>>({})
+const duplicateToolLoading = ref(false)
+const duplicateToolError = ref('')
 let selectionVersion = 0,
   optionVersion = 0
 const initialSnapshot = ref<string>()
@@ -154,6 +160,10 @@ async function query() {
       throw Error('调用详情上下文不一致')
     result.value = data
     selected.value = data.selection
+    expandedEvidence.value = {}
+    evidenceCalls.value = {}
+    duplicateToolLoading.value = false
+    duplicateToolError.value = ''
     if (!options.value.sampleOptions.items.some((s) => s.traceId === data.traceId))
       options.value.sampleOptions.items.unshift({
         traceId: data.traceId,
@@ -268,9 +278,114 @@ function locateEvent(eventId: string) {
   })
 }
 const displayCall = (id: string) =>
+  evidenceCalls.value[id]?.displayId ||
   result.value?.calls.items.find((c) => c.callId === id)?.displayId ||
   result.value?.sequence.items.find((c) => c.callId === id)?.displayId ||
+  (id.match(/^call_(\d+)$/) ? `CALL-${id.match(/^call_(\d+)$/)?.[1]?.padStart(2, '0')}` : '') ||
   id
+const evidenceKey = (firstId: string, duplicateId: string) => `${firstId}:${duplicateId}`
+const duplicateToolIds = computed(() => [...new Set(
+  result.value?.sampleAnalysis.inefficiencyGroups.flatMap((group) => group.duplicateCallIds) || [],
+)])
+const duplicateToolCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const callId of duplicateToolIds.value) {
+    const call = evidenceCalls.value[callId] ||
+      result.value?.calls.items.find((item) => item.callId === callId) ||
+      result.value?.sequence.items.find((item) => item.callId === callId)
+    if (!call) continue
+    const name = call.toolName || '未记录工具名称'
+    counts.set(name, (counts.get(name) || 0) + 1)
+  }
+  return [...counts].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }))
+})
+const duplicateToolMax = computed(() => Math.max(1, ...duplicateToolCounts.value.map((item) => item.count)))
+async function loadDuplicateTools() {
+  if (!result.value || duplicateToolLoading.value) return
+  const current = generation
+  duplicateToolError.value = ''
+  duplicateToolLoading.value = true
+  try {
+    for (const callId of duplicateToolIds.value) {
+      if (evidenceCalls.value[callId] || result.value.calls.items.some((item) => item.callId === callId) ||
+        result.value.sequence.items.some((item) => item.callId === callId)) continue
+      const detail = await api().detail(result.value.scope.batchId, result.value.traceId, {
+        ...scopeParams(), section: 'selection', callId,
+      })
+      if (current !== generation) return
+      if (!detail.selection || detail.selection.callId !== callId) throw Error('重复调用详情未返回')
+      evidenceCalls.value[callId] = detail.selection
+    }
+  } catch (cause) {
+    if (current === generation)
+      duplicateToolError.value = cause instanceof Error ? cause.message : '工具名称加载失败'
+  } finally {
+    if (current === generation) duplicateToolLoading.value = false
+  }
+}
+async function expandEvidence(firstId: string, duplicateId: string) {
+  const key = evidenceKey(firstId, duplicateId)
+  if (expandedEvidence.value[key]) {
+    expandedEvidence.value[key] = false
+    return
+  }
+  expandedEvidence.value[key] = true
+  if (!result.value || (evidenceCalls.value[firstId] && evidenceCalls.value[duplicateId])) return
+  const current = generation
+  evidenceLoading.value[key] = true
+  evidenceErrors.value[key] = ''
+  try {
+    for (const callId of [firstId, duplicateId]) {
+      if (evidenceCalls.value[callId]) continue
+      const detail = await api().detail(result.value.scope.batchId, result.value.traceId, {
+        ...scopeParams(), section: 'selection', callId,
+      })
+      if (current !== generation) return
+      if (!detail.selection || detail.selection.callId !== callId) throw Error('调用证据未返回')
+      evidenceCalls.value[callId] = detail.selection
+    }
+  } catch (cause) {
+    if (current === generation)
+      evidenceErrors.value[key] = cause instanceof Error ? cause.message : '证据加载失败'
+  } finally {
+    if (current === generation) evidenceLoading.value[key] = false
+  }
+}
+function requestEvidence(call?: ToolSelection) {
+  if (!call) return '未提供'
+  const visible = result.value?.calls.items.find((item) => item.callId === call.callId) ||
+    result.value?.sequence.items.find((item) => item.callId === call.callId)
+  return visible?.inputSummary ||
+    (call as ToolSelection & { inputSummary?: string }).inputSummary || '未提供'
+}
+function readScope(call: ToolSelection) {
+  try {
+    const input = JSON.parse(call.inputJson) as Record<string, unknown>
+    const command = typeof input.command === 'string' ? input.command : ''
+    const read = command.match(/sed\s+-n\s+['"]?(\d+),(\d+)p['"]?\s+([^\s;]+)/)
+    return read ? `${read[3]}:${read[1]}-${read[2]}` : null
+  } catch {
+    return null
+  }
+}
+function outputEvidence(call?: ToolSelection) {
+  if (!call) return '未提供'
+  try {
+    const output = JSON.parse(call.outputJson) as unknown
+    if (typeof output === 'string') return output
+    if (output && typeof output === 'object') {
+      const fields = output as Record<string, unknown>
+      for (const key of ['output', 'result', 'content', 'text'])
+        if (typeof fields[key] === 'string') return fields[key]
+    }
+  } catch { /* 返回内容可能是原始文本 */ }
+  return call.outputJson || '未提供'
+}
+function sameReadEvidence(first?: ToolSelection, duplicate?: ToolSelection) {
+  if (!first || !duplicate) return false
+  const firstScope = readScope(first)
+  return !!firstScope && firstScope === readScope(duplicate)
+}
 const status = (s: string) =>
   ({ succeeded: '成功', failed: '错误', not_executed: '未执行', unknown: '未知' })[s] || s
 const riskLabel = (s: string) =>
@@ -295,7 +410,7 @@ const cards = computed(() => {
         ['check', '成功', m.successCount, '次'],
         ['shield', '已拦截', m.notExecutedCount, '次'],
         ['error', '错误', m.errorCount, '次'],
-        ['clock', '低效', m.inefficientCount, '次'],
+        ['clock', '重复调用', m.inefficientCount, '次'],
       ]
     : []
 })
@@ -386,6 +501,10 @@ watch(
     controller?.abort()
     busy.value = false
     raw.value = ''
+    expandedEvidence.value = {}
+    evidenceCalls.value = {}
+    duplicateToolLoading.value = false
+    duplicateToolError.value = ''
     drawer.value = false
     packageDialog.value = false
   },
@@ -477,19 +596,32 @@ onUnmounted(() => {
       </div>
       <div class="tools-metrics">
         <h3>工具交互统计 <small>（行为标签可重叠）</small></h3>
-        <div
-          v-for="(c, i) in cards"
-          :key="i"
-          class="tool-metric"
-          :class="`metric-${i}`"
-          :title="`未执行 ${result.metrics.notExecutedCount} 次；行为标签不参与状态求和`"
-        >
-          <ToolGlyph :name="String(c[0])" /><b>{{ c[1] }}</b>
-          <div class="metric-value">
-            <strong>{{ c[2] }}</strong
-            ><span>{{ c[3] }}</span>
+        <template v-for="(c, i) in cards" :key="i">
+          <el-popover v-if="i === 5" placement="bottom" trigger="hover" :width="330"
+            popper-class="tools-repeat-popover" @show="loadDuplicateTools">
+            <template #reference>
+              <div class="tool-metric metric-5" tabindex="0">
+                <ToolGlyph :name="String(c[0])" /><b>{{ c[1] }}</b>
+                <div class="metric-value"><strong>{{ c[2] }}</strong><span>{{ c[3] }}</span></div>
+              </div>
+            </template>
+            <div class="repeat-chart">
+              <strong>重复调用工具分布</strong>
+              <p v-if="duplicateToolError" class="repeat-chart-error">{{ duplicateToolError }}</p>
+              <p v-else-if="duplicateToolLoading && !duplicateToolCounts.length">正在读取调用详情…</p>
+              <p v-else-if="!duplicateToolCounts.length">暂无重复调用明细</p>
+              <div v-for="item in duplicateToolCounts" :key="item.name" class="repeat-chart-row">
+                <span :title="item.name">{{ item.name }}</span>
+                <div class="repeat-chart-track"><div :style="{ width: `${item.count / duplicateToolMax * 100}%` }"></div></div>
+                <b>{{ item.count }} 次</b>
+              </div>
+            </div>
+          </el-popover>
+          <div v-else class="tool-metric" :class="`metric-${i}`">
+            <ToolGlyph :name="String(c[0])" /><b>{{ c[1] }}</b>
+            <div class="metric-value"><strong>{{ c[2] }}</strong><span>{{ c[3] }}</span></div>
           </div>
-        </div>
+        </template>
         <div class="tool-timing">
           <h3>耗时统计（本样本）</h3>
           <b
@@ -716,21 +848,50 @@ onUnmounted(() => {
               </p></template
             >
             <h4>3. 低效调用证据</h4>
-            <p
+            <div
               v-for="g in result.sampleAnalysis.inefficiencyGroups"
               :key="g.canonicalCallId"
-              class="tool-explanation"
+              class="inefficiency-group"
             >
-              <ToolGlyph name="clock" class="warning-icon" /><button
-                @click="selectCall(g.canonicalCallId)"
-              >
-                {{ displayCall(g.canonicalCallId) }}
-              </button>
-              →
-              <button v-for="id in g.duplicateCallIds" :key="id" @click="selectCall(id)">
-                {{ displayCall(id) }}</button
-              >：{{ g.reason }}
-            </p>
+              <div class="inefficiency-line">
+                <span>首次：</span>
+                <button @click="selectCall(g.canonicalCallId)">{{ displayCall(g.canonicalCallId) }}</button>
+              </div>
+              <div v-for="id in g.duplicateCallIds" :key="id" class="inefficiency-pair">
+                <div class="inefficiency-line">
+                  <span>重复：</span>
+                  <button @click="selectCall(id)">{{ displayCall(id) }}</button>
+                  <el-button
+                    link type="primary" :loading="evidenceLoading[evidenceKey(g.canonicalCallId, id)]"
+                    @click="expandEvidence(g.canonicalCallId, id)">
+                    {{ expandedEvidence[evidenceKey(g.canonicalCallId, id)] ? '收起证据' : '展开证据' }}
+                  </el-button>
+                </div>
+                <div v-if="expandedEvidence[evidenceKey(g.canonicalCallId, id)]" class="inefficiency-evidence">
+                  <p v-if="evidenceErrors[evidenceKey(g.canonicalCallId, id)]" class="evidence-error">
+                    {{ evidenceErrors[evidenceKey(g.canonicalCallId, id)] }}
+                  </p>
+                  <table v-else-if="evidenceCalls[g.canonicalCallId] && evidenceCalls[id]" class="inefficiency-table">
+                    <thead><tr><th>核对项</th><th>{{ displayCall(g.canonicalCallId) }} · 首次读取</th><th>{{ displayCall(id) }} · 重复读取</th></tr></thead>
+                    <tbody>
+                      <tr><th>请求参数</th><td>{{ requestEvidence(evidenceCalls[g.canonicalCallId]) }}</td><td>{{ requestEvidence(evidenceCalls[id]) }}</td></tr>
+                      <tr><th>返回内容</th>
+                        <td v-for="callId in [g.canonicalCallId, id]" :key="callId">
+                          <el-popover placement="top" trigger="click" :width="480">
+                            <pre class="inefficiency-original">{{ outputEvidence(evidenceCalls[callId]) }}</pre>
+                            <template #reference><el-button link type="primary">展开原文（{{ evidenceCalls[callId]?.stepDisplayId }}）</el-button></template>
+                          </el-popover>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="evidenceCalls[g.canonicalCallId] && evidenceCalls[id]" class="inefficiency-reason">
+                    依据:{{ sameReadEvidence(evidenceCalls[g.canonicalCallId], evidenceCalls[id])
+                      ? '读取范围和返回内容一致，期间未记录对目标文件的修改。' : g.reason }}
+                  </p>
+                </div>
+              </div>
+            </div>
             <p v-if="!result.sampleAnalysis.inefficiencyGroups.length">暂无低效调用证据</p>
           </article>
         </div>
@@ -1148,6 +1309,58 @@ button:not(.el-button) {
   column-gap: 7px;
   text-align: center;
 }
+.tools-view .tool-metric.metric-5 {
+  cursor: default;
+}
+.tools-view .tool-metric.metric-5:hover,
+.tools-view .tool-metric.metric-5:focus-visible {
+  border-color: #e7ad3e;
+  background: #fffaf0;
+  outline: none;
+}
+.tools-repeat-popover .repeat-chart {
+  color: #263950;
+  font-size: 13px;
+}
+.tools-repeat-popover .repeat-chart > strong {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 14px;
+}
+.tools-repeat-popover .repeat-chart > p {
+  margin: 5px 0;
+  color: #657797;
+}
+.tools-repeat-popover .repeat-chart > p.repeat-chart-error {
+  color: #d73749;
+}
+.tools-repeat-popover .repeat-chart-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 9px;
+  min-height: 29px;
+}
+.tools-repeat-popover .repeat-chart-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tools-repeat-popover .repeat-chart-row > b {
+  text-align: right;
+  white-space: nowrap;
+}
+.tools-repeat-popover .repeat-chart-track {
+  height: 8px;
+  border-radius: 5px;
+  background: #e8eef9;
+  overflow: hidden;
+}
+.tools-repeat-popover .repeat-chart-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #e8a000;
+}
 .tools-view .tool-metric > .tool-glyph {
   grid-column: 1;
   grid-row: 1;
@@ -1391,6 +1604,68 @@ button:not(.el-button) {
   height: 19px;
   margin-right: 8px;
   float: left;
+}
+.tools-view .inefficiency-group {
+  padding: 7px 0 9px;
+  border-bottom: 1px solid #e4edfa;
+  color: #263950;
+  font-size: 14px;
+}
+.tools-view .inefficiency-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+}
+.tools-view .inefficiency-pair {
+  padding-left: 0;
+}
+.tools-view .inefficiency-line button {
+  font-size: 14px;
+}
+.tools-view .inefficiency-line .el-button {
+  margin-left: 8px;
+  font-size: 14px;
+}
+.tools-view .inefficiency-evidence {
+  margin: 5px 0 9px;
+  overflow-x: auto;
+}
+.tools-view .inefficiency-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 14px;
+}
+.tools-view .inefficiency-table th,
+.tools-view .inefficiency-table td {
+  padding: 7px 6px;
+  border-bottom: 1px solid #e4eaf3;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow: visible;
+  font-size: 14px;
+}
+.tools-view .inefficiency-table th:first-child {
+  width: 25%;
+}
+.tools-view .inefficiency-table th {
+  font-weight: 700;
+}
+.tools-view .inefficiency-reason {
+  margin: 7px 0 0;
+  line-height: 1.5;
+}
+.tools-view .evidence-error {
+  color: #d73749;
+}
+.inefficiency-original {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 .tools-view .error-icon {
   color: #f5384e;

@@ -136,6 +136,11 @@ const example = ref<Format | null>(null),
 const queue = ref<{ file: File; fileId?: string; state: string; error: string }[]>([])
 let pageAlive = true
 let modeVersion = 0
+const lastRealBatchId = ref('')
+function rememberRealBatch(batchId?: string) {
+  if (!batchId || batchId.startsWith('mock_')) return
+  lastRealBatchId.value = batchId
+}
 const labels: Record<string, string> = {
   structure: '结构有效',
   call_link: '调用关联',
@@ -180,6 +185,7 @@ watch(
   () => parent.demo,
   async (mode, previousMode) => {
     const currentModeVersion = ++modeVersion
+    if (mode && previousMode === false) rememberRealBatch(store.query.batchId)
     store.configure(mode)
     queue.value = []
     example.value = null
@@ -191,7 +197,12 @@ watch(
     if (previousMode !== undefined || (!mode && hasDemoTraceScope(route.query))) {
       await router.replace({ query: { view: view.value } })
       if (!pageAlive || currentModeVersion !== modeVersion) return
-      await store.load({})
+      const batchId = !mode ? lastRealBatchId.value : ''
+      await store.load(batchId ? { batchId } : {})
+      if (!mode && batchId && /批次不存在|404/.test(store.error) && currentModeVersion === modeVersion) {
+        lastRealBatchId.value = ''
+        await store.load({})
+      }
       return
     }
     await store.load(
@@ -232,7 +243,10 @@ watch(view, async (next, previous) => {
 watch(
   () => [store.query, store.loading],
   () => {
-    if (view.value === 'ingest' && store.workspace?.batch && !store.loading) syncUrl()
+    if (view.value === 'ingest' && store.workspace?.batch && !store.loading) {
+      if (!parent.demo) rememberRealBatch(store.query.batchId)
+      syncUrl()
+    }
   },
   { deep: true },
 )
@@ -1024,7 +1038,7 @@ onUnmounted(() => {
             </p>
             <p>
               <b>缺失位置：</b
-              ><span v-for="i in w.issues" :key="i.code"
+              ><span v-if="!w.issues.length">无</span><span v-for="i in w.issues" :key="i.code"
                 >{{ labels[i.code] }} {{ i.affectedTraceCount }} 条
               </span>
             </p>
