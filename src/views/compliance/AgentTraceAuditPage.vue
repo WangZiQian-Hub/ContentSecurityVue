@@ -567,21 +567,7 @@ onUnmounted(() => {
         :error="store.actionError"
         :download="(a) => download(a.artifactId)"
       />
-      <div v-if="store.task && !autoViewExport && store.task.result?.kind !== 'agent_trace_export'" class="at-task" role="status">
-        <span
-          >{{ store.task.result?.kind === 'agent_trace_ingest' ? '解析与规则审计' : '导出任务' }} ·
-          {{ store.task.status }} · {{ store.task.result?.batchId }}</span
-        ><el-progress v-if="working" :percentage="store.task.progress || 0" /><span
-          v-if="store.task.result?.outcome === 'partial'"
-          >部分记录失败，请检查文件错误</span
-        ><el-button
-          v-if="['pending', 'running'].includes(store.task.status)"
-          text
-          @click="store.resume"
-          >恢复进度查询</el-button
-        >
-      </div>
-      <div v-if="store.loading" class="at-loading" aria-busy="true">正在加载批次与来源…</div>
+      <div v-if="store.loading && !(store.task?.status === 'succeeded' && store.task.result?.kind === 'agent_trace_ingest')" class="at-loading" aria-busy="true">正在加载批次与来源…</div>
       <el-empty v-if="!w && !store.loading && !store.error" description="工作区尚未加载，请重新加载"
         ><el-button type="primary" @click="refresh">重新加载工作区</el-button></el-empty
       >

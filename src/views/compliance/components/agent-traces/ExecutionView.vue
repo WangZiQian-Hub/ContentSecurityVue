@@ -613,31 +613,33 @@ defineExpose({
           </div>
           <small class="ex-distribution-note">各类别内按事件去重，类别之间可重叠</small>
         </section>
-        <section class="ex-card">
+        <section class="ex-card ex-pattern-panel">
           <h3>
             危险模式列表 <small>（共 {{ d.dangerPatterns.total }} 项）</small>
           </h3>
           <div class="ex-pattern-heading">
             <span>序号</span><span>危险模式</span><span>关键片段/特征</span><span>定位</span>
           </div>
-          <button
-            v-for="(p, pi) in d.dangerPatterns.items"
-            :key="p.patternId"
-            class="ex-pattern"
-            @click="
-              store.pause(); store.select(p.eventId)
-            "
-          >
-            <span>{{ pi + 1 }}</span
-            ><b>{{ p.label }}</b
-            ><el-popover trigger="hover" placement="left" :width="420" :show-after="150">
-              <template #reference><small tabindex="0" @click.stop>{{ p.snippet }}</small></template>
-              <div class="ex-snippet-popup" @click.stop>
-                <div class="ex-snippet-toolbar"><b>关键片段/特征 · 全文</b><el-button size="small" type="primary" @click.stop="copySnippet(p.snippet)">复制全文</el-button></div>
-                <pre class="ex-snippet-full">{{ p.snippet }}</pre>
-              </div>
-            </el-popover><el-tag>{{ p.eventDisplayId }}</el-tag>
-          </button>
+          <div class="ex-pattern-scroll">
+            <button
+              v-for="(p, pi) in d.dangerPatterns.items"
+              :key="p.patternId"
+              class="ex-pattern"
+              @click="
+                store.pause(); store.select(p.eventId)
+              "
+            >
+              <span>{{ pi + 1 }}</span
+              ><b>{{ p.label }}</b
+              ><el-popover trigger="hover" placement="left" :width="420" :show-after="150">
+                <template #reference><small tabindex="0" @click.stop>{{ p.snippet }}</small></template>
+                <div class="ex-snippet-popup" @click.stop>
+                  <div class="ex-snippet-toolbar"><b>关键片段/特征 · 全文</b><el-button size="small" type="primary" @click.stop="copySnippet(p.snippet)">复制全文</el-button></div>
+                  <pre class="ex-snippet-full">{{ p.snippet }}</pre>
+                </div>
+              </el-popover><el-tag>{{ p.eventDisplayId }}</el-tag>
+            </button>
+          </div>
         </section>
       </aside>
     </div>
@@ -955,6 +957,21 @@ dd {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.ex-pattern-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ex-pattern-panel > h3,
+.ex-pattern-panel > .ex-pattern-heading {
+  flex-shrink: 0;
+}
+.ex-pattern-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .ex-table {
   max-height: 300px;
