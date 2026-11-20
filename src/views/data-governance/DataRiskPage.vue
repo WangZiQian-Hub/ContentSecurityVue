@@ -6,9 +6,12 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import RiskChart from './components/RiskChart.vue'
 import RiskWeightAccuracyCard from './components/RiskWeightAccuracyCard.vue'
+import RiskDispositionPanel from './components/RiskDispositionPanel.vue'
+import GovernanceRunNotice from './components/GovernanceRunNotice.vue'
+import { useGovernanceRun } from '../../composables/useGovernanceRun'
 import { languageName } from '../../utils/governance-language'
 import { formatBeijingTime } from '../../utils/beijing-time'
-import { assertResultScope } from '../../utils/governance-scope'
+import { assertResultScope, hasGovernanceScope, initialGovernanceScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
 import * as api from '../../api/data-risk'
 import { isGovernanceLlm } from '../../api/governance-llm'
@@ -28,7 +31,8 @@ const options = ref<Options>(),
   result = ref<Result | null>(null),
   selected = ref<Sample>()
 const scope = reactive<Scope>({ datasetId: 0, versionId: '', language: 'all', schemeId: '' })
-const query = reactive<Query>({ page: 1, pageSize: 5, keyword: '', level: '', status: '' })
+const defaultFilters = { page: 1, keyword: '', level: '', status: '', candidatesOnly: true }
+const query = reactive<Query>({ ...defaultFilters, pageSize: 5 })
 const rows = ref<Sample[]>([]),
   total = ref(0),
   loading = ref(false),
@@ -40,6 +44,7 @@ const history = ref<Result[]>([]),
   activeRule = ref<Rule>(),
   knowledge = ref<Rule[]>([]),
   keyword = ref('')
+const dispositionPanel = ref<InstanceType<typeof RiskDispositionPanel>>()
 const review = reactive<ReviewInput>({
   opinion: '',
   reviewer: '',
@@ -52,6 +57,10 @@ const version = computed(() => dataset.value?.versions.find((v) => v.id === scop
 const scheme = computed(() => options.value?.schemes.find((s) => s.id === scope.schemeId))
 const label = (level?: string) =>
   level === 'UNKNOWN' ? '无法判断' : scheme.value?.levels.find((l) => l.level === level)?.label || level
+function sampleLevel(sample: Sample) {
+  if (sample.status === '无法评估') return '无法判断'
+  return sample.findings.length ? label(sample.maximumSuggestedLevel) : '未检出风险'
+}
 const extraCategories = (sample: Sample) => new Set(sample.findings.map((f) => f.category)).size - 1
 const color = (level: string) => scheme.value?.levels.find((l) => l.level === level)?.color
 const relatedCases = computed(() =>
@@ -64,8 +73,27 @@ const relatedCases = computed(() =>
 let generation = 0,
   listGeneration = 0,
   selectionGeneration = 0,
-  knowledgeGeneration = 0,
-  timer: ReturnType<typeof setTimeout> | undefined
+  knowledgeGeneration = 0
+let historySelected = false
+const ready = computed(() => !!options.value?.actions.includes('detect') && hasGovernanceScope(scope))
+const run = useGovernanceRun('risk', scope, {
+  create: api.startRisk,
+  get: api.getRiskTask,
+  id: (task) => task.id,
+  onResult: async (id, current) => {
+    if (historySelected || result.value?.id === id) return
+    const saved = await api.getRiskResult(id)
+    if (!current() || historySelected) return
+    if (busy.value) return false
+    assertResultScope(saved, scope)
+    const ticket = ++generation
+    result.value = saved
+    Object.assign(query, defaultFilters)
+    await loadRows()
+    if (ticket === generation) emit('risk-updated')
+  },
+})
+const { task: runTask, locked: runLocked, submitting, message: runMessage, issue: runIssue, canRetry } = run
 function clearSelection() {
   ++selectionGeneration
   ++knowledgeGeneration
@@ -104,6 +132,7 @@ async function loadRows() {
   rows.value = []
   clearSelection()
   if (!id) return
+  error.value = ''
   try {
     const page = await api.listRiskSamples(id, { ...query })
     if (ticket !== listGeneration || result.value?.id !== id) return
@@ -117,7 +146,8 @@ async function loadRows() {
 async function loadScope(resultId?: string) {
   const ticket = ++generation
   ++listGeneration
-  clearTimeout(timer)
+  run.reset()
+  historySelected = !!resultId
   clearSelection()
   result.value = null
   rows.value = []
@@ -125,19 +155,24 @@ async function loadScope(resultId?: string) {
   task.value = undefined
   history.value = []
   error.value = ''
-  Object.assign(query, { page: 1, keyword: '', level: '', status: '' })
+  Object.assign(query, defaultFilters)
   loading.value = true
   try {
+    if (!resultId && !hasGovernanceScope(scope)) return
     const r = resultId ? await api.getRiskResult(resultId) : await api.getLatestRisk({ ...scope })
-    if (resultId && r) Object.assign(scope, r.scope)
     if (ticket !== generation) return
+    if (resultId && r) Object.assign(scope, r.scope)
     assertResultScope(r, scope)
     result.value = r
     await loadRows()
   } catch (e) {
     if (ticket === generation) error.value = String(e)
   } finally {
-    if (ticket === generation) loading.value = false
+    if (ticket === generation) {
+      loading.value = false
+      run.rememberScope()
+      if (hasGovernanceScope(scope)) void run.restore()
+    }
   }
 }
 function changeDataset() {
@@ -159,8 +194,8 @@ function versionName(datasetId?: number, versionId?: string, fallback?: string) 
     ''
   )
 }
-function filter(level = '', status = '') {
-  Object.assign(query, { level, status, keyword: '', page: 1 })
+function filter(level = '', status = '', candidatesOnly = true) {
+  Object.assign(query, { ...defaultFilters, level, status, candidatesOnly })
   void loadRows()
 }
 function search() {
@@ -179,40 +214,10 @@ function sortRows({ prop, order }: { prop: string; order: 'ascending' | 'descend
   void loadRows()
 }
 async function start() {
-  await safely(async () => {
-    const ticket = ++generation
-    task.value = undefined
-    ++listGeneration
-    clearTimeout(timer)
-    clearSelection()
-    result.value = null
-    rows.value = []
-    total.value = 0
-    Object.assign(query, { page: 1, level: '', status: '', keyword: '' })
-    const t = await api.startRisk({ ...scope })
-    if (ticket !== generation) return
-    task.value = t
-    async function poll() {
-      try {
-        const next = await api.getRiskTask(t.id)
-        if (ticket !== generation) return
-        task.value = next
-        if (next.status === 'pending' || next.status === 'running') timer = setTimeout(poll, 2000)
-        else if (next.status === 'succeeded' && next.resultId) {
-          const saved = await api.getRiskResult(next.resultId)
-          if (ticket !== generation) return
-          assertResultScope(saved, scope)
-          result.value = saved
-          await loadRows()
-          emit('risk-updated')
-        }
-      } catch (e) {
-        if (ticket === generation) error.value = String(e)
-      }
-    }
-    if (t.status === 'failed') return
-    void poll()
-  })
+  if (!ready.value || busy.value || loading.value || runLocked.value) return
+  error.value = ''
+  historySelected = false
+  await run.start()
 }
 async function openHistory() {
   await safely(async () => {
@@ -225,9 +230,9 @@ async function openHistory() {
   })
 }
 async function useHistory(r: Result) {
+  historySelected = true
   await safely(async () => {
     const ticket = ++generation
-    clearTimeout(timer)
     ++listGeneration
     clearSelection()
     result.value = null
@@ -238,14 +243,27 @@ async function useHistory(r: Result) {
     if (ticket !== generation) return
     assertResultScope(saved, scope)
     result.value = saved
-    Object.assign(query, { page: 1, keyword: '', level: '', status: '' })
+    Object.assign(query, defaultFilters)
     await loadRows()
+  })
+}
+async function openDispositionVersion(versionId: string) {
+  const id = result.value?.id
+  if (!id) return
+  await safely(async () => {
+    const data = await api.getRiskOptions()
+    if (result.value?.id !== id) return
+    if (!data.datasets.find((item) => item.id === scope.datasetId)?.versions.some((item) => item.id === versionId))
+      throw new Error('新版本尚未出现在数据目录中，请重新尝试')
+    options.value = data
+    scope.versionId = versionId
+    await loadScope()
   })
 }
 async function openTask() {
   await safely(async () => {
     const ticket = generation,
-      id = result.value?.taskId || task.value?.id
+      id = result.value?.taskId
     if (!id) return
     const t = await api.getRiskTask(id)
     if (ticket === generation) {
@@ -254,6 +272,11 @@ async function openTask() {
       drawer.value = '任务详情'
     }
   })
+}
+function openRunTask() {
+  if (!runTask.value) return
+  task.value = runTask.value
+  drawer.value = '任务详情'
 }
 function openReview() {
   if (!selected.value) return
@@ -332,7 +355,7 @@ async function download() {
         languageName(s.language),
         s.text,
         s.primaryCategory,
-        s.maximumSuggestedLevel,
+        s.findings.length ? s.maximumSuggestedLevel : sampleLevel(s),
         s.referenceRiskLevel || '未标注',
         s.predictionCorrect === true ? '正确' : s.predictionCorrect === false ? '错误' : '无法判定',
         s.status,
@@ -361,23 +384,29 @@ async function download() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   })
 }
-onMounted(() =>
-  safely(async () => {
-    options.value = await api.getRiskOptions()
-    Object.assign(scope, options.value.defaultScope)
-    query.pageSize = options.value.pageSizes[0]!
-    const resultId =
-      typeof window === 'undefined'
-        ? ''
-        : new URLSearchParams(window.location.search).get('resultId') || ''
-    await loadScope(resultId || undefined)
-  }),
-)
+onMounted(async () => {
+  const ticket = generation
+  await safely(async () => {
+    const data = await api.getRiskOptions()
+    if (ticket !== generation) return
+    options.value = data
+    Object.assign(
+      scope,
+      initialGovernanceScope(data, run.rememberedScope(), data.defaultScope, isGovernanceLlm),
+    )
+    query.pageSize = data.pageSizes[0]!
+  })
+  if (ticket !== generation || !options.value) return
+  const resultId =
+    typeof window === 'undefined'
+      ? ''
+      : new URLSearchParams(window.location.search).get('resultId') || ''
+  await loadScope(resultId || undefined)
+})
 onBeforeUnmount(() => {
   ++generation
   ++listGeneration
   clearSelection()
-  clearTimeout(timer)
 })
 </script>
 <template>
@@ -426,13 +455,23 @@ onBeforeUnmount(() => {
         ></label>
         <el-button
           type="primary"
-          :disabled="busy || task?.status === 'running' || !options?.actions.includes('detect')"
+          :loading="submitting"
+          :disabled="busy || loading || !ready || runLocked"
           @click="start"
           >{{ result ? '重新检测' : '开始检测' }}</el-button
-        ><el-button :disabled="busy || !options?.actions.includes('history')" @click="openHistory"
+        ><el-button :disabled="busy || loading || !options?.actions.includes('history')" @click="openHistory"
           >历史结果</el-button
         >
       </div>
+      <GovernanceRunNotice
+        :message="runMessage"
+        :issue="runIssue"
+        :can-retry="canRetry"
+        :has-result="!!result"
+        @retry="run.restore()"
+      >
+        <el-button v-if="runTask" link type="primary" @click="openRunTask">查看当前任务详情</el-button>
+      </GovernanceRunNotice>
       <div v-if="result" class="risk-identity">
         <span
           >{{ versionName(result.scope.datasetId, result.scope.versionId) }} ·
@@ -448,7 +487,10 @@ onBeforeUnmount(() => {
         >
       </div>
       <div v-if="result" class="risk-metrics">
-        <button :class="{ active: !query.level && !query.status }" @click="filter()">
+        <button
+          :class="{ active: query.candidatesOnly && !query.level && !query.status }"
+          @click="filter()"
+        >
           <span>当前风险候选</span
           ><strong>{{ result.riskCount.toLocaleString() }}<small>条</small></strong>
         </button>
@@ -457,7 +499,7 @@ onBeforeUnmount(() => {
           ><strong class="danger">{{ result.highCount.toLocaleString() }}<small>条</small></strong>
         </button>
         <button :class="{ active: query.status === '待复核' }" @click="filter('', '待复核')">
-          <span>待人工复核</span
+          <span>{{ isGovernanceLlm ? '模型建议复核' : '待人工复核' }}</span
           ><strong>{{ result.pendingCount.toLocaleString() }}<small>条</small></strong>
         </button>
         <div>
@@ -466,7 +508,8 @@ onBeforeUnmount(() => {
         <RiskWeightAccuracyCard variant="result" :result-id="result.id" />
       </div>
       <p v-if="result" class="risk-note">
-        已复核 {{ result.reviewedCount }} · 无法判断 {{ result.unassessableCount }} · 检测失败
+        <template v-if="!isGovernanceLlm">已复核 {{ result.reviewedCount }} · </template>
+        无法判断 {{ result.unassessableCount }} · 检测失败
         {{ result.failedCount }}。等级为原检测建议，未复核不等于确认违法。
       </p>
       <details v-if="result?.failedCount" class="risk-note">
@@ -489,19 +532,8 @@ onBeforeUnmount(() => {
         type="info"
         :closable="false"
       />
-      <template v-if="!result && task"
-        ><el-alert
-          :title="
-            task.status === 'failed'
-              ? `检测失败：${task.errorMessage || '查看任务详情'}`
-              : '任务处理中，等待服务端保存检测结果'
-          "
-          :type="task.status === 'failed' ? 'error' : 'info'"
-          :closable="false"
-        /><el-button link @click="openTask">查看任务</el-button></template
-      >
       <el-empty
-        v-if="!result && !task"
+        v-if="!result && !loading && !error && !runMessage && !runIssue"
         description="当前条件尚无保存结果，请开始检测"
         :image-size="60"
       />
@@ -515,13 +547,13 @@ onBeforeUnmount(() => {
         >
         <RiskChart :result="result" :selected="query.level" @select="filter($event)" />
         <p class="risk-note">
-          每条样本按最高建议等级计数。点击分段或图例筛选列表，清空其他筛选；百分比四舍五入，以条数为准。
+          每条风险候选按最高建议等级计数。点击图例可查看对应样本。
         </p>
         <el-button class="risk-all-link" link type="primary" @click="filter()"
           >查看全部风险候选</el-button
         >
       </PanelCard>
-      <PanelCard title="风险样本明细" icon="List"
+      <PanelCard :title="query.candidatesOnly ? '风险样本明细' : '全部检测明细'" icon="List"
         ><template #extra
           ><el-button
             class="panel-more"
@@ -540,7 +572,7 @@ onBeforeUnmount(() => {
             @keyup.enter="search"
             @clear="search"
           /><el-button @click="search">搜索</el-button
-          ><el-select v-model="query.status" placeholder="复核状态" clearable @change="search"
+          ><el-select v-model="query.status" :placeholder="isGovernanceLlm ? '模型建议状态' : '复核状态'" clearable @change="search"
             ><el-option v-for="s in options?.reviewStatuses" :key="s" :label="s" :value="s"
           /></el-select>
         </div>
@@ -548,14 +580,25 @@ onBeforeUnmount(() => {
           <span
             >{{ label(query.level) || '全部等级' }} · {{ query.status || '全部状态' }} · 匹配
             {{ total }} 条</span
-          ><el-button link @click="filter()">重置筛选</el-button>
+          >
+          <div>
+            <el-button
+              v-if="isGovernanceLlm"
+              link
+              type="primary"
+              @click="filter('', '', !query.candidatesOnly)"
+            >
+              {{ query.candidatesOnly ? '查看全部检测明细' : '仅看风险候选' }}
+            </el-button>
+            <el-button link @click="filter('', '', query.candidatesOnly)">重置筛选</el-button>
+          </div>
         </div>
         <el-table
           :data="rows"
           row-key="id"
           highlight-current-row
           :current-row-key="selected?.id"
-          empty-text="当前条件无匹配风险候选"
+          :empty-text="query.candidatesOnly ? '当前条件无匹配风险候选' : '当前条件无匹配检测明细'"
           @row-click="choose"
           @sort-change="sortRows"
         >
@@ -574,13 +617,19 @@ onBeforeUnmount(() => {
             label="建议等级"
             width="110"
             sortable="custom"
-            ><template #default="{ row }"
-              ><span class="risk-level" :style="{ color: color(row.maximumSuggestedLevel) }"
-                >● {{ label(row.maximumSuggestedLevel) }}</span
-              ></template
-            ></el-table-column
           >
-          <el-table-column prop="status" label="复核状态" width="110" sortable="custom" />
+            <template #default="{ row }">
+              <span
+                v-if="row.findings.length"
+                class="risk-level"
+                :style="{ color: color(row.maximumSuggestedLevel) }"
+                >● {{ sampleLevel(row) }}</span
+              >
+              <span v-else>{{ sampleLevel(row) }}</span>
+            </template>
+          </el-table-column
+          >
+          <el-table-column prop="status" :label="isGovernanceLlm ? '模型建议状态' : '复核状态'" width="125" sortable="custom" />
           <el-table-column label="操作" width="86"
             ><template #default="{ row }"
               ><el-button
@@ -623,11 +672,14 @@ onBeforeUnmount(() => {
         <template v-if="selected"
           ><div class="risk-selected">
             <b>{{ selected.id }}</b
-            ><el-tag :color="color(selected.maximumSuggestedLevel)" effect="dark">{{
-              label(selected.maximumSuggestedLevel)
-            }}</el-tag>
+            ><el-tag
+              :type="selected.findings.length ? undefined : 'info'"
+              :color="selected.findings.length ? color(selected.maximumSuggestedLevel) : undefined"
+              effect="dark"
+              >{{ sampleLevel(selected) }}</el-tag
+            >
           </div>
-          <p class="risk-note">原检测建议 · {{ selected.primaryCategory }}</p>
+          <p v-if="selected.primaryCategory" class="risk-note">原检测建议 · {{ selected.primaryCategory }}</p>
           <blockquote v-for="e in selected.evidence" :key="e.id">{{ e.quote }}</blockquote>
           <div v-for="f in selected.findings" :key="f.ruleId" class="risk-reason">
             <b>{{ f.category }}</b>
@@ -644,7 +696,7 @@ onBeforeUnmount(() => {
               >{{ f.ruleId }} · v{{ f.ruleVersion }} ›</el-button
             >
           </div>
-          <div class="risk-conclusion">
+          <div v-if="!isGovernanceLlm" class="risk-conclusion">
             <b>人工结论 · {{ selected.status }}</b>
             <p>
               {{
@@ -665,11 +717,26 @@ onBeforeUnmount(() => {
               @click="openReview"
               v-if="!isGovernanceLlm"
               >{{ selected.review ? '查看复核' : '发起复核' }}</el-button
-            ><el-button @click="drawer = '原始样本（只读）'">原始样本</el-button>
+            >
+            <el-button
+              v-else-if="selected.findings.length"
+              type="primary"
+              :disabled="busy || dispositionPanel?.busy || !dispositionPanel?.canOpenSelected"
+              @click="dispositionPanel?.openSelected()"
+            >复核与处置</el-button>
+            <el-button @click="drawer = '原始样本（只读）'">原始样本</el-button>
           </div> </template
         ><el-empty v-else description="选择样本查看已保存证据" :image-size="60" />
       </PanelCard>
     </div>
+    <RiskDispositionPanel
+      v-if="isGovernanceLlm && result"
+      :key="result.id"
+      ref="dispositionPanel"
+      :result-id="result.id"
+      :sample="selected"
+      @open-version="openDispositionVersion"
+    />
     <PanelCard v-if="result" title="关联风险知识" icon="Collection"
       ><template #extra
         ><el-button
@@ -826,8 +893,8 @@ onBeforeUnmount(() => {
           ><el-descriptions-item label="原文（敏感字段遮蔽）"
             ><p class="risk-original">{{ selected.text }}</p></el-descriptions-item
           ><el-descriptions-item label="原检测建议"
-            >{{ selected.primaryCategory }} /
-            {{ label(selected.maximumSuggestedLevel) }}</el-descriptions-item
+            >{{ sampleLevel(selected) }}<template v-if="selected.primaryCategory">
+              · {{ selected.primaryCategory }}</template></el-descriptions-item
           ></el-descriptions
         >
         <template v-if="drawer !== '原始样本（只读）'"
@@ -847,8 +914,8 @@ onBeforeUnmount(() => {
               </blockquote></template
             >
           </section>
-          <h3>人工复核（独立记录）</h3>
-          <p>状态：{{ selected.status }} · 工单：{{ selected.review?.id || '尚未创建' }}</p>
+          <h3 v-if="!isGovernanceLlm">人工复核（独立记录）</h3>
+          <p v-if="!isGovernanceLlm">状态：{{ selected.status }} · 工单：{{ selected.review?.id || '尚未创建' }}</p>
           <template v-if="selected.review"
             ><p>
               复核人：{{ selected.review.reviewer }} ·

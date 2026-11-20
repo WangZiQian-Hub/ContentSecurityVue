@@ -25,19 +25,29 @@ export const useComplianceEventsStore = defineStore('compliance-events', () => {
   const focusRequested = ref(0)
   /** 当前上下文的训练任务 ID，分页查询与概览共用。 */
   let contextTaskId: string | undefined
+  let overviewSequence = 0
 
-  async function loadOverview(trainingTaskId?: string) {
+  async function loadOverview(trainingTaskId?: string, { background = false } = {}) {
+    const requestId = ++overviewSequence
+    const taskChanged = contextTaskId !== trainingTaskId
+    const showLoading = taskChanged || !background
     contextTaskId = trainingTaskId
-    loading.value = true
+    if (taskChanged) {
+      overview.value = null
+      error.value = null
+    }
+    if (showLoading) loading.value = true
     try {
-      overview.value = await api.getComplianceEventOverview(trainingTaskId)
+      const result = await api.getComplianceEventOverview(trainingTaskId, !showLoading)
+      if (requestId !== overviewSequence) return
+      overview.value = result
       error.value = null
     } catch (reason) {
-      // 失败时不保留旧概览：过期数据继续显示会被误读为实时监控结果。
-      overview.value = null
+      if (requestId !== overviewSequence) return
+      if (showLoading) overview.value = null
       error.value = reason instanceof Error ? reason.message : '合规事件加载失败'
     } finally {
-      loading.value = false
+      if (requestId === overviewSequence) loading.value = false
     }
   }
 
@@ -57,7 +67,6 @@ export const useComplianceEventsStore = defineStore('compliance-events', () => {
 
   function openRecordDialog(trainingTaskId?: string) {
     if (trainingTaskId !== undefined && trainingTaskId !== contextTaskId) {
-      contextTaskId = trainingTaskId
       void loadOverview(trainingTaskId)
     }
     dialogOpen.value = true

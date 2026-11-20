@@ -2,7 +2,19 @@
 
 入口：`/data-governance/anomaly`。沿用数据治理外壳、PanelCard、Element Plus 和请求层；只调整共享容器以启用异常页签，没有修改数据处理、价值分析或资源页面业务。
 
-## 接口与传递约定
+## 真实结果的人工复核
+
+当 `VITE_USE_MOCK=false` 且 `VITE_GOVERNANCE_BACKEND=llm` 时，`8001` 负责检测和保存候选，`8000` 负责复核和发布。已保存的 v2.0 / v2.1 结果可直接复核，无需重新调用模型；第一版只接受 `topic_label` 修改。
+
+1. 在当前数据集版本的异常结果中选一条建议，检查原标签、正文和建议标签，点击 **提交复核**。
+2. 打开 **人工复核**，选择 **审核通过** 或 **驳回**。通过只加入待发布修改集，不立即修改样本。
+3. 检查修改集，点击 **生成新版本 → 确认生成新版本**。新版本仍在同一数据集下，旧版本和历史结果不变。重新选择新版本可检测修复后的样本。
+
+复核使用 `8000 /api/v1/data-governance/anomaly-reviews/{result_id}` 下的 `GET /state`、`POST /samples/{sample_id}/candidates/{action}` 及 `POST /change-set/{remove|validate|generate-version}`。业务登录负责写权限；`X-Model-Access-Token` 仅用于让业务后端在配置的模型服务上核验候选归属，不使用模型管理员密钥。模型服务默认位于 `http://127.0.0.1:8001`，如部署位置不同，在业务后端配置可信的 `LLM_GOVERNANCE_ORIGIN`。连接检查失败不会把真实结果切成模拟数据。
+
+首次更新后重启 `8000`，由正常建表流程创建 `anomaly_reviews`。检测服务和 worker 无需为本功能重启。旧版本仍可查看复核历史，但不能继续发布；发布前修改集或基础版本已变化时，必须重新校验。
+
+## 早期非 LLM 接口与演示约定
 
 全部接口经过 `src/api/request.ts`，继承 `/api/v1`、鉴权、trace/request ID、请求 snake_case / 响应 camelCase、统一 envelope。所有异常接口携带 `kind=governance-anomaly`（GET 在 query，POST 在 body），不使用 module 替代 kind。
 

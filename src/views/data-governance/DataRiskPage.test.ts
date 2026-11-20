@@ -1,9 +1,11 @@
 import { createRenderer, nextTick, ssrContextKey } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Query, Result, Sample, Scope } from '../../types/data-risk'
 const api = vi.hoisted(() => ({
   getRiskOptions: vi.fn(),
   getLatestRisk: vi.fn(),
+  getRiskResult: vi.fn(),
+  getRiskTask: vi.fn(),
   listRiskSamples: vi.fn(),
   getRiskSample: vi.fn(),
   searchRiskKnowledge: vi.fn(),
@@ -11,6 +13,7 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../../api/data-risk', () => api)
 vi.mock('../../api/request', () => ({ isMock: true }))
+vi.mock('../../api/governance-llm', () => ({ isGovernanceLlm: false }))
 vi.mock('../../components/PanelCard.vue', () => ({ default: { render: () => null } }))
 import Page from './DataRiskPage.vue'
 import { riskMock } from '../../mock/data-risk'
@@ -42,12 +45,17 @@ interface State {
   total: number
   drawer: string
   error: string
+  runIssue: string
+  runLocked: boolean
+  runMessage: string
   loadScope(): Promise<void>
   loadRows(): Promise<void>
   choose(row: Sample): Promise<void>
-  filter(level: string, status?: string): void
+  filter(level: string, status?: string, candidatesOnly?: boolean): void
+  sampleLevel(sample: Sample): string
   openReview(): void
   start(): Promise<void>
+  useHistory(result: Result): Promise<void>
 }
 const flush = async () => {
   for (let i = 0; i < 20; i++) await nextTick()
@@ -65,10 +73,41 @@ function mount() {
 describe('风险页条件隔离、筛选及证据联动', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    const storage = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: storage.get.bind(storage),
+      setItem: storage.set.bind(storage),
+      removeItem: storage.delete.bind(storage),
+    })
     api.getRiskOptions.mockResolvedValue(riskMock.options())
     api.getLatestRisk.mockImplementation(async (s) => riskMock.latest(s))
     api.listRiskSamples.mockImplementation(async (id, q) => riskMock.samples(id, q))
     api.getRiskSample.mockImplementation(async (id, sample) => riskMock.detail(id, sample))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+  it('默认只查风险候选，查看全部明细时区分提示、未检出风险和无法判断', async () => {
+    const { state, unmount } = mount()
+    try {
+      await flush()
+      expect(api.listRiskSamples.mock.lastCall?.[1].candidatesOnly).toBe(true)
+      const notice = state.rows.find((row) => row.maximumSuggestedLevel === 'NOTICE')!
+      const clear = { ...notice, id: 'clear', findings: [], primaryCategory: '' }
+      const unknown = { ...clear, id: 'unknown', status: '无法评估' }
+      api.listRiskSamples.mockResolvedValueOnce({ items: [notice, clear, unknown], total: 3 })
+      state.filter('', '', false)
+      await flush()
+      expect(api.listRiskSamples.mock.lastCall?.[1].candidatesOnly).toBe(false)
+      expect(state.rows.map(state.sampleLevel)).toEqual(['提示', '未检出风险', '无法判断'])
+      state.filter('NOTICE')
+      await flush()
+      expect(api.listRiskSamples.mock.lastCall?.[1]).toMatchObject({
+        candidatesOnly: true,
+        level: 'NOTICE',
+        page: 1,
+      })
+    } finally {
+      unmount()
+    }
   })
   it('后端返回其他语种的结果时拒绝展示', async () => {
     const { state, unmount } = mount()
@@ -157,14 +196,93 @@ describe('风险页条件隔离、筛选及证据联动', () => {
     expect(state.selected?.id).toBe(b!.id)
     unmount()
   })
-  it('任务创建失败显示错误，不残留旧结果', async () => {
+  it('任务创建失败显示错误，仍保留上次结果', async () => {
     const { state, unmount } = mount()
     await flush()
+    const previous = state.result
     api.startRisk.mockRejectedValue(new Error('后端暂不可用'))
     await state.start()
-    expect(state.error).toBe('后端暂不可用')
-    expect(state.result).toBeNull()
-    expect(state.rows).toEqual([])
+    expect(state.runIssue).toBe('后端暂不可用')
+    expect(state.result).toEqual(previous)
+    expect(state.rows.length).toBeGreaterThan(0)
     unmount()
+  })
+  it('切换方案会查询各自的任务，返回页面后继续加载当前方案的结果', async () => {
+    const options = riskMock.options()
+    const alternative = { ...options.schemes[0]!, id: 'risk-other-scheme' }
+    api.getRiskOptions.mockResolvedValue({
+      ...options,
+      schemes: [...options.schemes, alternative],
+    })
+    const first = mount()
+    await flush()
+    const fallback = first.state.result!
+    const dataset = options.datasets.find((item) => item.versions.length > 1)!
+    Object.assign(first.state.scope, {
+      datasetId: dataset.id,
+      versionId: dataset.versions[1]!.id,
+      schemeId: alternative.id,
+    })
+    await first.state.loadScope()
+    const input = { ...first.state.scope }
+    const task = { id: 'risk-run-on-return', status: 'running', input }
+    api.startRisk.mockResolvedValue(task)
+    await first.state.start()
+    Object.assign(first.state.scope, fallback.scope)
+    await first.state.loadScope()
+    expect(first.state.runLocked).toBe(false)
+    expect(api.getRiskTask).not.toHaveBeenCalled()
+    Object.assign(first.state.scope, input)
+    api.getRiskTask.mockResolvedValue(task)
+    await first.state.loadScope()
+    await flush()
+    expect(first.state.runMessage).toBe('任务正在运行')
+    first.unmount()
+    const next = { ...fallback, id: 'risk-saved-on-return', scope: input }
+    api.getRiskTask.mockResolvedValue({ ...task, status: 'succeeded', resultId: next.id })
+    api.getRiskResult.mockResolvedValue(next)
+    api.listRiskSamples.mockResolvedValue({ items: [], total: 0 })
+    const second = mount()
+    try {
+      await flush()
+      expect(second.state.scope).toEqual(input)
+      expect(second.state.result?.id).toBe(next.id)
+      expect(second.state.runLocked).toBe(false)
+      expect(api.getRiskTask.mock.lastCall).toEqual([task.id])
+      expect(api.startRisk).toHaveBeenCalledExactlyOnceWith(input)
+    } finally {
+      second.unmount()
+    }
+  })
+  it('主动选择历史结果后，迟到的新结果不会覆盖当前查看的记录', async () => {
+    vi.useFakeTimers()
+    const { state, unmount } = mount()
+    try {
+      await flush()
+      const previous = state.result!
+      const task = { id: 'risk-run-during-history', input: { ...state.scope }, status: 'running' }
+      api.startRisk.mockResolvedValue(task)
+      const saved = { ...previous, id: 'risk-new-result' }
+      api.getRiskTask.mockResolvedValue({ ...task, status: 'succeeded', resultId: saved.id })
+      let complete!: (value: Result) => void
+      api.getRiskResult.mockImplementationOnce(
+        () =>
+          new Promise<Result>((resolve) => {
+            complete = resolve
+          }),
+      )
+      await state.start()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(api.getRiskResult).toHaveBeenCalledWith(saved.id)
+      api.getRiskResult.mockResolvedValueOnce(previous)
+      await state.useHistory(previous)
+      complete(saved)
+      await flush()
+      expect(state.result?.id).toBe(previous.id)
+      expect(state.runLocked).toBe(false)
+    } finally {
+      unmount()
+      vi.useRealTimers()
+    }
   })
 })

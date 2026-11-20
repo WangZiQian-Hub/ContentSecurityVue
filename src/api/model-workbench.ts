@@ -38,9 +38,10 @@ function normalizeModel(record: ModelRecord): ModelAsset {
           : 'industry',
   }
 }
-export async function getModelWorkbench(): Promise<ModelWorkbench> {
+export async function getModelWorkbench(silent = false): Promise<ModelWorkbench> {
   const data = await request<Omit<ModelWorkbench, 'models'> & { models: ModelRecord[] }>({
     url: '/model-workbenches/current',
+    silent,
   })
   return { ...data, models: data.models.map(normalizeModel) }
 }
@@ -209,8 +210,8 @@ export function recordModelCall(data: Record<string, unknown>): Promise<{ id: st
 /** 真实训练：8000 用服务端令牌代理 8001 建单并登记同款台账；浏览器无需模型服务令牌。 */
 export function createRealTraining(
   data: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>({
+): Promise<{ id: string }> {
+  return request<{ id: string }>({
     url: '/training-tasks/real',
     method: 'POST',
     data,
@@ -237,6 +238,7 @@ export function syncRealTraining(taskId: string, data: Record<string, unknown>) 
     url: `/training-tasks/${encodeURIComponent(taskId)}/sync`,
     method: 'POST',
     data,
+    silent: true,
   })
 }
 
@@ -244,6 +246,7 @@ export function fetchRealTrainingTask(taskId: string): Promise<Record<string, un
   // 台账只读代理：由 8000 用服务端令牌转发模型服务，浏览器不再持有/依赖模型服务令牌。
   return request<Record<string, unknown>>({
     url: `/training-tasks/${encodeURIComponent(taskId)}/detail`,
+    silent: true,
   })
 }
 
@@ -262,6 +265,7 @@ export function fetchRealTrainingMetrics(
   return request({
     url: `/training-tasks/${encodeURIComponent(taskId)}/metrics`,
     params: { afterId, limit: 1000 },
+    silent: true,
   })
 }
 
@@ -278,6 +282,7 @@ export interface RealArtifact {
 export function listRealArtifacts(taskId: string): Promise<RealArtifact[]> {
   return request<RealArtifact[]>({
     url: `/training-tasks/${encodeURIComponent(taskId)}/artifacts`,
+    silent: true,
   })
 }
 

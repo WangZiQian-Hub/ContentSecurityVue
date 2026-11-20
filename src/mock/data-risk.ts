@@ -246,7 +246,8 @@ function detail(resultId: string, sampleId: string) {
 function matching(resultId: string, q: Query) {
   const matches = record(resultId).samples.filter(
     (s) =>
-      (!q.level || s.maximumSuggestedLevel === q.level) &&
+      (!q.candidatesOnly || s.findings.length > 0) &&
+      (!q.level || (s.findings.length > 0 && s.maximumSuggestedLevel === q.level)) &&
       (!q.status || s.status === q.status) &&
       `${s.id} ${s.text} ${s.primaryCategory}`
         .toLowerCase()

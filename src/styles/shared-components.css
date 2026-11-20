@@ -51,6 +51,7 @@
 .page-meta time {
   font-size: 14px; /* 字体大小 */
   font-weight: 600; /* 字体粗细 */
+  font-variant-numeric: tabular-nums;
   color: #627da5;
   position: relative;
   left: -10px; /* 负数向左，正数向右 */

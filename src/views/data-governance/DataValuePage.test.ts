@@ -1,5 +1,5 @@
 import { createRenderer, nextTick, ssrContextKey } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   ValueResult,
   ValueScope,
@@ -51,6 +51,11 @@ interface State {
   rows: ValueSample[]
   resultFailed: boolean
   loading: boolean
+  runLocked: boolean
+  runMessage: string
+  runIssue: string
+  canRetry: boolean
+  run: { restore(): Promise<void> }
   detailOpen: boolean
   selected?: ValueSample
   explain(row: ValueSample): void
@@ -83,10 +88,17 @@ function mount() {
 describe('价值页范围切换与只读解释', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    const storage = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: storage.get.bind(storage),
+      setItem: storage.set.bind(storage),
+      removeItem: storage.delete.bind(storage),
+    })
     api.getValueOptions.mockResolvedValue(valueOptions)
     api.getLatestValueResult.mockImplementation(async (scope) => latestDemoResult(scope))
     api.listValueSamples.mockResolvedValue({ items: [sample], total: 1 })
   })
+  afterEach(() => vi.unstubAllGlobals())
   it('翻页请求期间保留总页数，第二页返回后页码与行数据保持一致', async () => {
     api.listValueSamples.mockResolvedValueOnce({ items: [sample], total: 50 })
     const { state, unmount } = mount()
@@ -290,6 +302,98 @@ describe('价值页范围切换与只读解释', () => {
       expect(api.getValueTask).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
+    }
+  })
+  it('提交返回前切页仍会恢复任务，同一范围不会再发起一次分析', async () => {
+    const first = mount()
+    await flush()
+    first.state.scope.schemeId = 'general-v2'
+    first.state.scope.language = 'all'
+    await flush()
+    const savedScope = { ...first.state.scope }
+    const task: ValueTask = {
+      taskId: 'value-task-on-return',
+      name: '分析',
+      status: 'pending',
+      createdAt: '2026-09-25',
+      resultId: null,
+    }
+    let resolveSubmission!: (created: ValueTask) => void
+    api.createValueTask.mockImplementationOnce(
+      () =>
+        new Promise<ValueTask>((resolve) => {
+          resolveSubmission = resolve
+        }),
+    )
+    api.getValueTask.mockResolvedValue(task)
+    const submitting = first.state.analyze()
+    await flush()
+    first.unmount()
+    const second = mount()
+    try {
+      await flush()
+      expect(second.state.scope).toEqual(savedScope)
+      expect(second.state.runMessage).toBe('正在提交任务')
+      await second.state.analyze()
+      resolveSubmission(task)
+      await submitting
+      await flush()
+      expect(second.state.runMessage).toBe('任务已排队，等待执行')
+      expect(second.state.runLocked).toBe(true)
+      await second.state.analyze()
+      expect(api.createValueTask).toHaveBeenCalledExactlyOnceWith(savedScope)
+      expect(api.getValueTask).toHaveBeenCalledExactlyOnceWith(task.taskId)
+    } finally {
+      second.unmount()
+    }
+  })
+  it('暂时查询失败时保留任务编号，重试可加载新结果', async () => {
+    const first = mount()
+    await flush()
+    const previous = first.state.result!
+    const task = { taskId: 'retry-task', status: 'running' }
+    api.createValueTask.mockResolvedValue(task)
+    await first.state.analyze()
+    first.unmount()
+    api.getValueTask.mockRejectedValueOnce(new Error('offline'))
+    const second = mount()
+    try {
+      await flush()
+      expect(second.state.canRetry).toBe(true)
+      expect(second.state.runLocked).toBe(true)
+      expect(second.state.result?.id).toBe(previous.id)
+      api.getValueTask.mockResolvedValueOnce({
+        ...task,
+        status: 'succeeded',
+        resultId: 'new-result',
+      })
+      api.getValueResult.mockResolvedValueOnce({ ...previous, id: 'new-result' })
+      await second.state.run.restore()
+      expect(second.state.result?.id).toBe('new-result')
+      expect(second.state.runLocked).toBe(false)
+      expect(api.createValueTask).toHaveBeenCalledTimes(1)
+    } finally {
+      second.unmount()
+    }
+  })
+  it('服务端明确返回任务不存在时，解除提交限制', async () => {
+    const first = mount()
+    await flush()
+    api.createValueTask.mockResolvedValueOnce({ taskId: 'missing', status: 'pending' })
+    await first.state.analyze()
+    first.unmount()
+    api.getValueTask.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } })
+    const second = mount()
+    try {
+      await flush()
+      expect(second.state.runLocked).toBe(false)
+      expect(second.state.canRetry).toBe(false)
+      expect(second.state.runIssue).toContain('可以重新发起')
+      api.createValueTask.mockResolvedValueOnce({ taskId: 'replacement', status: 'pending' })
+      await second.state.analyze()
+      expect(api.createValueTask).toHaveBeenCalledTimes(2)
+    } finally {
+      second.unmount()
     }
   })
 })

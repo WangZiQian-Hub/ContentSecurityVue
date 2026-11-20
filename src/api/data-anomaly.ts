@@ -1,5 +1,7 @@
+import { isAxiosError } from 'axios'
+import { ElMessage } from 'element-plus'
 import { isMock as businessMock, request as businessRequest } from './request'
-import { isGovernanceLlm, llmRequest } from './governance-llm'
+import { getLlmToken, isGovernanceLlm, llmRequest } from './governance-llm'
 import { getGovernanceResources } from './governance-resources'
 import { anomalyMock } from '../mock/data-anomaly'
 import { getResourceSamples } from './data-resource'
@@ -15,16 +17,45 @@ import {
   type ChangeSet,
   type VersionCheck,
   type Published,
+  type AnomalyReviewState,
+  type CandidateReview,
 } from '../types/data-anomaly'
 import type { PageResult } from '../types'
 const base = '/data-governance/anomaly-results'
 const kind = ANOMALY_KIND
 const useMock = () => businessMock && !isGovernanceLlm
 const request: typeof businessRequest = isGovernanceLlm ? llmRequest : businessRequest
-const modelScope = (scope: Scope): Scope => ({ ...scope, language: isGovernanceLlm ? 'all' : scope.language })
+const modelScope = (scope: Scope): Scope => ({
+  ...scope,
+  language: isGovernanceLlm ? 'all' : scope.language,
+})
 const get = <T>(url: string, params = {}) => request<T>({ url, params: { kind, ...params } })
 const post = <T>(url: string, data = {}) =>
   request<T>({ url, method: 'POST', data: { kind, ...data } })
+async function reviewRequest<T>(
+  resultId: string | undefined,
+  path: string,
+  data?: object,
+): Promise<T> {
+  const token = getLlmToken()
+  if (!resultId || !token) throw new Error('请先打开异常检测结果并配置模型服务访问令牌')
+  try {
+    return await businessRequest<T>({
+      url: `/data-governance/anomaly-reviews/${encodeURIComponent(resultId)}/${path}`,
+      method: data ? 'POST' : 'GET',
+      data,
+      headers: { 'X-Model-Access-Token': token },
+      silent: true,
+    })
+  } catch (error) {
+    const detail = isAxiosError(error) ? error.response?.data?.detail : undefined
+    const message = typeof detail === 'string' ? detail : '复核请求失败，请刷新后重试'
+    if (data) ElMessage.error(message)
+    throw new Error(message)
+  }
+}
+export const getAnomalyReviewState = (resultId: string) =>
+  reviewRequest<AnomalyReviewState>(resultId, 'state')
 export async function getAnomalyOptions(): Promise<Options> {
   const [options, datasets] = await Promise.all([
     useMock() ? anomalyMock.options() : get<Options>('/data-governance/options'),
@@ -79,36 +110,56 @@ export const updateCandidate = async (
   action: string,
   candidateId?: string,
   inputSampleRevisionId?: string,
-): Promise<Sample> =>
+): Promise<Sample | CandidateReview> =>
   useMock()
     ? anomalyMock.mutate(id, sampleId, action, candidateId, inputSampleRevisionId)
-    : post(
-        `${base}/${encodeURIComponent(id)}/samples/${encodeURIComponent(sampleId)}/candidates/${action}`,
-        { candidateId, inputSampleRevisionId },
-      )
+    : isGovernanceLlm
+      ? reviewRequest<CandidateReview>(
+          id,
+          `samples/${encodeURIComponent(sampleId)}/candidates/${action}`,
+          { candidateId, inputSampleRevisionId },
+        )
+      : post(
+          `${base}/${encodeURIComponent(id)}/samples/${encodeURIComponent(sampleId)}/candidates/${action}`,
+          { candidateId, inputSampleRevisionId },
+        )
 export const startAnomaly = async (input: Scope): Promise<Task> =>
   useMock()
     ? anomalyMock.start(input)
     : post('/data-governance/anomaly-tasks', { name: '异常数据检测', input: modelScope(input) })
 export const getAnomalyTask = async (id: string): Promise<Task> =>
-  useMock()
-    ? anomalyMock.task(id)
-    : get(`/data-governance/anomaly-tasks/${encodeURIComponent(id)}`)
+  useMock() ? anomalyMock.task(id) : get(`/data-governance/anomaly-tasks/${encodeURIComponent(id)}`)
 export const getAnomalyChangeSet = async (scope: Scope): Promise<ChangeSet> =>
   useMock() ? anomalyMock.changeSet(scope) : get('/data-governance/change-sets/current', scope)
-export const removeAnomalyEntry = async (scope: Scope, candidateId: string): Promise<ChangeSet> =>
+export const removeAnomalyEntry = async (
+  scope: Scope,
+  candidateId: string,
+  resultId?: string,
+): Promise<ChangeSet> =>
   useMock()
     ? anomalyMock.remove(scope, candidateId)
-    : post('/data-governance/change-sets/remove', { ...scope, candidateId })
-export const checkAnomalyVersion = async (scope: Scope): Promise<VersionCheck> =>
-  useMock() ? anomalyMock.check(scope) : post('/data-governance/change-sets/validate', scope)
+    : isGovernanceLlm
+      ? reviewRequest(resultId, 'change-set/remove', { candidateId })
+      : post('/data-governance/change-sets/remove', { ...scope, candidateId })
+export const checkAnomalyVersion = async (
+  scope: Scope,
+  resultId?: string,
+): Promise<VersionCheck> =>
+  useMock()
+    ? anomalyMock.check(scope)
+    : isGovernanceLlm
+      ? reviewRequest(resultId, 'change-set/validate', {})
+      : post('/data-governance/change-sets/validate', scope)
 export const publishAnomalyVersion = async (
   scope: Scope,
   validationToken: string,
+  resultId?: string,
 ): Promise<Published> =>
   useMock()
     ? anomalyMock.publish(scope, validationToken)
-    : post('/data-governance/change-sets/generate-version', { ...scope, validationToken })
+    : isGovernanceLlm
+      ? reviewRequest(resultId, 'change-set/generate-version', { validationToken })
+      : post('/data-governance/change-sets/generate-version', { ...scope, validationToken })
 export async function exportAnomalySamples(id: string, query: Query) {
   // 服务端分页遍历完整匹配集合，绝不只导出当前页。
   const rows: Sample[] = []

@@ -59,7 +59,9 @@ const chart = computed<EChartsOption>(() => ({
   ],
 }))
 const dialog = ref(false)
-const checkpoint = ref<{ name: string; epoch: number; loss: number }>()
+const outputTableMaxHeight = 'calc(7 * var(--training-output-row-height))'
+type CheckpointRow = { name: string; epoch: number; loss: number | null }
+const checkpoint = ref<CheckpointRow>()
 /** 真实训练脚本目录，从 8001 透传拉取；不再前端硬编码。8001 注册什么就显示什么。 */
 const realScripts = ref<TrainingScriptCatalog[]>([])
 const realScriptsLoading = ref(false)
@@ -194,7 +196,7 @@ async function submit() {
     return void ElMessage.warning('目标版本已存在，请使用新版本号')
   try {
     if (isGovernanceLlm && !isMock) {
-      await createRealTraining({
+      const task = await createRealTraining({
         name: form.name.trim(),
         modelId: form.modelId,
         baseVersion: form.baseVersion,
@@ -208,6 +210,7 @@ async function submit() {
         scriptId: form.scriptId,
         ...(scriptHasTrainSamples ? { trainSamples: form.trainSamples } : {}),
       })
+      selectedId.value = task.id
       dialog.value = false
       ElMessage.success('真实训练任务已创建，等待模型服务执行')
       await store.load()
@@ -269,31 +272,42 @@ async function collectRealCurves(taskId: string) {
 }
 
 /** 把模型服务的真实状态同步进 8000 台账；有变化时刷新页面数据。 */
+let syncing = false
+let disposed = false
 async function syncRealTasks() {
+  if (syncing || disposed) return
   const running = store.data.training.filter(
     (t) => isRealId(t.id) && (t.status === 'pending' || t.status === 'running'),
   )
   if (!running.length) return
-  let changed = false
-  for (const task of running) {
-    try {
-      const detail = (await fetchRealTrainingTask(task.id)) as Record<string, unknown>
-      const curves = await collectRealCurves(task.id)
-      await syncRealTraining(task.id, {
-        status: String(detail.status || 'running'),
-        epoch: Number(detail.epoch || 0),
-        progress: Number(detail.progress || 0),
-        lossHistory: curves.lossHistory,
-        validationLossHistory: curves.validationLossHistory,
-        checkpoints: curves.checkpoints,
-        errorMessage: (detail.errorMessage as string) || null,
-      })
-      changed = true
-    } catch {
-      // 单个任务同步失败静默重试：下一轮 5 秒节拍会再次尝试，不打断页面。
+  syncing = true
+  try {
+    let changed = false
+    for (const task of running) {
+      if (disposed) return
+      try {
+        const detail = await fetchRealTrainingTask(task.id)
+        if (disposed) return
+        const curves = await collectRealCurves(task.id)
+        if (disposed) return
+        await syncRealTraining(task.id, {
+          status: String(detail.status || 'running'),
+          epoch: Number(detail.epoch || 0),
+          progress: Number(detail.progress || 0),
+          lossHistory: curves.lossHistory,
+          validationLossHistory: curves.validationLossHistory,
+          checkpoints: curves.checkpoints,
+          errorMessage: (detail.errorMessage as string) || null,
+        })
+        changed = true
+      } catch {
+        // 下一次定时刷新重试。
+      }
     }
+    if (changed && !disposed) await store.load({ background: true })
+  } finally {
+    syncing = false
   }
-  if (changed) await store.load()
 }
 
 let syncTimer: ReturnType<typeof setInterval> | undefined
@@ -314,25 +328,75 @@ onMounted(() => {
   void loadRealScripts()
 })
 onBeforeUnmount(() => {
+  disposed = true
   if (syncTimer) clearInterval(syncTimer)
 })
 
 const artifacts = ref<RealArtifact[]>([])
 const artifactsBusy = ref(false)
 const artifactsError = ref('')
+const checkpoints = computed<CheckpointRow[]>(() => {
+  const task = selected.value
+  if (!task) return []
+  const rows = task.checkpoints
+  if (task.status !== 'succeeded' || rows.some((row) => row.epoch === task.epochs)) return rows
+
+  const adapterSaved = ['outputs/adapter_model.safetensors', 'outputs/adapter_config.json'].every(
+    (filename) =>
+      artifacts.value.some((file) => file.filename === filename && file.kind === 'checkpoint' && file.size > 0),
+  )
+  if (!adapterSaved) return rows
+
+  return [
+    ...rows,
+    {
+      name: `checkpoint-${String(task.epochs).padStart(2, '0')}`,
+      epoch: task.epochs,
+      loss: null,
+    },
+  ]
+})
 watch(
-  selected,
-  async (task) => {
-    artifacts.value = []
-    artifactsError.value = ''
-    if (!task || !isRealId(task.id) || !isGovernanceLlm || isMock) return
-    artifactsBusy.value = true
-    try {
-      artifacts.value = await listRealArtifacts(task.id)
-    } catch (e) {
-      artifactsError.value = e instanceof Error ? e.message : '产物读取失败'
-    } finally {
+  [
+    () => selected.value?.id,
+    () => selected.value?.status,
+    () => selected.value?.epoch,
+    () => selected.value?.progress,
+  ],
+  async ([taskId], previous, onCleanup) => {
+    const taskChanged = taskId !== previous?.[0]
+    if (taskChanged) {
+      artifacts.value = []
+      artifactsError.value = ''
+    }
+    if (!taskId || !isRealId(taskId) || !isGovernanceLlm || isMock) {
       artifactsBusy.value = false
+      return
+    }
+
+    let current = true
+    onCleanup(() => {
+      current = false
+    })
+    if (taskChanged) artifactsBusy.value = true
+    try {
+      const files = await listRealArtifacts(taskId)
+      if (current) {
+        const existing = artifacts.value
+        if (
+          files.length !== existing.length ||
+          files.some((file, index) =>
+            file.id !== existing[index]?.id || file.sha256 !== existing[index]?.sha256,
+          )
+        ) {
+          artifacts.value = files
+        }
+        artifactsError.value = ''
+      }
+    } catch (e) {
+      if (current) artifactsError.value = e instanceof Error ? e.message : '产物读取失败'
+    } finally {
+      if (current) artifactsBusy.value = false
     }
   },
   { immediate: true },
@@ -429,12 +493,21 @@ async function saveArtifact(row: RealArtifact) {
   </div>
   <div v-if="selected" class="mw-grid mw-wide-left">
     <PanelCard title="检查点与训练产物" icon="Coin"
-      ><el-table :data="selected.checkpoints" border empty-text="暂无检查点"
+      ><el-table
+        :key="selected.id"
+        class="training-output-table"
+        :data="checkpoints"
+        :max-height="outputTableMaxHeight"
+        scrollbar-always-on
+        border
+        empty-text="暂无检查点"
         ><el-table-column prop="name" label="检查点" min-width="150" /><el-table-column
           prop="epoch"
           label="轮次"
           width="80"
-        /><el-table-column prop="loss" label="验证损失" /><el-table-column label="状态"
+        /><el-table-column label="验证损失" show-overflow-tooltip
+          ><template #default="{ row }">{{ row.loss ?? '暂无' }}</template></el-table-column
+        ><el-table-column label="状态"
           ><template #default>已保存</template></el-table-column
         ><el-table-column label="操作" width="80"
           ><template #default="{ row }"
@@ -451,31 +524,43 @@ async function saveArtifact(row: RealArtifact) {
         ><span v-else>完成后登记模型产物</span>
       </div></PanelCard
     >
+    <ComplianceEventMonitor
+      :training-task-id="selected.id"
+      :running="selected.status === 'running'"
+    />
     <PanelCard
       v-if="isGovernanceLlm && isRealId(selected.id)"
       class="mw-artifact-panel"
-      title="模型服务产物（真实文件）"
+      title="模型服务产物"
       icon="Download"
-      ><el-alert
+    >
+      <template #extra><span>目标版本 {{ selected.targetVersion }}</span></template>
+      <el-alert
         v-if="artifactsError"
         type="warning"
         :closable="false"
         show-icon
         :title="artifactsError"
       /><el-table
-        v-else
+        v-if="!artifactsError || artifacts.length"
         v-loading="artifactsBusy"
+        :key="selected.id"
+        class="training-output-table"
         :data="artifacts"
+        :max-height="outputTableMaxHeight"
+        row-key="id"
+        scrollbar-always-on
         border
-        empty-text="任务完成后即可下载产物"
+        empty-text="当前任务暂无可下载文件"
         ><el-table-column
           prop="filename"
           label="文件"
           min-width="220"
           show-overflow-tooltip
-        /><el-table-column prop="kind" label="类型" width="110" /><el-table-column
+        /><el-table-column prop="kind" label="类型" width="110" show-overflow-tooltip /><el-table-column
           label="大小"
-          width="100"
+          width="115"
+          show-overflow-tooltip
           ><template #default="{ row }">{{ (row.size / 1024).toFixed(1) }} KB</template></el-table-column
         ><el-table-column label="SHA-256" min-width="130"
           ><template #default="{ row }"
@@ -490,10 +575,6 @@ async function saveArtifact(row: RealArtifact) {
         ></el-table
       ></PanelCard
     >
-    <ComplianceEventMonitor
-      :training-task-id="selected.id"
-      :running="selected.status === 'running'"
-    />
   </div>
   <el-dialog v-model="dialog" title="新建训练任务" width="560px" class="mw-dialog"
     ><el-form label-width="100px" @submit.prevent="submit"
@@ -590,10 +671,25 @@ async function saveArtifact(row: RealArtifact) {
     ><el-descriptions v-if="checkpoint" :column="1" border
       ><el-descriptions-item label="名称">{{ checkpoint.name }}</el-descriptions-item
       ><el-descriptions-item label="轮次">{{ checkpoint.epoch }}</el-descriptions-item
-      ><el-descriptions-item label="验证损失">{{ checkpoint.loss }}</el-descriptions-item
+      ><el-descriptions-item label="验证损失">{{ checkpoint.loss ?? '暂无' }}</el-descriptions-item
       ><el-descriptions-item label="关联任务">{{
         selected?.id
       }}</el-descriptions-item></el-descriptions
     ></el-dialog
   >
 </template>
+
+<style scoped>
+.training-output-table {
+  --training-output-row-height: 40px;
+}
+
+.training-output-table :deep(.el-table__cell) {
+  height: var(--training-output-row-height);
+  padding-block: 0;
+}
+
+.training-output-table :deep(.el-table__cell .cell) {
+  white-space: nowrap;
+}
+</style>

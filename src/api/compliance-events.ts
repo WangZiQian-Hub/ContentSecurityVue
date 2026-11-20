@@ -25,7 +25,7 @@ import type { PageResult } from '../types'
 
 /** 真实请求。404 转为明确的"接口未提供"错误；其余错误提示后原样抛出。
  *  全程不弹 404 的全局提示：面板每 5 秒轮询一次，静默交给面板内联告警处理。 */
-async function requestEvents<T>(real: RequestConfig): Promise<T> {
+async function requestEvents<T>(real: RequestConfig, background = false): Promise<T> {
   try {
     return await request<T>({ ...real, silent: true })
   } catch (error) {
@@ -37,7 +37,7 @@ async function requestEvents<T>(real: RequestConfig): Promise<T> {
       : error instanceof Error
         ? error.message
         : '网络异常'
-    ElMessage.error(String(message))
+    if (!background) ElMessage.error(String(message))
     throw error
   }
 }
@@ -45,12 +45,13 @@ async function requestEvents<T>(real: RequestConfig): Promise<T> {
 /** 读取监控面板概览（汇总 + 最近事件）。 */
 export function getComplianceEventOverview(
   trainingTaskId?: string,
+  background = false,
 ): Promise<ComplianceEventOverview> {
   if (isMock) return Promise.resolve(createComplianceEventOverview())
-  return requestEvents<ComplianceEventOverview>({
-    url: '/compliance-events/overview',
-    params: trainingTaskId ? { trainingTaskId } : {},
-  })
+  return requestEvents<ComplianceEventOverview>(
+    { url: '/compliance-events/overview', params: trainingTaskId ? { trainingTaskId } : {} },
+    background,
+  )
 }
 
 /** 分页查询全部合规事件（“查看全部记录”弹窗使用）。 */

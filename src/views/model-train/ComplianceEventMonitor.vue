@@ -39,31 +39,32 @@ const statusTagType: Record<ComplianceEventStatus, 'primary' | 'success' | 'info
   ignored: 'info',
 }
 
-function refresh() {
-  void store.loadOverview(props.trainingTaskId)
+function refresh(background = false) {
+  return store.loadOverview(props.trainingTaskId, { background })
 }
 
 let pollTimer: ReturnType<typeof setTimeout> | undefined
+let disposed = false
 function stopPolling() {
   if (pollTimer) clearTimeout(pollTimer)
   pollTimer = undefined
 }
 function schedulePolling() {
   stopPolling()
-  if (!props.running) return
-  pollTimer = setTimeout(() => {
-    refresh()
+  if (disposed || !props.running) return
+  pollTimer = setTimeout(async () => {
+    await refresh(true)
     schedulePolling()
   }, 5000)
 }
 
 watch(
-  () => props.trainingTaskId,
-  () => refresh(),
-)
-watch(
-  () => props.running,
-  () => schedulePolling(),
+  [() => props.trainingTaskId, () => props.running],
+  ([taskId, running], [previousTaskId, wasRunning]) => {
+    if (taskId !== previousTaskId) void refresh()
+    else if (!running && wasRunning) void refresh(true)
+    schedulePolling()
+  },
 )
 
 /** 点“合规监控”入口：滚动定位到面板并短暂高亮。 */
@@ -77,10 +78,13 @@ watch(
 )
 
 onMounted(() => {
-  refresh()
+  void refresh()
   schedulePolling()
 })
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  disposed = true
+  stopPolling()
+})
 </script>
 
 <template>

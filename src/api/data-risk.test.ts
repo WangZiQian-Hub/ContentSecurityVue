@@ -150,6 +150,16 @@ describe('风险识别：资源一致性与保存结果契约', () => {
     expect(backend.request).toHaveBeenLastCalledWith({
       url: '/data-governance/risk-results/result/samples/sample',
     })
+    await api.listRiskSamples('result', {
+      ...q,
+      candidatesOnly: true,
+      sortBy: 'maximumSuggestedLevel',
+      sortOrder: 'desc',
+    })
+    expect(backend.request).toHaveBeenLastCalledWith({
+      url: '/data-governance/risk-results/result/samples',
+      params: { ...q, candidatesOnly: true, sortBy: 'maximum_suggested_level', sortOrder: 'desc' },
+    })
     await api.searchRiskKnowledge('result', 'sample', '个人信息暴露')
     expect(backend.request).toHaveBeenLastCalledWith({
       url: '/risk-knowledge',
@@ -160,6 +170,12 @@ describe('风险识别：资源一致性与保存结果契约', () => {
       url: '/data-governance/risk-results/result/export',
       method: 'POST',
       data: { keyword: '', level: '', status: '' },
+    })
+    await api.exportRiskSamples('result', { ...q, candidatesOnly: true })
+    expect(backend.request).toHaveBeenLastCalledWith({
+      url: '/data-governance/risk-results/result/export',
+      method: 'POST',
+      data: { keyword: '', level: '', status: '', candidatesOnly: true },
     })
     await api.reviewRisk('result', 'sample', 'revision', input, 'review')
     expect(backend.request).toHaveBeenLastCalledWith({

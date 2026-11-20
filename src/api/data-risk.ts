@@ -84,9 +84,12 @@ export async function getRiskResult(id: string): Promise<Result> {
   return useMock() ? (await mock()).result(id) : request({ url: path(id) })
 }
 export async function listRiskSamples(id: string, q: Query): Promise<PageResult<Sample>> {
-  return useMock()
-    ? (await mock()).samples(id, q)
-    : request({ url: `${path(id)}/samples`, params: { ...q } })
+  if (useMock()) return (await mock()).samples(id, q)
+  const params = {
+    ...q,
+    ...(q.sortBy === 'maximumSuggestedLevel' && { sortBy: 'maximum_suggested_level' }),
+  }
+  return request({ url: `${path(id)}/samples`, params })
 }
 export async function getRiskSample(id: string, sample: string): Promise<Sample> {
   return useMock() ? (await mock()).detail(id, sample) : request({ url: samplePath(id, sample) })
@@ -151,6 +154,11 @@ export async function exportRiskSamples(id: string, q: Query): Promise<Sample[]>
   return request({
     url: `${path(id)}/export`,
     method: 'POST',
-    data: { keyword: q.keyword, level: q.level, status: q.status },
+    data: {
+      keyword: q.keyword,
+      level: q.level,
+      status: q.status,
+      ...(q.candidatesOnly && { candidatesOnly: true }),
+    },
   })
 }

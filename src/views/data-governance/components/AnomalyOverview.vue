@@ -4,6 +4,7 @@ import { getAnomalyOverview } from '../../../api/data-anomaly'
 import type { Overview } from '../../../types/data-anomaly'
 import type { Kpi } from '../../../types'
 import KpiStrip from '../../../components/KpiStrip.vue'
+import AnomalyPollutionRateCard from './AnomalyPollutionRateCard.vue'
 const data = ref<Overview>()
 const open = ref(false)
 const error = ref('')
@@ -46,12 +47,21 @@ onMounted(async () => {
       ><el-button link type="primary" @click="open = true">统计口径 ›</el-button>
     </div>
     <el-alert v-if="error" :title="error" type="error" />
-    <KpiStrip class="anomaly-kpi-strip" :snapshot-items="cards" hide-comparison :title-descriptions="descriptions">
+    <KpiStrip
+      class="anomaly-kpi-strip"
+      :snapshot-items="cards"
+      hide-comparison
+      :title-descriptions="descriptions"
+      :grid-columns="cards.length ? `repeat(${cards.length}, minmax(0, 1fr)) minmax(270px, 1.25fr)` : undefined"
+    >
       <template #value="{ item }">
         <span :title="`${item.value.toLocaleString('zh-CN')} 条`"
           >{{ formatCount(item.value).value
           }}<small>{{ formatCount(item.value).unit }}</small></span
         >
+      </template>
+      <template #trailing>
+        <AnomalyPollutionRateCard variant="overview" :stats="data?.pollutionIdentification" />
       </template>
     </KpiStrip>
     <el-drawer v-model="open" title="总体统计口径"

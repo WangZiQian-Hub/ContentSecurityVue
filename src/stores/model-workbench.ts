@@ -67,20 +67,31 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       void load()
     }, 5000)
   }
-  async function load() {
-    loading.value = true
-    error.value = ''
+  let loadSequence = 0
+  let appliedLoad = 0
+  async function load({ background = false } = {}) {
+    const requestId = ++loadSequence
+    const showLoading = !background || !loaded.value
+    if (showLoading) {
+      loading.value = true
+      error.value = ''
+    }
     try {
-      data.value = isMock
+      const snapshot = isMock
         ? loaded.value
           ? data.value
           : createModelDemo()
-        : await api.getModelWorkbench()
+        : await api.getModelWorkbench(!showLoading)
+      if (requestId < appliedLoad) return
+      appliedLoad = requestId
+      data.value = snapshot
       loaded.value = true
+      error.value = ''
     } catch {
-      error.value = '模型数据加载失败，请检查服务连接后重试。'
+      if (showLoading && requestId >= appliedLoad)
+        error.value = '模型数据加载失败，请检查服务连接后重试。'
     } finally {
-      loading.value = false
+      if (showLoading) loading.value = false
     }
   }
   async function run<T>(action: () => Promise<T>): Promise<T> {

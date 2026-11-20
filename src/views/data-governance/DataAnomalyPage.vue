@@ -4,12 +4,17 @@ import AssessmentNotice from '../../components/AssessmentNotice.vue'
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
+import GovernanceRunNotice from './components/GovernanceRunNotice.vue'
+import AnomalyPollutionRateCard from './components/AnomalyPollutionRateCard.vue'
+import { useGovernanceRun } from '../../composables/useGovernanceRun'
 import { languageName } from '../../utils/governance-language'
-import { assertResultScope } from '../../utils/governance-scope'
+import { assertResultScope, hasGovernanceScope, initialGovernanceScope } from '../../utils/governance-scope'
 import { TASK_STATUS } from '../../utils/enums'
 import * as api from '../../api/data-anomaly'
 import { isGovernanceLlm } from '../../api/governance-llm'
 import type {
+  AnomalyReviewState,
+  Candidate,
   ChangeSet,
   Options,
   Query,
@@ -37,6 +42,8 @@ const statusSortOrder = ref<'ascending' | 'descending' | null>(null)
 const task = ref<Task>()
 const history = ref<Result[]>([])
 const changeSet = ref<ChangeSet>()
+const reviewState = ref<AnomalyReviewState>()
+const reviewWarning = ref('')
 const check = ref<VersionCheck>()
 const published = ref<Published>()
 const exportOpen = ref(false),
@@ -44,11 +51,103 @@ const exportOpen = ref(false),
   repair = ref<HTMLElement>()
 let generation = 0,
   listGeneration = 0,
-  selectionGeneration = 0,
-  timer: ReturnType<typeof setTimeout> | undefined
+  selectionGeneration = 0
+let historySelected = false
+const ready = computed(() => !!options.value && hasGovernanceScope(scope))
+const run = useGovernanceRun('anomaly', scope, {
+  create: api.startAnomaly,
+  get: api.getAnomalyTask,
+  id: (task) => task.taskId,
+  onResult: async (id, current) => {
+    if (historySelected || result.value?.id === id) return
+    const [saved, currentChangeSet] = await Promise.all([
+      api.getAnomalyResult(id),
+      isGovernanceLlm ? Promise.resolve(undefined) : api.getAnomalyChangeSet(snapshot()),
+    ])
+    if (!current() || historySelected) return
+    if (busy.value) return false
+    assertResultScope(saved, scope)
+    const ticket = ++generation
+    ++listGeneration
+    ++selectionGeneration
+    result.value = saved
+    rows.value = []
+    total.value = 0
+    selected.value = undefined
+    changeSet.value = currentChangeSet
+    reviewState.value = undefined
+    reviewWarning.value = ''
+    check.value = undefined
+    published.value = undefined
+    confirmOpen.value = false
+    exportOpen.value = false
+    drawer.value = ''
+    Object.assign(query, { page: 1, keyword: '', type: '', status: '' })
+    await loadReviewState(id, ticket)
+    if (ticket !== generation) return
+    await loadRows()
+    if (ticket === generation) emit('anomaly-updated')
+  },
+})
+const { task: runTask, locked: runLocked, submitting, message: runMessage, issue: runIssue, canRetry } = run
 const dataset = computed(() => options.value?.datasets.find((d) => d.id === scope.datasetId))
 const version = computed(() => dataset.value?.versions.find((v) => v.id === scope.versionId))
 const candidate = computed(() => selected.value?.candidates.at(-1))
+const candidateStatusLabels: Record<Candidate['status'], string> = {
+  DRAFT: '内容复核待完成',
+  PENDING_REVIEW: '待人工复核',
+  APPROVED: '审核通过，待发布',
+  REJECTED: '已驳回',
+  PUBLISHED: '已发布',
+  WITHDRAWN: '已撤回',
+}
+const reviewsByCandidate = computed(
+  () => new Map(reviewState.value?.reviews.map((item) => [item.candidateId, item])),
+)
+const statusesBySample = computed(() => {
+  const statuses = new Map<string, Sample['status']>()
+  for (const item of reviewState.value?.reviews ?? []) {
+    if (['APPROVED', 'PUBLISHED', 'REJECTED'].includes(item.status))
+      statuses.set(item.sampleId, '已处理')
+    else if (item.status === 'PENDING_REVIEW' && !statuses.has(item.sampleId))
+      statuses.set(item.sampleId, '待复核')
+  }
+  return statuses
+})
+const reviewingSamples = computed(
+  () => [...statusesBySample.value.values()].filter((status) => status === '待复核').length,
+)
+function withReview(row: Sample): Sample {
+  if (!isGovernanceLlm) return row
+  const candidates = row.candidates.map((item) => ({
+    ...item,
+    status: reviewsByCandidate.value.get(item.candidateId)?.status ?? item.status,
+  }))
+  const current = candidates.at(-1)
+  const actions: string[] = []
+  if (
+    reviewState.value?.editable &&
+    current?.fieldChanges.length === 1 &&
+    current.fieldChanges[0]?.field === 'topic_label' &&
+    current.validationResults.length &&
+    current.validationResults.every((item) => item.passed)
+  ) {
+    if (current.status === 'DRAFT' || current.status === 'WITHDRAWN') actions.push('submit')
+    if (current.status === 'PENDING_REVIEW') actions.push('approve', 'reject', 'withdraw')
+  }
+  return {
+    ...row,
+    status: statusesBySample.value.get(row.id) ?? row.status,
+    candidates,
+    actions,
+    timeline: [
+      ...row.timeline,
+      ...candidates.flatMap(
+        (item) => reviewsByCandidate.value.get(item.candidateId)?.timeline ?? [],
+      ),
+    ],
+  }
+}
 const detectionScheme = computed(() => {
   const id = result.value?.scope.schemeId || scope.schemeId
   return options.value?.schemes.find((item) => item.id === id)?.name || id || '未记录'
@@ -72,14 +171,17 @@ const metrics = computed(() =>
         },
         {
           label: '待处理',
-          value: result.value.pendingCount.toLocaleString(),
+          value: Math.max(
+            0,
+            result.value.pendingCount - statusesBySample.value.size,
+          ).toLocaleString(),
           unit: '条',
           status: '待处理',
           active: query.status === '待处理',
         },
         {
           label: '待复核',
-          value: result.value.reviewCount.toLocaleString(),
+          value: (result.value.reviewCount + reviewingSamples.value).toLocaleString(),
           unit: '条',
           status: '待复核',
           active: query.status === '待复核',
@@ -113,7 +215,8 @@ async function choose(row: Sample) {
   if (!id) return
   try {
     const detail = await api.getAnomalySample(id, row.id)
-    if (ticket === selectionGeneration && id === result.value?.id) selected.value = detail
+    if (ticket === selectionGeneration && id === result.value?.id)
+      selected.value = withReview(detail)
   } catch (e) {
     if (ticket === selectionGeneration) error.value = String(e)
   }
@@ -127,19 +230,24 @@ async function loadRows() {
   if (!id) return
   try {
     let page
-    if (statusSortOrder.value) {
+    const localStatus = isGovernanceLlm ? query.status : ''
+    if (statusSortOrder.value || localStatus) {
       const pageSize = 100
-      const first = await api.listAnomalySamples(id, { ...query, page: 1, pageSize })
+      const filterQuery = { ...query, status: isGovernanceLlm ? '' : query.status, pageSize }
+      const first = await api.listAnomalySamples(id, { ...filterQuery, page: 1 })
       const remaining = await Promise.all(
         Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) =>
-          api.listAnomalySamples(id, { ...query, page: index + 2, pageSize }),
+          api.listAnomalySamples(id, { ...filterQuery, page: index + 2 }),
         ),
       )
       const statusOrder: Record<string, number> = { 待处理: 0, 待复核: 1, 已处理: 2 }
       const direction = statusSortOrder.value === 'ascending' ? 1 : -1
       const items = [first, ...remaining]
         .flatMap((item) => item.items)
-        .sort(
+        .map(withReview)
+        .filter((row) => !localStatus || row.status === localStatus)
+      if (statusSortOrder.value)
+        items.sort(
           (a, b) =>
             direction *
             ((statusOrder[a.status] ?? Number.MAX_SAFE_INTEGER) -
@@ -147,9 +255,15 @@ async function loadRows() {
               a.id.localeCompare(b.id, 'zh-CN')),
         )
       const start = (query.page - 1) * query.pageSize
-      page = { ...first, items: items.slice(start, start + query.pageSize), page: query.page }
+      page = {
+        ...first,
+        items: items.slice(start, start + query.pageSize),
+        page: query.page,
+        total: items.length,
+      }
     } else {
       page = await api.listAnomalySamples(id, { ...query })
+      page.items = page.items.map(withReview)
     }
     if (ticket !== listGeneration || id !== result.value?.id) return
     rows.value = page.items
@@ -171,17 +285,35 @@ function changeStatusSort({
   query.page = 1
   void loadRows()
 }
+async function loadReviewState(resultId: string, ticket: number) {
+  if (!isGovernanceLlm || ticket !== generation || result.value?.id !== resultId) return
+  reviewWarning.value = ''
+  try {
+    const state = await api.getAnomalyReviewState(resultId)
+    if (ticket !== generation || result.value?.id !== resultId) return
+    reviewState.value = state
+    changeSet.value = state.changeSet
+  } catch {
+    if (ticket !== generation || result.value?.id !== resultId) return
+    reviewState.value = undefined
+    changeSet.value = undefined
+    reviewWarning.value = '复核状态加载失败，仍可查看检测结果。请刷新后重试。'
+  }
+}
 async function loadScope(resultId?: string) {
   const ticket = ++generation
   ++listGeneration
   ++selectionGeneration
-  clearTimeout(timer)
+  run.reset()
+  historySelected = !!resultId
   result.value = null
   selected.value = undefined
   rows.value = []
   total.value = 0
   task.value = undefined
   changeSet.value = undefined
+  reviewState.value = undefined
+  reviewWarning.value = ''
   check.value = undefined
   published.value = undefined
   drawer.value = ''
@@ -192,7 +324,10 @@ async function loadScope(resultId?: string) {
   error.value = ''
   try {
     const exact = resultId ? await api.getAnomalyResult(resultId) : null
+    if (ticket !== generation) return
     if (exact) Object.assign(scope, exact.scope)
+    if (!ready.value) return
+    run.rememberScope()
     const input = snapshot()
     const [r, c] = await Promise.all([
       exact ? Promise.resolve(exact) : api.getLatestAnomaly(input),
@@ -202,11 +337,16 @@ async function loadScope(resultId?: string) {
     assertResultScope(r, input)
     result.value = r
     changeSet.value = c
+    if (r) await loadReviewState(r.id, ticket)
+    if (ticket !== generation) return
     await loadRows()
   } catch (e) {
     if (ticket === generation) error.value = String(e)
   } finally {
-    if (ticket === generation) loading.value = false
+    if (ticket === generation) {
+      loading.value = false
+      if (ready.value) void run.restore()
+    }
   }
 }
 function changeDataset() {
@@ -246,6 +386,8 @@ async function refresh(sampleId?: string) {
   if (ticket !== generation) return
   result.value = r
   changeSet.value = c
+  await loadReviewState(r.id, ticket)
+  if (ticket !== generation) return
   await loadRows()
   const row = rows.value.find((r) => r.id === sampleId)
   if (row) await choose(row)
@@ -263,41 +405,20 @@ async function act(action: string) {
       row.candidates.at(-1)?.candidateId,
       row.revisionId,
     )
+    if (action === 'approve' || action === 'reject' || action === 'withdraw') drawer.value = ''
     await refresh(row.id)
   })
 }
 async function start() {
-  await safely(async () => {
-    const ticket = generation
-    const created = await api.startAnomaly(snapshot())
-    if (ticket !== generation) return
-    task.value = created
-    result.value = null
-    rows.value = []
-    selected.value = undefined
-    total.value = 0
-    const taskId = task.value.taskId
-    async function poll() {
-      try {
-        const t = await api.getAnomalyTask(taskId)
-        if (ticket !== generation) return
-        task.value = t
-        if (t.status === 'pending' || t.status === 'running') timer = setTimeout(poll, 2000)
-        else if (t.status === 'succeeded' && t.resultId) {
-          const saved = await api.getAnomalyResult(t.resultId)
-          if (ticket === generation) {
-            assertResultScope(saved, scope)
-            result.value = saved
-            await loadRows()
-            emit('anomaly-updated')
-          }
-        }
-      } catch (e) {
-        if (ticket === generation) error.value = String(e)
-      }
-    }
-    timer = setTimeout(poll, 2000)
-  })
+  if (!ready.value || busy.value || loading.value || runLocked.value) return
+  error.value = ''
+  historySelected = false
+  await run.start()
+}
+function openRunTask() {
+  if (!runTask.value) return
+  task.value = runTask.value
+  drawer.value = '任务详情'
 }
 async function openHistory() {
   await safely(async () => {
@@ -320,46 +441,60 @@ async function openTask() {
     })
 }
 async function selectHistory(r: Result) {
+  historySelected = true
   await safely(async () => {
     const ticket = ++generation
     ++listGeneration
     ++selectionGeneration
-    clearTimeout(timer)
     result.value = null
     task.value = undefined
     selected.value = undefined
     rows.value = []
     total.value = 0
     drawer.value = ''
+    if (isGovernanceLlm) {
+      reviewState.value = undefined
+      reviewWarning.value = ''
+      changeSet.value = undefined
+      check.value = undefined
+      published.value = undefined
+    }
     const saved = await api.getAnomalyResult(r.id)
     if (ticket !== generation) return
     assertResultScope(saved, scope)
     result.value = saved
+    await loadReviewState(saved.id, ticket)
+    if (ticket !== generation) return
     Object.assign(query, { page: 1, type: '', status: '', keyword: '' })
     await loadRows()
   })
 }
 async function preparePublish() {
   await safely(async () => {
-    check.value = await api.checkAnomalyVersion(snapshot())
+    check.value = await api.checkAnomalyVersion(snapshot(), result.value?.id)
     confirmOpen.value = true
   })
 }
 async function publish() {
   if (!check.value) return
   await safely(async () => {
-    published.value = await api.publishAnomalyVersion(snapshot(), check.value!.token)
+    published.value = await api.publishAnomalyVersion(
+      snapshot(),
+      check.value!.token,
+      result.value?.id,
+    )
     options.value = await api.getAnomalyOptions()
     confirmOpen.value = false
-    changeSet.value = await api.getAnomalyChangeSet(snapshot())
+    if (!isGovernanceLlm) changeSet.value = await api.getAnomalyChangeSet(snapshot())
     await refresh()
     ElMessage.success('已整批生成新版本，原版本保持不变')
   })
 }
 async function remove(candidateId: string) {
   await safely(async () => {
-    changeSet.value = await api.removeAnomalyEntry(snapshot(), candidateId)
+    changeSet.value = await api.removeAnomalyEntry(snapshot(), candidateId, result.value?.id)
     check.value = undefined
+    if (isGovernanceLlm) await refresh(selected.value?.id)
   })
 }
 async function download() {
@@ -367,7 +502,9 @@ async function download() {
   const id = result.value.id,
     q = { ...query }
   await safely(async () => {
-    const all = await api.exportAnomalySamples(id, q)
+    const all = (await api.exportAnomalySamples(id, isGovernanceLlm ? { ...q, status: '' } : q))
+      .map(withReview)
+      .filter((row) => !q.status || row.status === q.status)
     const csv = [
       ['样本ID', '版本', '语种', '正文', '主要类型', '状态'],
       ...all.map((r) => [
@@ -399,27 +536,28 @@ async function download() {
     exportOpen.value = false
   })
 }
-onMounted(() =>
-  safely(async () => {
-    options.value = await api.getAnomalyOptions()
-    if (!dataset.value) scope.datasetId = options.value.datasets[0]!.id
-    scope.versionId = dataset.value!.versions[0]!.id
-    scope.language = isGovernanceLlm
-      ? 'all'
-      : dataset.value!.versions[0]!.languages[0]?.code || 'all'
-    scope.schemeId = options.value.schemes[0]!.id
-    const resultId =
-      typeof window === 'undefined'
-        ? ''
-        : new URLSearchParams(window.location.search).get('resultId') || ''
-    await loadScope(resultId || undefined)
-  }),
-)
+onMounted(async () => {
+  const ticket = generation
+  await safely(async () => {
+    const data = await api.getAnomalyOptions()
+    if (ticket !== generation) return
+    options.value = data
+    Object.assign(
+      scope,
+      initialGovernanceScope(data, run.rememberedScope(), { datasetId: 3 }, isGovernanceLlm),
+    )
+  })
+  if (ticket !== generation || !options.value) return
+  const resultId =
+    typeof window === 'undefined'
+      ? ''
+      : new URLSearchParams(window.location.search).get('resultId') || ''
+  await loadScope(resultId || undefined)
+})
 onBeforeUnmount(() => {
   ++generation
   ++listGeneration
   ++selectionGeneration
-  clearTimeout(timer)
 })
 watch(
   () => query.page,
@@ -471,11 +609,21 @@ watch(
         ></label>
         <el-button
           type="primary"
-          :disabled="busy || !options || task?.status === 'running'"
+          :loading="submitting"
+          :disabled="busy || loading || !ready || runLocked"
           @click="start"
           >{{ result ? '重新检测' : '开始检测' }}</el-button
-        ><el-button :disabled="busy" @click="openHistory">历史结果</el-button>
+        ><el-button :disabled="busy || loading || !ready" @click="openHistory">历史结果</el-button>
       </div>
+      <GovernanceRunNotice
+        :message="runMessage"
+        :issue="runIssue"
+        :can-retry="canRetry"
+        :has-result="!!result"
+        @retry="run.restore()"
+      >
+        <el-button v-if="runTask" link type="primary" @click="openRunTask">查看当前任务详情</el-button>
+      </GovernanceRunNotice>
       <div v-if="result" class="anomaly-result">
         <span
           >当前结果：{{
@@ -486,26 +634,11 @@ watch(
           {{ result.finishedAt }}</span
         ><el-button link type="primary" @click="openTask">查看任务 ›</el-button>
       </div>
-      <el-alert
-        v-else-if="task?.status === 'running'"
-        title="检测任务运行中，正在等待保存结果"
-        type="info"
-        :closable="false"
-      />
-      <el-alert
-        v-else-if="task?.status === 'failed'"
-        :title="`检测失败：${task.errorMessage || '请查看任务详情'}`"
-        type="error"
-        :closable="false"
-      />
       <el-empty
-        v-else
+        v-else-if="!loading && !error && !runMessage && !runIssue"
         description="未分析：没有完全匹配的历史结果，点击开始检测创建任务"
         :image-size="60"
       />
-      <el-button v-if="task && !result" link type="primary" @click="drawer = '任务详情'"
-        >查看当前任务详情</el-button
-      >
       <template v-if="result"
         ><div class="anomaly-metrics result-cards">
           <button
@@ -520,6 +653,7 @@ watch(
               >{{ m.value }}<small>{{ m.unit }}</small></strong
             >
           </button>
+          <AnomalyPollutionRateCard variant="result" :stats="result.pollutionIdentification" />
         </div>
         <p class="anomaly-note result-note">
           失败 {{ result.failedCount }} · 不可评估 {{ result.unavailableCount }} · 已处理
@@ -577,19 +711,25 @@ watch(
             ><el-tag type="danger">{{ selected.primaryType }}</el-tag
             ><el-tag type="warning">{{ selected.status }}</el-tag>
           </div>
-          <p class="anomaly-excerpt">{{ selected.text }}</p>
-          <p v-for="f in selected.findings" :key="f.ruleId" class="anomaly-finding">
-            <b>发现问题：</b>{{ f.reason }}<br /><b>证据：</b>“{{ f.quote }}”
-          </p>
-          <div class="anomaly-source">
-            数据集：{{ result.datasetName }}<br />版本：{{
-              versionName(result.scope.datasetId, selected.versionId)
-            }}
-            · 样本：{{ selected.id }}<br />原文件 / 行号：{{
-              selected.source.filename || '未记录'
-            }}
-            /
-            {{ selected.source.line ?? '未记录' }}
+          <div
+            :key="selected.id"
+            class="governance-sample-scroll"
+            role="region"
+            tabindex="0"
+            aria-label="样本正文、异常依据与来源"
+          >
+            <p class="anomaly-excerpt">{{ selected.text }}</p>
+            <p v-for="f in selected.findings" :key="f.ruleId" class="anomaly-finding">
+              <b>发现问题：</b>{{ f.reason }}<br /><b>证据：</b>“{{ f.quote }}”
+            </p>
+            <div class="anomaly-source">
+              数据集：{{ result.datasetName }}<br />版本：{{
+                versionName(result.scope.datasetId, selected.versionId)
+              }}
+              · 样本：{{ selected.id }}<br />原文件 / 行号：{{ selected.source.filename || '未记录' }}
+              /
+              {{ selected.source.line ?? '未记录' }}
+            </div>
           </div>
           <el-button link type="primary" @click="drawer = '原始样本'"
             >查看原始样本 ›</el-button
@@ -695,11 +835,11 @@ watch(
               <p class="anomaly-note">
                 技术检查只核对格式、字段和引用，不代表标签错标已确认；人工复核状态另行记录。
               </p>
-              <el-tag :type="candidate.status === 'APPROVED' ? 'success' : 'warning'">{{
-                candidate.status === 'DRAFT' || candidate.status === 'PENDING_REVIEW'
-                  ? '内容复核待完成'
-                  : candidate.status
-              }}</el-tag>
+              <el-tag
+                :type="['APPROVED', 'PUBLISHED'].includes(candidate.status) ? 'success' : 'warning'"
+              >
+                {{ candidateStatusLabels[candidate.status] }}
+              </el-tag>
             </div>
           </div>
           <p>{{ candidate.reason }}</p>
@@ -723,11 +863,11 @@ watch(
               type="primary"
               :disabled="busy || !selected.actions.includes('submit')"
               @click="act('submit')"
-              v-if="!isGovernanceLlm"
+              v-if="!isGovernanceLlm || selected.actions.includes('submit')"
               >提交复核</el-button
             ><el-button link type="primary" @click="drawer = '处理时间线'">查看修复记录</el-button
             ><el-button
-              v-if="selected.actions.includes('approve') && !isGovernanceLlm"
+              v-if="selected.actions.includes('approve')"
               :disabled="busy"
               @click="drawer = '人工复核'"
               >人工复核</el-button
@@ -744,7 +884,8 @@ watch(
       /></PanelCard>
     </div>
     <PanelCard title="待发布修改集"
-      ><template v-if="changeSet"
+      ><el-alert v-if="reviewWarning" :title="reviewWarning" type="warning" :closable="false" />
+      <template v-if="changeSet"
         ><p class="change-set-title">
           {{ dataset?.name }} · 基础版本 <el-tag>{{ changeSet.versionLabel }}</el-tag>
         </p>
@@ -765,7 +906,6 @@ watch(
             type="primary"
             :disabled="busy || !changeSet.actions.includes('publish')"
             @click="preparePublish"
-            v-if="!isGovernanceLlm"
             >生成新版本</el-button
           >
         </div>
@@ -777,7 +917,12 @@ watch(
           :title="`已生成：${published.versionLabel}（${published.newDatasetVersionId}）`"
           type="success"
           :closable="false" /></template
-    ></PanelCard>
+      ><el-empty
+        v-else-if="!reviewWarning"
+        description="打开已完成的异常检测结果后查看修改集"
+        :image-size="50"
+      />
+    </PanelCard>
     <el-drawer
       :model-value="!!drawer"
       :class="{ 'governance-history-drawer': drawer === '历史结果' }"
@@ -861,7 +1006,7 @@ watch(
                 type="danger"
                 :disabled="busy"
                 @click="remove(row.candidateId)"
-                v-if="!isGovernanceLlm"
+                v-if="!isGovernanceLlm || changeSet?.actions.includes('remove')"
                 >移除条目</el-button
               ></template
             ></el-table-column
@@ -880,7 +1025,7 @@ watch(
         >
         <h3>候选历史</h3>
         <p v-for="c in selected?.candidates" :key="c.candidateId">
-          {{ c.candidateId }} · {{ c.status }}
+          {{ c.candidateId }} · {{ candidateStatusLabels[c.status] }}
         </p></template
       >
       <template v-else-if="drawer === '人工复核'"
@@ -898,18 +1043,15 @@ watch(
           <el-button
             type="primary"
             :disabled="busy || !selected?.actions.includes('approve')"
-            @click="act('approve').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm"
+            @click="act('approve')"
             >审核通过</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('reject')"
-            @click="act('reject').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm"
+            @click="act('reject')"
             >驳回</el-button
           ><el-button
             :disabled="busy || !selected?.actions.includes('withdraw')"
-            @click="act('withdraw').then(() => (drawer = ''))"
-            v-if="!isGovernanceLlm"
+            @click="act('withdraw')"
             >撤回复核</el-button
           >
         </div></template
@@ -1060,8 +1202,10 @@ watch(
 }
 /* 顶部结果指标条：外观与"风险识别与分级"页保持一致；只作用于带 result-cards 的这条，
    "待发布修改集"面板里复用 .anomaly-metrics 的三格不受影响。 */
-.anomaly-metrics.result-cards > button,
-.anomaly-metrics.result-cards > div {
+.anomaly-metrics.result-cards {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(250px, 1.2fr);
+}
+.anomaly-metrics.result-cards > * {
   padding: 15px 20px;
   background: #f4f8fe;
   border: 1px solid #e7effb;
@@ -1162,6 +1306,7 @@ watch(
 }
 .anomaly-tags {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .anomaly-tags :deep(.el-tag__content) {
@@ -1171,6 +1316,7 @@ watch(
   font-size: 16px;
   font-weight: 600;
   line-height: 1.9;
+  white-space: pre-wrap;
 }
 .anomaly-source {
   border-top: 1px solid #e0e9f3;
@@ -1272,7 +1418,8 @@ watch(
   .anomaly-repair {
     grid-template-columns: 1fr;
   }
-  .anomaly-metrics {
+  .anomaly-metrics,
+  .anomaly-metrics.result-cards {
     grid-template-columns: repeat(2, 1fr);
   }
 }

@@ -12,6 +12,7 @@ const props = defineProps<{
   hideMiniBarsWithoutComparison?: boolean
   hideComparison?: boolean
   titleDescriptions?: Record<string, string>
+  gridColumns?: string
   /** 接口没返回指标时显示的占位文案；不传则维持原样（整块不显示内容）。 */
   emptyText?: string
   /** 占位文案下面的一行小字；不传则只显示上面那行。 */
@@ -94,7 +95,7 @@ watch(
   <div
     class="kpi-strip"
     :style="{
-      gridTemplateColumns: items.length ? `repeat(${items.length}, minmax(0, 1fr))` : '1fr',
+      gridTemplateColumns: gridColumns || (items.length ? `repeat(${items.length}, minmax(0, 1fr))` : '1fr'),
     }"
   >
     <!-- 没拿到指标时给一句说明，避免整排卡片直接消失。 -->
@@ -122,5 +123,6 @@ watch(
         <i v-for="bar in 5" :key="bar" :style="{ height: `${bar * 6 + 6}px` }"></i>
       </div>
     </article>
+    <slot name="trailing" />
   </div>
 </template>

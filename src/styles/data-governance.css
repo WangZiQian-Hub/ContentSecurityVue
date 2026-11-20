@@ -10,6 +10,17 @@
 .governance-grid {
   grid-template-columns: 0.8fr 1.2fr 1.15fr;
 }
+.governance-sample-scroll {
+  max-height: min(360px, 48vh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding-inline-end: 6px;
+  scrollbar-gutter: stable;
+}
+.governance-sample-scroll:focus-visible {
+  outline: 2px solid #87bdff;
+  outline-offset: 2px;
+}
 .legend-note {
   text-align: center;
   color: #1677ff;

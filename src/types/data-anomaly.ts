@@ -36,6 +36,11 @@ export interface Sample extends ResourceSample {
   timeline: { at: string; message: string }[]
   actions: string[]
 }
+export interface PollutionIdentification {
+  correctCount: number
+  totalCount: number
+  validCount: number
+}
 export interface Result extends Assessment {
   id: string
   taskId: string
@@ -52,6 +57,7 @@ export interface Result extends Assessment {
   reviewCount: number
   processedCount: number
   primaryTypeCounts: { type: string; count: number }[]
+  pollutionIdentification?: PollutionIdentification
 }
 export interface Task {
   taskId: string
@@ -89,6 +95,17 @@ export interface ChangeSet {
   conflicts: number
   actions: string[]
 }
+export interface CandidateReview {
+  candidateId: string
+  sampleId: string
+  status: Candidate['status']
+  timeline: Sample['timeline']
+}
+export interface AnomalyReviewState {
+  editable: boolean
+  reviews: CandidateReview[]
+  changeSet: ChangeSet
+}
 export interface VersionCheck {
   token: string
   count: number
@@ -104,4 +121,5 @@ export interface Published {
 export interface Overview {
   cards: { label: string; value: number; icon: string }[]
   definitions: string[]
+  pollutionIdentification?: PollutionIdentification
 }

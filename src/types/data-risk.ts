@@ -23,6 +23,7 @@ export interface Query {
   keyword: string
   level: string
   status: string
+  candidatesOnly?: boolean
   sortBy?: RiskSortField
   sortOrder?: SortOrder
 }

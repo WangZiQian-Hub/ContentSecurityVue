@@ -7,9 +7,12 @@ import { ElMessage } from 'element-plus'
 import PanelCard from '../../components/PanelCard.vue'
 import ValueMetrics from './components/ValueMetrics.vue'
 import ValueChart from './components/ValueChart.vue'
+import GovernanceRunNotice from './components/GovernanceRunNotice.vue'
 import { isMock } from '../../api/request'
 import { getLlmToken, isGovernanceLlm } from '../../api/governance-llm'
+import { useGovernanceRun } from '../../composables/useGovernanceRun'
 import { languageName } from '../../utils/governance-language'
+import { assertResultScope, hasGovernanceScope, initialGovernanceScope } from '../../utils/governance-scope'
 import * as api from '../../api/data-value'
 import type {
   ValueOptions,
@@ -33,9 +36,7 @@ const languages = computed(
   () => versions.value.find((item) => item.id === scope.versionId)?.languages ?? [],
 )
 const scopeKey = () => JSON.stringify(scope)
-const ready = computed(
-  () => !!(scope.datasetId && scope.versionId && scope.language && scope.schemeId),
-)
+const ready = computed(() => hasGovernanceScope(scope))
 const result = ref<ValueResult | null>()
 const loading = ref(false)
 const optionsFailed = ref(false)
@@ -60,7 +61,6 @@ const historyOpen = ref(false)
 const historyLoading = ref(false)
 const historyFailed = ref(false)
 const tasks = ref<ValueTask[]>([])
-const creating = ref(false)
 const taskOpen = ref(false)
 const taskLoading = ref(false)
 const taskFailed = ref(false)
@@ -70,8 +70,20 @@ let resultSeq = 0
 let sampleSeq = 0
 let historySeq = 0
 let taskSeq = 0
-let taskTimer: ReturnType<typeof setTimeout> | undefined
+let scopeSeq = 0
 let disposed = false
+let historySelected = false
+const run = useGovernanceRun('value', scope, {
+  create: api.createValueTask,
+  get: api.getValueTask,
+  id: (task) => task.taskId,
+  onTask: upsertTask,
+  onResult: async (id, current) => {
+    if (historySelected || result.value?.id === id) return
+    await loadResult(id, () => current() && !historySelected)
+  },
+})
+const { locked: runLocked, submitting: creating, message: runMessage, issue: runIssue, canRetry } = run
 const tierNames = { high: '高价值', medium: '中价值', low: '低价值', unavailable: '不可评估' }
 const statusNames = {
   pending: '等待执行',
@@ -137,15 +149,15 @@ function versionName(datasetId?: number, versionId?: string, fallback?: string) 
 async function loadOptions() {
   optionsFailed.value = false
   try {
-    options.value = await api.getValueOptions()
+    const data = await api.getValueOptions()
+    if (disposed) return
+    options.value = data
     if (initialResultId) {
       const exact = await api.getValueResult(initialResultId)
-      Object.assign(scope, exact.scope)
+      if (!disposed) Object.assign(scope, exact.scope)
       return
     }
-    scope.schemeId = options.value.schemes[0]?.id ?? ''
-    scope.datasetId = options.value.datasets[0]?.id ?? 0
-    resetDataset()
+    Object.assign(scope, initialGovernanceScope(data, run.rememberedScope(), {}, isGovernanceLlm))
   } catch {
     optionsFailed.value = true
   }
@@ -173,8 +185,7 @@ async function loadSamples() {
     if (seq === sampleSeq) sampleLoading.value = false
   }
 }
-async function loadResult(id?: string) {
-  const seq = ++resultSeq
+function clearDisplayedResult() {
   ++sampleSeq
   result.value = undefined
   rows.value = []
@@ -185,30 +196,31 @@ async function loadResult(id?: string) {
   sampleFailed.value = false
   keywordInput.value = ''
   Object.assign(query, { page: 1, tier: 'all', keyword: '', bin: '' })
-  loading.value = false
+}
+async function loadResult(id?: string, keepPreviousWhile?: () => boolean) {
+  const seq = ++resultSeq
+  if (!keepPreviousWhile) clearDisplayedResult()
   if (!ready.value) return
   loading.value = true
   try {
     const data = id ? await api.getValueResult(id) : await api.getLatestValueResult({ ...scope })
-    if (seq !== resultSeq) return
-    if (
-      data &&
-      (data.scope.datasetId !== scope.datasetId ||
-        data.scope.versionId !== scope.versionId ||
-        data.scope.language !== scope.language ||
-        data.scope.schemeId !== scope.schemeId)
-    )
-      throw new Error('分析结果与当前范围不一致')
+    if (seq !== resultSeq || (keepPreviousWhile && !keepPreviousWhile())) return
+    assertResultScope(data, scope)
+    if (keepPreviousWhile) clearDisplayedResult()
     result.value = data
     await loadSamples()
-  } catch {
-    if (seq === resultSeq) resultFailed.value = true
+  } catch (error) {
+    if (seq !== resultSeq) return
+    if (keepPreviousWhile) throw error
+    resultFailed.value = true
   } finally {
     if (seq === resultSeq) loading.value = false
   }
 }
-watch(scopeKey, () => {
-  clearTimeout(taskTimer)
+watch(scopeKey, async () => {
+  const seq = ++scopeSeq
+  run.reset()
+  run.rememberScope()
   historyOpen.value = false
   historyLoading.value = false
   historyFailed.value = false
@@ -217,9 +229,13 @@ watch(scopeKey, () => {
   ++historySeq
   tasks.value = []
   detailOpen.value = false
+  taskOpen.value = false
+  ++taskSeq
   const resultId = initialResultId
   initialResultId = ''
-  void loadResult(resultId || undefined)
+  historySelected = !!resultId
+  await loadResult(resultId || undefined)
+  if (!disposed && seq === scopeSeq && ready.value) void run.restore()
 })
 watch(
   () => [
@@ -259,7 +275,10 @@ async function showHistory() {
   const seq = ++historySeq
   try {
     const data = await api.listValueTasks({ ...scope })
-    if (seq === historySeq) tasks.value = data.items
+    if (seq === historySeq) {
+      tasks.value = data.items
+      if (run.task.value) upsertTask(run.task.value)
+    }
   } catch {
     if (seq === historySeq) historyFailed.value = true
   } finally {
@@ -295,7 +314,7 @@ function upsertTask(task: ValueTask) {
       : [task, ...tasks.value].slice(0, 20)
 }
 async function analyze() {
-  if (!ready.value || creating.value) return
+  if (!ready.value || loading.value || runLocked.value || resultFailed.value) return
   if (isGovernanceLlm && !getLlmToken()) {
     ElMessage.error('请先填写模型访问令牌')
     return
@@ -304,55 +323,21 @@ async function analyze() {
     ElMessage.info('示例模式展示已有结果；重新分析需连接后端服务。')
     return
   }
-  creating.value = true
-  const key = scopeKey()
-  try {
-    const task = await api.createValueTask({ ...scope })
-    if (disposed || key !== scopeKey()) return
-    ElMessage.success('分析任务已提交')
-    if (key !== scopeKey()) return
-    upsertTask(task)
-    clearTimeout(taskTimer)
-    const poll = async () => {
-      if (disposed || key !== scopeKey()) return
-      try {
-        const updated = await api.getValueTask(task.taskId)
-        if (disposed || key !== scopeKey()) return
-        upsertTask(updated)
-        if (updated.status === 'pending' || updated.status === 'running') {
-          if (!disposed) taskTimer = setTimeout(poll, 2000)
-        } else if (updated.status === 'succeeded' && updated.resultId)
-          await loadResult(updated.resultId)
-        else if (updated.status === 'failed')
-          ElMessage.error(updated.errorMessage || '分析任务失败')
-      } catch (e) {
-        if (!disposed && key === scopeKey())
-          ElMessage.error(e instanceof Error ? e.message : String(e))
-      }
-    }
-    // 价值分析后端 may complete synchronously (and returns resultId). Load
-    // that immutable snapshot immediately so the current page reflects the
-    // analysis instead of leaving the user in the empty initial state.
-    if (task.status === 'succeeded' && task.resultId) {
-      await loadResult(task.resultId)
-      return
-    }
-    if (task.status === 'pending' || task.status === 'running') taskTimer = setTimeout(poll, 2000)
-    historyOpen.value = true
-  } catch {
-    /* 请求层统一展示错误。 */
-  } finally {
-    creating.value = false
-  }
+  historySelected = false
+  await run.start()
 }
 async function refreshTask(task: ValueTask) {
   if (isMock && !isGovernanceLlm) return
   const key = scopeKey()
+  const seq = resultSeq
   try {
     const updated = await api.getValueTask(task.taskId)
-    if (key !== scopeKey()) return
+    if (disposed || key !== scopeKey()) return
     tasks.value = tasks.value.map((item) => (item.taskId === task.taskId ? updated : item))
-    if (updated.status === 'succeeded' && updated.resultId) await loadResult(updated.resultId)
+    if (seq === resultSeq && updated.status === 'succeeded' && updated.resultId) {
+      historySelected = true
+      await loadResult(updated.resultId)
+    }
   } catch {
     /* 请求层统一展示错误。 */
   }
@@ -362,8 +347,9 @@ function explain(row: ValueSample) {
   detailOpen.value = true
 }
 function openHistoryResult(id: string) {
+  historySelected = true
   historyOpen.value = false
-  void loadResult(id)
+  return loadResult(id)
 }
 async function exportPage() {
   const cell = (value: unknown) => {
@@ -391,10 +377,10 @@ async function exportPage() {
 }
 onBeforeUnmount(() => {
   disposed = true
-  clearTimeout(taskTimer)
   ++resultSeq
   ++sampleSeq
   ++historySeq
+  ++taskSeq
 })
 onMounted(loadOptions)
 </script>
@@ -446,12 +432,19 @@ onMounted(loadOptions)
         <el-button
           type="primary"
           :loading="creating"
-          :disabled="!ready || loading || resultFailed"
+          :disabled="!ready || loading || resultFailed || runLocked"
           @click="analyze"
           >{{ result ? '重新分析' : '开始分析' }}</el-button
         >
         <el-button :disabled="!ready" @click="showHistory">历史结果</el-button>
       </div>
+      <GovernanceRunNotice
+        :message="runMessage"
+        :issue="runIssue"
+        :can-retry="canRetry"
+        :has-result="!!result"
+        @retry="run.restore()"
+      />
       <div v-if="result" class="value-result-line">
         <span
           >当前结果：{{
@@ -465,7 +458,7 @@ onMounted(loadOptions)
           </template></span
         ><el-button link type="primary" @click="showTaskDetail">查看任务 ›</el-button>
       </div>
-      <div v-else class="muted">
+      <div v-else-if="!runMessage && !runIssue" class="muted">
         {{
           loading
             ? '正在加载当前范围的分析结果…'
@@ -515,24 +508,30 @@ onMounted(loadOptions)
           ><div class="sample-score">
             {{ selected.id }} · 综合评分 {{ selected.score ?? '0' }}{{ selected.tier === 'unavailable' ? '（无法判断）' : '' }}
           </div>
-          <h3 class="sample-title">{{ selected.text }}</h3>
-          <div class="reason-scroll" tabindex="0" aria-label="样本价值维度解释，可上下滚动">
+          <div
+            :key="selected.id"
+            class="governance-sample-scroll"
+            role="region"
+            tabindex="0"
+            aria-label="样本正文与价值解释"
+          >
+            <h3 class="sample-title">{{ selected.text }}</h3>
             <div
               v-for="item in selected.dimensions.slice(0, 3)"
               :key="item.name"
               class="reason-row"
             >
-              <b>{{ item.name }} {{ item.score }}</b
-              ><span
-                >{{ item.reason }}
+              <b>{{ item.name }} {{ item.score }}</b>
+              <div class="reason-content">
+                {{ item.reason }}
                 <blockquote v-for="(evidence, index) in item.evidence" :key="index">
                   原文证据：{{ evidence }}
-                </blockquote></span
-              >
+                </blockquote>
+              </div>
             </div>
+            <AssessmentNotice :value="selected" />
+            <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
           </div>
-          <AssessmentNotice :value="selected" />
-        <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
           <p class="muted sample-explanation-note">
             解释对象为选中样本，不代表整个数据集。
           </p></template
@@ -659,13 +658,13 @@ onMounted(loadOptions)
         <AssessmentNotice :value="selected" />
         <p v-if="selected.unavailableReason">{{ selected.unavailableReason }}</p>
         <div v-for="item in selected.dimensions" :key="item.name" class="reason-row">
-          <b>{{ item.name }} {{ item.score }}</b
-          ><span
-            >{{ item.reason }}
+          <b>{{ item.name }} {{ item.score }}</b>
+          <div class="reason-content">
+            {{ item.reason }}
             <blockquote v-for="(evidence, index) in item.evidence" :key="index">
               原文证据：{{ evidence }}
-            </blockquote></span
-          >
+            </blockquote>
+          </div>
         </div>
         <p class="muted">解释仅针对本样本，评分方案：{{ result?.schemeName }}。</p></template
       ></el-drawer
@@ -845,16 +844,7 @@ onMounted(loadOptions)
   line-height: 1.7;
   color: #133675;
   margin: 12px 0;
-}
-.reason-scroll {
-  max-height: 150px;
-  overflow-y: auto;
-  padding-right: 5px;
-  scrollbar-gutter: stable;
-}
-.reason-scroll:focus-visible {
-  outline: 2px solid #87bdff;
-  outline-offset: 2px;
+  white-space: pre-wrap;
 }
 .reason-row {
   display: flex;
@@ -876,8 +866,13 @@ onMounted(loadOptions)
   color: #1265c3;
   flex: 0 0 92px;
 }
-.reason-row span {
+.reason-content {
+  min-inline-size: 0;
   color: #45618d;
+  overflow-wrap: anywhere;
+}
+.reason-content blockquote {
+  margin-inline: 0;
 }
 .value-list-toolbar {
   display: flex;
@@ -918,6 +913,7 @@ onMounted(loadOptions)
 .value-detail-heading {
   font-size: 18px;
   margin: 0 0 8px;
+  overflow-wrap: anywhere;
 }
 /* 第二行：语种、综合评分和价值档位 */
 .value-detail-meta {
