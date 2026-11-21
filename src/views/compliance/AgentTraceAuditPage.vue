@@ -605,6 +605,7 @@ onUnmounted(() => {
                     /><AppIcon name="Upload" /><span>选择文件</span></label
                   ><el-select
                     v-model="auditStrategy"
+                    style="width: 240px; flex-shrink: 0"
                     placeholder="轨迹审计策略"
                     aria-label="轨迹审计策略"
                     :disabled="working"
