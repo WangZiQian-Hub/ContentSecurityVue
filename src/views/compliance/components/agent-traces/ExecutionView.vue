@@ -644,7 +644,7 @@ defineExpose({
       </aside>
     </div>
     <section v-if="d" class="ex-card ex-log" :class="{ 'ex-no-time': !showEventTime }">
-      <div class="ex-toolbar">
+      <div class="ex-toolbar ex-log-toolbar">
         <h3>轨迹回放与事件日志（{{ d.events.total }} 个步骤）</h3>
         <div>
           <el-button
@@ -672,6 +672,14 @@ defineExpose({
             >⚑ 首个风险</el-button
           >
         </div>
+        <el-button
+          class="ex-log-export"
+          type="primary"
+          title="导出首次风险，全部风险文件"
+          :disabled="!store.canExport || exporting || exportDownloading"
+          @click="exportResult('package')"
+          >导出结果包</el-button
+        >
       </div>
       <small>仅回放已记录事件，不执行外部调用。时间缺失仍可按序查看。</small>
       <div class="ex-table">
@@ -998,6 +1006,25 @@ tr {
 }
 .ex-log {
   margin-top: 10px;
+}
+.at-execution .ex-log > .ex-log-toolbar {
+  justify-content: flex-start;
+  gap: 16px;
+}
+.at-execution .ex-log-toolbar > h3 {
+  margin: 0;
+}
+.at-execution .ex-log .ex-log-toolbar > .ex-log-export {
+  margin-left: auto;
+}
+.at-execution .ex-log > small {
+  position: static;
+  display: block;
+  transform: none;
+  margin-bottom: 4px;
+}
+.at-execution .ex-log {
+  height: auto;
 }
 .ex-original-evidence { min-height: 72px; max-height: 70vh; overflow: auto; }
 .ex-original-evidence section { margin-top: 16px; }

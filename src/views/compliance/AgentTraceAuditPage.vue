@@ -132,7 +132,8 @@ const example = ref<Format | null>(null),
   contents = ref(['normalized_json', 'offline_html', 'evidence_index', 'manifest']),
   search = ref(''),
   preview = ref<HTMLElement>(),
-  defaultFormat = ref('auto')
+  defaultFormat = ref('auto'),
+  auditStrategy = ref<'default' | 'internlm-9b' | 'deepseek-4.1-flash'>()
 const queue = ref<{ file: File; fileId?: string; state: string; error: string }[]>([])
 let pageAlive = true
 let modeVersion = 0
@@ -374,6 +375,7 @@ async function parse(mode = 'parse_pending') {
       batchId: b.batchId,
       expectedVersion: b.batchVersion,
       mode,
+      auditStrategy: auditStrategy.value || 'default',
     },
   })
 }
@@ -462,14 +464,7 @@ onUnmounted(() => {
       <h1>智能体轨迹审计</h1>
       <div>
         <el-button
-          :type="
-            view === 'statistics' || view === 'execution' || view === 'ingest' || view === 'tools'
-              ? 'primary'
-              : undefined
-          "
-          :plain="
-            view === 'statistics' || view === 'execution' || view === 'ingest' || view === 'tools'
-          "
+          type="primary"
           :disabled="
             view === 'tools'
               ? !toolsPage?.canView || (!parent.demo && !competitionScope)
@@ -494,27 +489,6 @@ onUnmounted(() => {
                     : exportResult('view')
           "
           ><AppIcon name="Download" />导出当前JSON文件</el-button
-        ><el-button
-          type="primary"
-          :disabled="
-            view === 'tools'
-              ? !toolsPage?.canView
-              : view === 'execution'
-                ? !executionPage?.canPackage
-                : view === 'statistics'
-                  ? !statisticsPage?.canPackage
-                  : !canExport || working
-          "
-          @click="
-            view === 'tools'
-              ? toolsPage?.openPackage()
-              : view === 'execution'
-                ? executionPage?.openPackage()
-                : view === 'statistics'
-                  ? statisticsPage?.openPackage()
-                  : exportResult('package')
-          "
-          >导出结果包</el-button
         >
       </div>
     </header>
@@ -629,13 +603,16 @@ onUnmounted(() => {
                       :disabled="working || !w.batch || !w.batch.allowedActions.includes('upload')"
                       @change="filesChanged"
                     /><AppIcon name="Upload" /><span>选择文件</span></label
-                  ><el-select v-model="defaultFormat" aria-label="新文件默认格式"
-                    ><el-option label="自动识别格式" value="auto" /><el-option
-                      v-for="f in w.formats"
-                      :key="f.code"
-                      :label="f.label"
-                      :value="f.code" /></el-select
-                  ><el-button
+                  ><el-select
+                    v-model="auditStrategy"
+                    placeholder="轨迹审计策略"
+                    aria-label="轨迹审计策略"
+                    :disabled="working"
+                  >
+                    <el-option label="默认审计策略" value="default" />
+                    <el-option label="书生 9B" value="internlm-9b" />
+                    <el-option label="deepseek 4.1 Flash" value="deepseek-4.1-flash" />
+                  </el-select><el-button
                     type="primary"
                     :disabled="
                       working ||

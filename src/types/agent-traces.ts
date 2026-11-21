@@ -160,6 +160,7 @@ export interface Command {
     expectedVersion?: number
     fileIds?: string[]
     mode?: string
+    auditStrategy?: 'default' | 'internlm-9b' | 'deepseek-4.1-flash'
     snapshotId?: string
     exportKind?: string
     format?: string
