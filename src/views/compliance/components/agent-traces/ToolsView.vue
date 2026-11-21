@@ -409,7 +409,7 @@ const cards = computed(() => {
         ['layers', '工具种类', m.toolKindCount, '种'],
         ['check', '成功', m.successCount, '次'],
         ['shield', '已拦截', m.notExecutedCount, '次'],
-        ['error', '错误', m.errorCount, '次'],
+        ['error', '失败', m.errorCount, '次'],
         ['clock', '重复调用', m.inefficientCount, '次'],
       ]
     : []
