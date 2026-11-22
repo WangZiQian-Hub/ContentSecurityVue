@@ -12,6 +12,7 @@ export interface ExecutionSample {
   riskLevel: string
   auditDecision: string
   riskTypes: { code: string; label: string }[]
+  ruleFindings?: import('../utils/agent-trace-presentation').RuleFinding[]
   eventCount: number
   callCount: number
   durationMs: number | null

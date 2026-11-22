@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ViewExportStatus from './ViewExportStatus.vue'
-import RuleFindings from './RuleFindings.vue'
 import { traceBatchLabel } from '../../../../utils/agent-trace-presentation'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import ToolGlyph from './ToolGlyph.vue'
@@ -635,7 +634,6 @@ onUnmounted(() => {
         </div>
       </div>
       <el-alert v-if="options?.batchOptions.items.find(b => b.batchId === result?.scope.batchId)?.activeSnapshotId && options?.batchOptions.items.find(b => b.batchId === result?.scope.batchId)?.activeSnapshotId !== result.scope.snapshotId" title="当前为历史快照，后台已有新的审计结果。" type="info" :closable="false"><el-button link @click="latest">查看最新结果</el-button></el-alert>
-      <RuleFindings :items="result.ruleFindings" :version="result.ruleAudit?.version" @locate="locateEvent" />
       <div class="tools-columns">
         <div>
           <article class="tool-panel">

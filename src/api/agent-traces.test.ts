@@ -30,6 +30,20 @@ describe('agent trace HTTP boundary', () => {
     backend.request.mockRejectedValue(new Error('backend down'))
     await expect(agentTraceHttp.workspace({})).rejects.toThrow('backend down')
   })
+  it.each(['default', 'internlm-9b', 'deepseek-4.1-flash'] as const)(
+    'forwards the %s audit strategy with the ingest task',
+    async (auditStrategy) => {
+      const command = {
+        capabilityCode: 'agent_trace_ingest' as const,
+        name: 'parse',
+        input: { batchId: 'b', expectedVersion: 2, auditStrategy },
+      }
+      await agentTraceHttp.execute(command, 'parse-key')
+      expect(backend.request).toHaveBeenCalledWith(
+        expect.objectContaining({ url: '/tasks/execute', data: command }),
+      )
+    },
+  )
   it('uploads file bytes through FormData, not recursive JSON conversion', async () => {
     const file = new File(['{}'], 'run.json')
     await agentTraceHttp.upload(file, 'file-key')

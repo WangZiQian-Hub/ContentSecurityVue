@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import { agentTraceHttp } from '../api/agent-traces'
@@ -63,6 +64,10 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     pendingKeys.clear()
   }
   function message(e: unknown) {
+    if (isAxiosError(e)) {
+      const reason = e.response?.data?.message ?? e.response?.data?.detail
+      if (typeof reason === 'string' && reason) return reason
+    }
     return e instanceof Error ? e.message : '请求失败，请重试'
   }
   async function load(q: Query = {}) {
@@ -205,19 +210,19 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
   }
   async function deleteItem(fileId: string | null) {
     await action(async () => {
+      const mode = modeGeneration
       const batch = workspace.value?.batch
       if (!batch) throw new Error('请先选择批次')
-      const payload = { batchId: batch.batchId, expectedVersion: batch.batchVersion, fileId }
-      await api.deleteItem(batch.batchId, batch.batchVersion, fileId, key(payload))
+      const expectedSnapshotId = fileId === null ? batch.activeSnapshotId ?? null : undefined
+      const payload = { batchId: batch.batchId, expectedVersion: batch.batchVersion, fileId, expectedSnapshotId }
+      await api.deleteItem(batch.batchId, batch.batchVersion, fileId, key(payload), expectedSnapshotId)
+      if (mode !== modeGeneration) return
       pendingKeys.delete(JSON.stringify(payload))
       await load(fileId ? { batchId: batch.batchId } : {})
     })
   }
-  async function upload(file: File) {
-    return api.upload(
-      file,
-      key({ name: file.name, size: file.size, lastModified: file.lastModified }),
-    )
+  async function upload(file: File, requestId: string) {
+    return api.upload(file, requestId)
   }
   async function submit(command: Command) {
     await action(async () => {
@@ -229,7 +234,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
       poll(t.taskId, current)
     })
   }
-  function poll(id: string, current = generation) {
+  function poll(id: string, current = generation, delay = demo.value ? 250 : 2000) {
     clearTimeout(timer)
     timer = setTimeout(
       async () => {
@@ -242,10 +247,15 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
             await load({ batchId: t.result.batchId })
           else if (t.status === 'failed') actionError.value = t.errorMessage || '任务失败'
         } catch (e) {
-          if (current === generation) actionError.value = message(e)
+          if (current !== generation) return
+          if (isAxiosError(e) && (!e.response || e.response.status >= 500 || e.response.status === 429)) {
+            poll(id, current, 5000)
+          } else {
+            actionError.value = message(e)
+          }
         }
       },
-      demo.value ? 250 : 2000,
+      delay,
     )
   }
   function resume() {

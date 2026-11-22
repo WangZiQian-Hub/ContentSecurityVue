@@ -260,7 +260,7 @@ export function createAgentTraceMock(): AgentTraceApi {
     artifacts = new Map<string, { blob: Blob; filename: string }>(),
     memo = new Map<string, { payload: string; promise: Promise<unknown> }>(),
     urls: string[] = []
-  const permissions = ['upload', 'bind_files', 'parse', 'view_raw', 'export_view', 'export_package']
+  const permissions = ['upload', 'bind_files', 'parse', 'view_raw', 'export_view', 'export_package', 'delete_batch']
   const makeBatch = (name: string, id = `mock_batch_${crypto.randomUUID()}`): State => ({
     batch: {
       batchId: id,
@@ -503,11 +503,11 @@ export function createAgentTraceMock(): AgentTraceApi {
           ? state(q.batchId)
           : q.sourceId
             ? batches.find((b) => b.files.some((f) => f.fileId === q.sourceId)) || state('missing')
-            : state(),
-        rows = rowsFor(s, q)
-      if (q.sourceId && !s.files.some((f) => f.fileId === q.sourceId))
+            : batches[batches.length - 1],
+        rows = s ? rowsFor(s, q) : []
+      if (q.sourceId && !s?.files.some((f) => f.fileId === q.sourceId))
         throw new Error('来源与批次不匹配')
-      const sourceId = q.sourceId || (q.issueType ? undefined : s.files[0]?.fileId),
+      const sourceId = q.sourceId || (q.issueType ? undefined : s?.files[0]?.fileId),
         filtered = filter(rows, { ...q, sourceId }),
         selected = q.traceId
           ? filtered.find((r) => r.traceId === q.traceId)
@@ -563,7 +563,7 @@ export function createAgentTraceMock(): AgentTraceApi {
         supportedFormatCount: 3,
         importedFormatCount: new Set(rows.map((r) => r.sourceFormat)).size,
         parsedTraceCount: rows.length,
-        failedRecordCount: s.files.reduce((n, f) => n + f.failedRecordCount, 0),
+        failedRecordCount: s?.files.reduce((n, f) => n + f.failedRecordCount, 0) ?? 0,
         categoryMode: 'single',
         byLanguage: ['zh', 'en', 'unknown'].map((code) => ({
           code,
@@ -581,8 +581,8 @@ export function createAgentTraceMock(): AgentTraceApi {
       }
       return structuredClone({
         resolvedSelection: {
-          batchId: s.batch.batchId,
-          snapshotId: q.snapshotId || s.batch.activeSnapshotId,
+          batchId: s?.batch.batchId ?? null,
+          snapshotId: q.snapshotId || s?.batch.activeSnapshotId || null,
           sourceId: sourceId || null,
           traceId: selected?.traceId || null,
         },
@@ -611,8 +611,8 @@ export function createAgentTraceMock(): AgentTraceApi {
           q.batchOptionPage || 1,
           50,
         ),
-        batch: s.batch,
-        files: page(s.files, q.filesPage || 1, 20),
+        batch: s?.batch ?? null,
+        files: page(s?.files ?? [], q.filesPage || 1, 20),
         summary,
         validation: {
           traceTotal: rows.length,
@@ -637,7 +637,7 @@ export function createAgentTraceMock(): AgentTraceApi {
           .map((j) => j.task)
           .filter(
             (t) =>
-              t.result?.batchId === s.batch.batchId &&
+              s && t.result?.batchId === s.batch.batchId &&
               (t.status === 'pending' || t.status === 'running'),
           ),
       }) as Workspace
@@ -700,15 +700,15 @@ export function createAgentTraceMock(): AgentTraceApi {
         }
         return { batch: structuredClone(s.batch) }
       }),
-    deleteItem: (batchId, version, fileId, key) =>
-      once(key, { batchId, version, fileId }, async () => {
+    deleteItem: (batchId, version, fileId, key, expectedSnapshotId) =>
+      once(key, { batchId, version, fileId, expectedSnapshotId }, async () => {
         const s = state(batchId)
         if (s.batch.batchVersion !== version) throw new Error('批次版本冲突，请刷新后重试')
         if (
           [...jobs.values()].some(
             (j) => ['pending', 'running'].includes(j.task.status) && j.task.result?.batchId === batchId,
           )
-        ) throw new Error('正在解析，请稍后删除')
+        ) throw new Error('正在解析或导出，请稍后删除')
         if (fileId) {
           const index = s.files.findIndex((file) => file.fileId === fileId)
           if (index < 0) throw new Error('文件不存在')
@@ -719,8 +719,19 @@ export function createAgentTraceMock(): AgentTraceApi {
           s.batch.batchVersion++
           s.batch.stagingChanged = true
         } else {
-          if (s.files.length) throw new Error('只能删除没有文件的空批次')
+          if (expectedSnapshotId === undefined && (s.files.length || s.batch.activeSnapshotId))
+            throw new Error('确认删除后才能移除批次内的文件和审计记录')
+          if (expectedSnapshotId !== undefined && expectedSnapshotId !== (s.batch.activeSnapshotId ?? null))
+            throw new Error('批次审计结果已更新，请刷新后重新确认删除')
           batches.splice(batches.indexOf(s), 1)
+          for (const f of s.files) {
+            if (!batches.some((batch) => batch.files.some((item) => item.fileId === f.fileId))) uploads.delete(f.fileId)
+          }
+          for (const [id, job] of jobs) {
+            if (job.task.result?.batchId !== batchId) continue
+            for (const artifact of job.task.result.artifacts || []) artifacts.delete(artifact.artifactId)
+            jobs.delete(id)
+          }
         }
         return { deleted: true }
       }),

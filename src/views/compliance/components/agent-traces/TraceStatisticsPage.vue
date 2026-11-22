@@ -279,7 +279,7 @@ onUnmounted(() => {
         </article>
       </div>
       <section v-if="w.auditSummary" class="trace-audit-summary">
-        <b>规则审计 {{ w.auditSummary.completedSamples }} / {{ w.auditSummary.totalSamples }}</b>
+        <b>轨迹审计 {{ w.auditSummary.completedSamples }} / {{ w.auditSummary.totalSamples }}</b>
         <span>策略拒绝样本 {{ w.auditSummary.policySamples }}</span><span>运行异常样本 {{ w.auditSummary.operationSamples }}</span><span>效率线索样本 {{ w.auditSummary.efficiencySamples }}</span>
         <small>{{ w.auditSummary.scope }}；各项按样本去重，可重叠。{{ w.auditSummary.version }}</small>
       </section>

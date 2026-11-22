@@ -134,7 +134,8 @@ const example = ref<Format | null>(null),
   preview = ref<HTMLElement>(),
   defaultFormat = ref('auto'),
   auditStrategy = ref<'default' | 'internlm-9b' | 'deepseek-4.1-flash'>()
-const queue = ref<{ file: File; fileId?: string; state: string; error: string }[]>([])
+const queue = ref<{ file: File; requestId: string; fileId?: string; state: string; error: string }[]>([])
+watch(() => w.value?.batch?.batchId, () => { queue.value = [] })
 let pageAlive = true
 let modeVersion = 0
 const lastRealBatchId = ref('')
@@ -265,15 +266,26 @@ async function deleteItem(fileId: string | null) {
   const file = fileId ? w.value?.files.items.find((item) => item.fileId === fileId) : null
   try {
     await ElMessageBox.confirm(
-      file ? `确定删除文件“${file.filename}”吗？` : `确定删除空批次“${batch.name}”吗？`,
+      file
+        ? `确定删除文件“${file.filename}”吗？`
+        : `确定永久删除批次“${batch.name}”（${batch.displayId}）吗？该批次的轨迹、所有历史审计结果和平台导出记录将一并删除，操作无法撤销。`,
       '确认删除',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+      { type: 'warning', confirmButtonText: file ? '删除' : '永久删除', cancelButtonText: '取消' },
     )
   } catch {
     return
   }
+  const current = w.value?.batch
+  if (!current || current.batchId !== batch.batchId || current.batchVersion !== batch.batchVersion
+    || current.activeSnapshotId !== batch.activeSnapshotId) return
   await store.deleteItem(fileId)
-  if (!store.actionError) syncUrl()
+  if (!store.actionError) {
+    if (fileId === null) {
+      queue.value = []
+      if (lastRealBatchId.value === batch.batchId) lastRealBatchId.value = ''
+    }
+    syncUrl()
+  }
 }
 async function changeSource(sourceId: string) {
   await store.load({ sourceId })
@@ -315,6 +327,7 @@ async function filesChanged(event: Event) {
   for (const file of files) {
     queue.value.push({
       file,
+      requestId: crypto.randomUUID(),
       state: '待上传',
       error:
         policy.allowedExtensions.some((e) => file.name.toLowerCase().endsWith(e)) &&
@@ -341,8 +354,8 @@ async function uploadPending() {
       }
       row.state = '上传中'
       try {
-        const result = await store.upload(row.file)
-        if (!pageAlive) return
+        const result = await store.upload(row.file, row.requestId)
+        if (!pageAlive || batchId !== store.workspace?.batch?.batchId) return
         row.fileId = result.fileId
         row.state = '已上传，待绑定'
       } catch (e) {
@@ -364,20 +377,46 @@ function retryUpload(row: { error: string }) {
   row.error = ''
   return uploadPending()
 }
+const submittingAuditBatchId = ref<string | null>(null)
+const auditNotice = computed(() => {
+  const batchId = w.value?.batch?.batchId
+  if (!batchId || store.actionError) return null
+  if (submittingAuditBatchId.value === batchId)
+    return { button: '提交中', title: '正在提交轨迹审计任务' }
+  const task = store.task
+  if (task?.result?.kind !== 'agent_trace_ingest' || task.result.batchId !== batchId)
+    return null
+  if (task.status === 'pending')
+    return { button: '排队中', title: '审计任务已提交，正在等待后台处理' }
+  if (task.status === 'running')
+    return {
+      button: '审计中',
+      title: '后台正在解析和审计轨迹',
+      description: '模型补查可能需要一些时间。任务完成后，页面会自动更新结果。',
+    }
+  if (task.status === 'succeeded' && store.loading)
+    return { button: '更新中', title: '轨迹审计已完成，正在加载结果' }
+  return null
+})
 async function parse(mode = 'parse_pending') {
   autoViewExport.value = false
   const b = w.value?.batch
   if (!b) return
-  await store.submit({
-    capabilityCode: 'agent_trace_ingest',
-    name: '智能体轨迹解析与规则审计',
-    input: {
-      batchId: b.batchId,
-      expectedVersion: b.batchVersion,
-      mode,
-      auditStrategy: auditStrategy.value || 'default',
-    },
-  })
+  submittingAuditBatchId.value = b.batchId
+  try {
+    await store.submit({
+      capabilityCode: 'agent_trace_ingest',
+      name: '智能体轨迹解析与审计',
+      input: {
+        batchId: b.batchId,
+        expectedVersion: b.batchVersion,
+        mode,
+        auditStrategy: auditStrategy.value || 'default',
+      },
+    })
+  } finally {
+    if (submittingAuditBatchId.value === b.batchId) submittingAuditBatchId.value = null
+  }
 }
 const working = computed(
   () => store.busy || (!!store.task && ['pending', 'running'].includes(store.task.status)),
@@ -581,7 +620,7 @@ onUnmounted(() => {
               </div>
             </section>
           </div>
-          <el-alert v-if="w.auditSummary" :title="`规则审计：${w.auditSummary.completedSamples} / ${w.auditSummary.totalSamples} 条已完成；安全风险 ${w.auditSummary.securitySamples}，策略拒绝 ${w.auditSummary.policySamples}，运行异常 ${w.auditSummary.operationSamples}`" type="info" :closable="false" />
+          <el-alert v-if="w.auditSummary" :title="`轨迹审计已完成 ${w.auditSummary.completedSamples} / ${w.auditSummary.totalSamples} 条，安全风险 ${w.auditSummary.securitySamples}，策略拒绝 ${w.auditSummary.policySamples}，运行异常 ${w.auditSummary.operationSamples}`" type="info" :closable="false" />
           <div class="at-ingest-grid">
             <PanelCard title="轨迹文件接入与解析" icon="Upload"
               ><template #extra
@@ -615,28 +654,38 @@ onUnmounted(() => {
                     <el-option label="deepseek 4.1 Flash" value="deepseek-4.1-flash" />
                   </el-select><el-button
                     type="primary"
+                    :loading="!!auditNotice"
                     :disabled="
                       working ||
                       !w.batch?.allowedActions.includes('parse') ||
                       !w.files.items.some((f) => f.parseStatus !== 'succeeded')
                     "
                     @click="parse()"
-                    ><AppIcon name="CaretRight" /><span>开始解析</span></el-button
+                    ><AppIcon v-if="!auditNotice" name="CaretRight" /><span>{{ auditNotice?.button || '开始解析' }}</span></el-button
                   >
                 </div></template
               >
               <el-alert
-                v-if="w.batch?.stagingChanged"
+                v-if="auditNotice"
+                :title="auditNotice.title"
+                :description="auditNotice.description"
+                type="info"
+                :closable="false"
+                show-icon
+                role="status"
+              />
+              <el-alert
+                v-else-if="w.batch?.stagingChanged"
                 title="有待解析变更，以下批次统计仍为上次完成快照"
                 type="info"
                 :closable="false"
               />
               <el-button
-                v-if="w.batch && !w.files.total && !queue.length && w.batch.allowedActions.includes('upload')"
+                v-if="w.batch?.allowedActions.includes('delete_batch')"
                 type="danger"
                 plain
                 size="small"
-                :disabled="working"
+                :disabled="working || store.loading"
                 @click="deleteItem(null)"
               >删除批次</el-button>
               <div v-for="f in w.files.items" :key="f.fileId" class="at-file">

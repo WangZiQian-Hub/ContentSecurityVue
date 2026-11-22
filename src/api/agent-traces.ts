@@ -35,11 +35,11 @@ export const agentTraceHttp: AgentTraceApi = {
       headers: headers(key),
       silent: true,
     }),
-  deleteItem: (batchId, expectedVersion, fileId, key) =>
+  deleteItem: (batchId, expectedVersion, fileId, key, expectedSnapshotId) =>
     request({
       url: `${root}/batches/${id(batchId)}/deletions`,
       method: 'POST',
-      data: { expectedVersion, fileId },
+      data: { expectedVersion, fileId, expectedSnapshotId },
       headers: headers(key),
       silent: true,
     }),

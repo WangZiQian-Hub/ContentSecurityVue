@@ -7,6 +7,7 @@ type Issue = {
   step_id?: number
   message_index?: number
   previous_step_id?: number
+  rule_id?: string
   source_subitem?: string
   error_type?: string
   field?: string
@@ -132,14 +133,14 @@ function print(value: unknown) {
           </template>
         </el-tab-pane>
         <el-tab-pane name="reasoning" label="思考与风险" lazy>
-          <p>规则审计结论 {{ result.B2.judgment }}。请结合原始证据复核。</p>
+          <p>审计结论 {{ result.B2.judgment }}。请结合原始证据复核。</p>
           <details v-for="risk in result.B3.risks" :key="risk.step_id">
-            <summary>首次风险 · {{ location(risk) }}</summary>
+            <summary>首次风险 · {{ location(risk) }}<span v-if="risk.rule_id === 'other'"> · other</span></summary>
             <pre>{{ risk.risk_quote }}</pre>
             <template v-for="(entry, i) in risk.evidence" :key="i">
               <p>{{ location(entry) }} · 原文证据</p><pre>{{ entry.quote }}</pre>
             </template>
-            <el-button v-if="risk.step_id !== undefined" link type="primary" @click="goToCall(risk.step_id)">查看对应工具调用</el-button>
+            <el-button v-if="risk.step_id !== undefined && result.C1.calls.some(call => call.step_id === risk.step_id)" link type="primary" @click="goToCall(risk.step_id)">查看对应工具调用</el-button>
           </details>
           <p v-if="result.B1.absent_body_step_ids.length">未提供思考正文的步骤 {{ result.B1.absent_body_step_ids.join('、') }}</p>
           <details v-for="segment in result.B1.segments" :key="segment.step_id">
@@ -149,11 +150,12 @@ function print(value: unknown) {
         </el-tab-pane>
         <el-tab-pane name="tools" label="工具调用与完整性" lazy>
           <p>会话完成状态 {{ completion }}。未配对 {{ result.C1.unmatched.length }}，明确截断 {{ result.C4.truncations.length }}。</p>
-          <p v-for="(item, i) in errors" :key="i">{{ location(item) }} · {{ item.error_type || item.issue || '重复调用' }}</p>
+          <p v-for="(item, i) in errors" :key="i">{{ location(item) }} · {{ item.error_type || item.issue || '重复调用' }}<span v-if="item.rule_id === 'other'"> · other</span></p>
           <details v-for="(item, i) in result.C5.issues" :key="'issue-' + i">
-            <summary>{{ item.source_subitem }} · {{ location(item) }} · 查看证据</summary>
+            <summary>{{ item.source_subitem }} · {{ location(item) }}<span v-if="item.rule_id === 'other'"> · other</span> · 查看证据</summary>
             <template v-for="(entry, j) in item.evidence" :key="j"><p>{{ location(entry) }}</p><pre>{{ entry.quote }}</pre></template>
             <el-button v-if="item.step_id !== undefined" link type="primary" @click="goToCall(item.step_id)">查看对应工具调用</el-button>
+            <el-button v-if="item.previous_step_id !== undefined" link type="primary" @click="goToCall(item.previous_step_id)">查看前次调用</el-button>
           </details>
           <details v-for="(item, i) in result.C1.unmatched" :key="'unmatched-' + i">
             <summary>未配对 · {{ location(item) }}</summary><pre>{{ print(item.content) }}</pre>

@@ -4,17 +4,22 @@ defineProps<{ items?: RuleFinding[]; version?: string }>()
 defineEmits<{ locate: [eventId: string, callId?: string | null] }>()
 const group = { security: '安全风险线索', policy: '策略拒绝', operation: '运行异常', efficiency: '效率线索' }
 const outcome: Record<string, string> = { blocked: '已拦截', executed: '已执行', unknown: '结果未知', exposure_only: '仅发现外部指令，未判定攻击成功', recorded: '日志已记录' }
+const modelLabel = { deepseek: 'DeepSeek', internlm: '书生 9B' }
 </script>
 <template>
   <section class="trace-rule-findings">
-    <h3>规则审计发现 <small>{{ version || '尚未完成规则审计' }}</small></h3>
-    <p>仅检查已记录的明确事件；未命中不代表全面安全。运行异常和效率线索不计入安全风险样本。</p>
-    <el-empty v-if="!items?.length" :image-size="45" :description="version ? '当前规则未发现命中项' : '等待后台规则审计'" />
+    <h3>审计发现 <small>{{ version || '尚未完成审计' }}</small></h3>
+    <el-empty v-if="!items?.length" :image-size="45" :description="version ? '当前审计未发现命中项' : '等待后台审计'" />
     <article v-for="f in items" :key="f.findingId">
       <el-tag :type="f.category === 'security' ? 'danger' : f.category === 'policy' ? 'warning' : 'info'">{{ group[f.category] }}</el-tag>
-      <strong>{{ f.label }}</strong><span>{{ outcome[f.outcome] || f.outcome }}</span>
-      <el-button link type="primary" @click="$emit('locate', f.eventId, f.callId)">{{ f.competitionStep ? `赛题第 ${f.competitionStep} 步 · ` : '' }}{{ f.eventDisplayId }} · 定位</el-button>
-      <pre>{{ f.evidenceText }}</pre><small>规则 {{ f.ruleId }} · {{ f.ruleVersion }}</small>
+      <strong>{{ f.label }}</strong><span v-if="f.eventId && f.outcome !== 'model_judgment'">{{ outcome[f.outcome] || f.outcome }}</span>
+      <el-button v-if="f.eventId" link type="primary" @click="$emit('locate', f.eventId, f.callId)">{{ f.competitionStep ? `赛题第 ${f.competitionStep} 步 · ` : '' }}{{ f.eventDisplayId }} · 定位</el-button>
+      <span v-else>整条轨迹</span>
+      <pre v-if="f.evidenceText">{{ f.evidenceText }}</pre>
+      <small v-if="f.detectionSource === 'model_fallback'" :title="f.modelId">
+        {{ f.ruleId }} · {{ f.modelProvider ? modelLabel[f.modelProvider] : '模型' }}补查
+      </small>
+      <small v-else>规则 {{ f.ruleId }} · {{ f.ruleVersion }}</small>
     </article>
   </section>
 </template>

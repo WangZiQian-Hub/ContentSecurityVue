@@ -10,6 +10,15 @@ async function finish(api: AgentTraceApi, command: Command) {
   return api.task(task.taskId)
 }
 describe('agent trace contracts', () => {
+  it('deletes completed batches using the confirmed snapshot and supports an empty workspace', async () => {
+    const api = createAgentTraceMock()
+    const { batchOptions } = await api.workspace({})
+    for (const batch of batchOptions.items) {
+      await api.deleteItem(batch.batchId, batch.batchVersion, null, crypto.randomUUID(), batch.activeSnapshotId ?? null)
+      await expect(api.workspace({ batchId: batch.batchId })).rejects.toThrow('未找到批次')
+    }
+    expect((await api.workspace({})).batch).toBeNull()
+  })
   it('keeps batch totals independent of preview source and has the intended missing union', async () => {
     const api = createAgentTraceMock(),
       w = await api.workspace({})

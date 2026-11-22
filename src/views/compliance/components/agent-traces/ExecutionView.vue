@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ViewExportStatus from './ViewExportStatus.vue'
 import RuleFindings from './RuleFindings.vue'
-import { traceBatchLabel } from '../../../../utils/agent-trace-presentation'
+import { traceBatchLabel, traceRiskLabel } from '../../../../utils/agent-trace-presentation'
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import ExecutionGraph from './ExecutionGraph.vue'
@@ -385,7 +385,7 @@ defineExpose({
                 ? '中文'
                 : d.summary.language
           }}）· 风险类型： {{ d.summary.riskTypes.map((r) => r.label).join(' / ') }} ·
-          {{ level(d.summary.riskLevel) }} · 步骤 {{ d.summary.eventCount }} steps · 工具调用
+          {{ traceRiskLabel(d.summary.auditDecision, d.summary.ruleFindings ?? d.ruleFindings) }} · 步骤 {{ d.summary.eventCount }} steps · 工具调用
           {{ d.summary.callCount }} calls · 耗时 {{ duration(d.summary.durationMs) }}</template
         >
       </div>
@@ -465,7 +465,10 @@ defineExpose({
             <el-tag size="small" :type="sample.language === 'zh' ? 'warning' : 'primary'">{{
               sample.language === 'en' ? 'EN' : sample.language === 'zh' ? '中文' : sample.language
             }}</el-tag
-            ><span :class="sample.riskLevel">{{ level(sample.riskLevel) }}</span
+            ><span :class="{
+              'ex-risk-found': sample.auditDecision === 'risk_found',
+              'ex-risk-clear': sample.auditDecision === 'no_risk_found',
+            }">{{ traceRiskLabel(sample.auditDecision, sample.ruleFindings) }}</span
             ><small
               >{{ sample.riskTypes.map((r) => r.label).join(' / ') || '暂无风险类别' }} /
               {{ sample.eventCount }} steps / {{ sample.callCount }} calls /
@@ -870,6 +873,13 @@ defineExpose({
 }
 .ex-sample > span:last-of-type {
   float: right;
+}
+.ex-sample .ex-risk-found {
+  color: #d92929;
+  background: #fff0f0;
+}
+.ex-sample .ex-risk-clear {
+  background: #fff;
 }
 .ex-sample small {
   display: block;

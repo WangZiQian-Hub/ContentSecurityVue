@@ -218,7 +218,7 @@ export interface AgentTraceApi {
     files: { fileId: string; formatOverride: string }[],
     key: string,
   ): Promise<{ batch: Batch }>
-  deleteItem(batchId: string, expectedVersion: number, fileId: string | null, key: string): Promise<{ deleted: boolean }>
+  deleteItem(batchId: string, expectedVersion: number, fileId: string | null, key: string, expectedSnapshotId?: string | null): Promise<{ deleted: boolean }>
   samples(batchId: string, q: Query, signal?: AbortSignal): Promise<PageResult<Sample>>
   detail(batchId: string, traceId: string, q: Query, signal?: AbortSignal): Promise<Detail>
   execute(command: Command, key: string): Promise<TraceTask>
