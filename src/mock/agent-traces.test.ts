@@ -1,10 +1,11 @@
+import { createUuid } from '../utils/uuid'
 import { describe, expect, it } from 'vitest'
 import { createAgentTraceMock, parseTraceRecord, traceFormats } from './agent-traces'
 import { mapKeys } from '../utils/case'
 import { traceZip } from '../utils/agent-trace-export'
 import type { AgentTraceApi, Command } from '../types/agent-traces'
 async function finish(api: AgentTraceApi, command: Command) {
-  const task = await api.execute(command, crypto.randomUUID())
+  const task = await api.execute(command, createUuid())
   await api.task(task.taskId)
   await api.task(task.taskId)
   return api.task(task.taskId)
@@ -14,7 +15,7 @@ describe('agent trace contracts', () => {
     const api = createAgentTraceMock()
     const { batchOptions } = await api.workspace({})
     for (const batch of batchOptions.items) {
-      await api.deleteItem(batch.batchId, batch.batchVersion, null, crypto.randomUUID(), batch.activeSnapshotId ?? null)
+      await api.deleteItem(batch.batchId, batch.batchVersion, null, createUuid(), batch.activeSnapshotId ?? null)
       await expect(api.workspace({ batchId: batch.batchId })).rejects.toThrow('未找到批次')
     }
     expect((await api.workspace({})).batch).toBeNull()

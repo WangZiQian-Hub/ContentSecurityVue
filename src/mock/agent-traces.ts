@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import type {
   AgentTraceApi,
   Batch,
@@ -261,7 +262,7 @@ export function createAgentTraceMock(): AgentTraceApi {
     memo = new Map<string, { payload: string; promise: Promise<unknown> }>(),
     urls: string[] = []
   const permissions = ['upload', 'bind_files', 'parse', 'view_raw', 'export_view', 'export_package', 'delete_batch']
-  const makeBatch = (name: string, id = `mock_batch_${crypto.randomUUID()}`): State => ({
+  const makeBatch = (name: string, id = `mock_batch_${createUuid()}`): State => ({
     batch: {
       batchId: id,
       displayId: id === 'mock_batch_demo' ? 'AUD-2026-001' : `AUD-${batches.length + 1}`,
@@ -651,7 +652,7 @@ export function createAgentTraceMock(): AgentTraceApi {
       }),
     upload: (file, key) =>
       once(key, { name: file.name, size: file.size }, async () => {
-        const fileId = `mock_file_${crypto.randomUUID()}`
+        const fileId = `mock_file_${createUuid()}`
         uploads.set(fileId, { name: file.name, size: file.size, content: await file.text() })
         return { fileId }
       }),
@@ -832,7 +833,7 @@ export function createAgentTraceMock(): AgentTraceApi {
     execute: (command, key) =>
       once(key, command, async () => {
         const s = state(command.input.batchId),
-          taskId = `mock_task_${crypto.randomUUID()}`
+          taskId = `mock_task_${createUuid()}`
         if (
           command.capabilityCode === 'agent_trace_ingest' &&
           s.batch.batchVersion !== command.input.expectedVersion
@@ -933,7 +934,7 @@ export function createAgentTraceMock(): AgentTraceApi {
                 : 'succeeded'
             }
             if (!s.rows.length) throw new Error('没有可发布的有效轨迹，请检查文件错误')
-            const snapshotId = `mock_snapshot_${crypto.randomUUID()}`
+            const snapshotId = `mock_snapshot_${createUuid()}`
             s.batch.activeSnapshotId = snapshotId
             s.batch.stagingChanged = false
             s.snapshots.set(snapshotId, structuredClone(s.rows))
@@ -1066,7 +1067,7 @@ export function createAgentTraceMock(): AgentTraceApi {
       blob = traceZip(files)
       filename = 'agent-trace-results.zip'
     }
-    const artifactId = `mock_art_${crypto.randomUUID()}`
+    const artifactId = `mock_art_${createUuid()}`
     artifacts.set(artifactId, { blob, filename })
     task.result = {
       kind: 'agent_trace_export',

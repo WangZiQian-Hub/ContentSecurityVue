@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createUuid } from '../../../utils/uuid'
 import { computed, ref, watch } from 'vue'
 import { useComplianceStore } from '../../../stores/compliance'
 const props = defineProps<{ modelValue: boolean; action: 'claim' | 'evidence' | 'resolve' }>(),
@@ -12,7 +13,7 @@ watch(
   () => {
     evidenceRefs.value = []
     reason.value = ''
-    requestId.value = crypto.randomUUID()
+    requestId.value = createUuid()
   },
 )
 const title = computed(
@@ -21,7 +22,7 @@ const title = computed(
 watch(
   [evidenceRefs, reason, () => store.alert?.version],
   () => {
-    requestId.value = crypto.randomUUID()
+    requestId.value = createUuid()
   },
   { deep: true },
 )

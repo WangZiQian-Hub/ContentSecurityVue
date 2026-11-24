@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { isAxiosError } from 'axios'
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
@@ -34,7 +35,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
   const pendingKeys = new Map<string, string>()
   const key = (payload: unknown) => {
     const p = JSON.stringify(payload)
-    if (!pendingKeys.has(p)) pendingKeys.set(p, crypto.randomUUID())
+    if (!pendingKeys.has(p)) pendingKeys.set(p, createUuid())
     return pendingKeys.get(p)!
   }
   function stop() {
@@ -266,7 +267,7 @@ export const useAgentTraceStore = defineStore('agent-traces', () => {
     }
   }
   async function ticket(id: string) {
-    return api.ticket(id, crypto.randomUUID())
+    return api.ticket(id, createUuid())
   }
   function dispose() {
     stop()

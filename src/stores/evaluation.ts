@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
@@ -134,7 +135,7 @@ export const useEvaluationStore = defineStore('evaluation', () => {
     const fingerprint = JSON.stringify(input)
     let entry = keys.get(operation)
     if (!entry || entry.fingerprint !== fingerprint) {
-      entry = { fingerprint, key: crypto.randomUUID() }
+      entry = { fingerprint, key: createUuid() }
       keys.set(operation, entry)
     }
     writing.value = true

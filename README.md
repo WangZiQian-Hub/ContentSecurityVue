@@ -1,5 +1,7 @@
 # 内容安全治理原型平台
 
+HTTP 局域网部署遇到 `crypto.randomUUID is not a function` 的原因、兼容处理和前端镜像更新方式，见 [UUID 兼容与部署说明](docs/http-uuid-deployment.md)。
+
 参考效果图搭建的 Vue 前端项目。八个一级菜单、34 个二级路由、共享布局、图表与模拟接口。顶部搜索可定位页面，当前任务、消息、用户入口可打开，业务操作返回模拟结果。
 
 ## 在 VS Code 中启动

@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import type {
   AgentTraceStatisticsApi,
   AgentTraceStatisticsQuery as Query,
@@ -720,7 +721,7 @@ export function createAgentTraceStatisticsMock(
         if (cached.payload !== payload) throw new Error('409：幂等键对应不同请求')
         return structuredClone(jobs.get(cached.id)!.task)
       }
-      const taskId = `mock_stats_task_${crypto.randomUUID()}`,
+      const taskId = `mock_stats_task_${createUuid()}`,
         task: TraceTask = { taskId, status: 'pending', progress: 0 }
       jobs.set(taskId, { task, command })
       keys.set(key, { payload, id: taskId })

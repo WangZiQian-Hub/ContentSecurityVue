@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createUuid } from '../../utils/uuid'
 import './agent-trace-shared.css'
 import { traceBatchLabel } from '../../utils/agent-trace-presentation'
 import ViewExportStatus from './components/agent-traces/ViewExportStatus.vue'
@@ -327,7 +328,7 @@ async function filesChanged(event: Event) {
   for (const file of files) {
     queue.value.push({
       file,
-      requestId: crypto.randomUUID(),
+      requestId: createUuid(),
       state: '待上传',
       error:
         policy.allowedExtensions.some((e) => file.name.toLowerCase().endsWith(e)) &&

@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { computed, ref, shallowRef } from 'vue'
 import { request } from '../api/request'
 import { agentTraceHttp, downloadTraceTicket } from '../api/agent-traces'
@@ -124,7 +125,7 @@ export function useExecutionExport(api: ExportTransport = transport) {
     task.value = { taskId: '', status: 'pending' }
     try {
       if (demo) {
-        const id = `mock_execution_export_${crypto.randomUUID()}`
+        const id = `mock_execution_export_${createUuid()}`
         task.value = { taskId: id, status: 'pending', progress: 0 }
         await sleep(150, signal)
         task.value = { taskId: id, status: 'running', progress: 30 }
@@ -153,7 +154,7 @@ export function useExecutionExport(api: ExportTransport = transport) {
           },
         }
       } else {
-        const result = await api.execute(captured, crypto.randomUUID(), signal)
+        const result = await api.execute(captured, createUuid(), signal)
         if (version !== generation) return
         task.value = result
         await poll(version, signal)
@@ -195,7 +196,7 @@ export function useExecutionExport(api: ExportTransport = transport) {
     try {
       if (blob) api.saveBlob(blob, artifact.filename)
       else {
-        const ticket = await api.ticket(artifact.artifactId, crypto.randomUUID())
+        const ticket = await api.ticket(artifact.artifactId, createUuid())
         if (version === generation) await api.download(ticket)
       }
     } catch (e) {

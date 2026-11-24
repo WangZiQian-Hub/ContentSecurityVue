@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import { complianceApi, type ComplianceApi } from '../api/compliance'
@@ -405,7 +406,7 @@ export const useComplianceStore = defineStore('compliance', () => {
       }
     }
     try {
-      const result = await api().execute(capability, input, crypto.randomUUID())
+      const result = await api().execute(capability, input, createUuid())
       if (current === generation) {
         task.value = result
         if (['pending', 'running'].includes(result.status)) pollTimer = setTimeout(poll, 2000)

@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import axios, { type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import { mapKeys } from '../utils/case'
@@ -12,7 +13,7 @@ client.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('accessToken')
   if (token) config.headers.set('Authorization', `Bearer ${token}`)
   if (lastTraceId) config.headers.set('X-Trace-Id', lastTraceId)
-  if (!config.headers.has('X-Request-Id')) config.headers.set('X-Request-Id', crypto.randomUUID())
+  if (!config.headers.has('X-Request-Id')) config.headers.set('X-Request-Id', createUuid())
   config.data = mapKeys(config.data, 'snake')
   config.params = mapKeys(config.params, 'snake')
   return config

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createUuid } from '../../../utils/uuid'
 import { computed, ref, watch } from 'vue'
 import { useComplianceStore } from '../../../stores/compliance'
 import type { AuditReview } from '../../../types/compliance'
@@ -14,7 +15,7 @@ watch(
   () => {
     reason.value = ''
     evidenceRefs.value = []
-    requestId.value = crypto.randomUUID()
+    requestId.value = createUuid()
   },
 )
 const blocked = computed(() =>
@@ -29,7 +30,7 @@ const blocked = computed(() =>
 watch(
   [conclusion, reason, evidenceRefs, () => store.audit?.version],
   () => {
-    requestId.value = crypto.randomUUID()
+    requestId.value = createUuid()
   },
   { deep: true },
 )
