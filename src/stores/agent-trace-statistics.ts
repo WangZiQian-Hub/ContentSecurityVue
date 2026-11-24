@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import { agentTraceStatisticsHttp } from '../api/agent-trace-statistics'
@@ -327,7 +328,7 @@ export const useAgentTraceStatisticsStore = defineStore('agent-trace-statistics'
     exportBusy.value = true
     exportError.value = ''
     if (!reuse || JSON.stringify(command) !== JSON.stringify(retryCommand))
-      retryKey = crypto.randomUUID()
+      retryKey = createUuid()
     retryCommand = command
     exportScope.value = command.input
     try {
@@ -417,7 +418,7 @@ export const useAgentTraceStatisticsStore = defineStore('agent-trace-statistics'
   async function download(id: string) {
     const version = generations.export
     try {
-      const ticket = await api.ticket(id, crypto.randomUUID())
+      const ticket = await api.ticket(id, createUuid())
       if (version !== generations.export) return
       await downloadTraceTicket(ticket, demo.value)
     } catch (e) {

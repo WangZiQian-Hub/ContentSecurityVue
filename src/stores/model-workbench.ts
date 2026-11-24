@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { isMock } from '../api/request'
@@ -111,7 +112,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       const model: ModelAsset = isMock
         ? {
             ...input,
-            id: `mdl-${crypto.randomUUID()}`,
+            id: `mdl-${createUuid()}`,
             creator: '当前用户（演示）',
             updatedAt: now,
             dataset: null,
@@ -149,7 +150,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       const task: TrainingTask = isMock
         ? {
             ...input,
-            id: `TR-${crypto.randomUUID().slice(0, 8)}`,
+            id: `TR-${createUuid().slice(0, 8)}`,
             description: '新建训练任务',
             status: 'pending',
             progress: 0,
@@ -172,7 +173,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       const service: ModelService = isMock
         ? {
             ...input,
-            id: `SVC-${crypto.randomUUID().slice(0, 8)}`,
+            id: `SVC-${createUuid().slice(0, 8)}`,
             status: 'deployed',
             checkedAt: null,
             latencyMs: null,
@@ -181,7 +182,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         : await api.registerModelService(input)
       data.value.services.unshift(service)
       data.value.changes.unshift({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         serviceName: service.name,
         description: `登记服务，绑定 ${service.version}`,
         createdAt: new Date().toISOString(),
@@ -219,7 +220,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         : await api.upgradeModelService(id, version)
       Object.assign(service, upgraded)
       data.value.changes.unshift({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         serviceName: service.name,
         description: `升级绑定版本至 ${version}，等待连接检查`,
         createdAt: new Date().toISOString(),
@@ -240,7 +241,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         : await api.stopModelService(id)
       Object.assign(service, stopped)
       data.value.changes.unshift({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         serviceName: service.name,
         description: `停止服务（${service.version}），模型调用页不再可选`,
         createdAt: new Date().toISOString(),
@@ -253,7 +254,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       if (!isMock) await api.deleteModelService(id)
       data.value.services = data.value.services.filter((s) => s.id !== id)
       data.value.changes.unshift({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         serviceName: service.name,
         description: `删除服务登记（${service.version}），历史调用记录保留`,
         createdAt: new Date().toISOString(),
@@ -276,7 +277,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       if (isMock) {
         const sensitive = /联系|手机|姓名|住址|隐私/.test(input.prompt)
         call = {
-          id: `CALL-${crypto.randomUUID().slice(0, 8)}`,
+          id: `CALL-${createUuid().slice(0, 8)}`,
           modelId: input.modelId,
           serviceId: service.id,
           version: service.version,
@@ -295,7 +296,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
           elapsedMs: 1200,
           createdAt: new Date().toISOString(),
           status: 'succeeded',
-          traceId: `demo-${crypto.randomUUID()}`,
+          traceId: `demo-${createUuid()}`,
         }
       } else {
         const task = await api.executeModelTask({
@@ -363,7 +364,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
         riskLevel: outcome.riskLevel,
         reconstruction: outcome.reconstruction,
         elapsedMs: outcome.elapsedMs,
-        traceId: crypto.randomUUID(),
+        traceId: createUuid(),
       })
       await load()
       const call = data.value.calls.find((c) => c.id === recorded?.id) || null
@@ -378,7 +379,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
       assessmentStale.value = false
       refreshAssessmentInFiveSeconds()
       if (isMock) {
-        const id = `KE-${crypto.randomUUID().slice(0, 8)}`
+        const id = `KE-${createUuid().slice(0, 8)}`
         editTasks.value.unshift({
           id,
           modelId,
@@ -425,7 +426,7 @@ export const useModelWorkbench = defineStore('model-workbench', () => {
           throw new Error(
             '此组合尚无演示测试样本，请选择安全对话模型 v1.5.0 与 v1.5.1，或接入真实评估服务',
           )
-        data.value.assessment = { ...example, id: `T-${crypto.randomUUID().slice(0, 8)}` }
+        data.value.assessment = { ...example, id: `T-${createUuid().slice(0, 8)}` }
         assessmentStale.value = false
         return '示例评估已完成'
       }

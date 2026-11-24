@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { request, isMock } from './request'
 import { tasks } from '../mock/data'
 import { getTaskCategory } from '../utils/enums'
@@ -31,7 +32,7 @@ export async function executeTask(data: ExecuteTaskReq): Promise<Task> {
   if (isMock) {
     await new Promise((resolve) => setTimeout(resolve, 650))
     const task: Task = {
-      taskId: `mock_${crypto.randomUUID()}`,
+      taskId: `mock_${createUuid()}`,
       name: data.name || '能力演示任务',
       taskCategory: data.taskCategory || getTaskCategory(data.capabilityCode),
       capabilityCode: data.capabilityCode,

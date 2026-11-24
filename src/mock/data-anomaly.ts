@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { resourceDatasets } from './resource-catalog'
 import {
   governanceResources,
@@ -20,7 +21,7 @@ import type {
 } from '../types/data-anomaly'
 const copy = <T>(x: T): T => structuredClone(x)
 const now = () => new Date().toISOString()
-const uid = (prefix: string) => `${prefix}_${crypto.randomUUID()}`
+const uid = (prefix: string) => `${prefix}_${createUuid()}`
 const types = ['标签异常', '重复记录', '格式异常', '字段缺失']
 const ruleNames = [
   '主题标签一致性',

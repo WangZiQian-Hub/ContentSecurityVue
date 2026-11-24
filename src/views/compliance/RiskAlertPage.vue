@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createUuid } from '../../utils/uuid'
 import { computed, onMounted, ref } from 'vue'
 import PanelCard from '../../components/PanelCard.vue'
 import { complianceApi } from '../../api/compliance'
@@ -131,11 +132,11 @@ async function loadComments(errorId: string): Promise<ErrorComment[]> {
 /** 新增一条评论，返回最新评论列表。 */
 async function postComment(errorId: string, content: string): Promise<ErrorComment[]> {
   if (COMMENT_BACKEND) {
-    await complianceApi.addErrorComment(errorId, { content }, crypto.randomUUID())
+    await complianceApi.addErrorComment(errorId, { content }, createUuid())
     return complianceApi.errorComments(errorId)
   }
   writeLocalComment(errorId, {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     author: '张三',
     content,
     createdAt: new Date().toISOString(),

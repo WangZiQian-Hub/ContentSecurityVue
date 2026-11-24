@@ -1,3 +1,4 @@
+import { createUuid } from '../utils/uuid'
 import { resourceDatasets } from './resource-catalog'
 import { governanceResources, resourceVersionSamples } from './governance-resources'
 import type {
@@ -16,7 +17,7 @@ import type {
 } from '../types/data-risk'
 const copy = <T>(v: T): T => structuredClone(v)
 const now = () => new Date().toISOString()
-const id = (kind: string) => `${kind}_${crypto.randomUUID()}`
+const id = (kind: string) => `${kind}_${createUuid()}`
 const rules: Rule[] = [
   {
     id: 'PII-03',
