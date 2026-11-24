@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { login as apiLogin, type AuthUser } from '../api/auth'
+import { clearDockerLlmToken } from '../api/governance-llm'
 
 const TOKEN_KEY = 'accessToken'
 const USER_KEY = 'authUser'
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const result = await apiLogin(username, password)
+    clearDockerLlmToken()
     sessionStorage.setItem(TOKEN_KEY, result.token)
     sessionStorage.setItem(USER_KEY, JSON.stringify(result.user))
     user.value = result.user
@@ -28,6 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    clearDockerLlmToken()
     sessionStorage.removeItem(TOKEN_KEY)
     sessionStorage.removeItem(USER_KEY)
     user.value = null

@@ -1,9 +1,13 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import { ref } from 'vue'
 import { mapKeys } from '../utils/case'
+import { request } from './request'
 
 export const LLM_TOKEN_KEY = 'llmAccessToken'
 export const isGovernanceLlm = import.meta.env.VITE_GOVERNANCE_BACKEND === 'llm'
+const AUTO_EXPIRY_KEY = 'llmAutoTokenExpiresAt'
+const dockerAutoToken = import.meta.env.VITE_DOCKER_LLM_AUTO_TOKEN === 'true'
+let pendingToken: Promise<void> | undefined
 let lastTraceId: string | undefined
 const client = axios.create({
   baseURL: import.meta.env.VITE_LLM_API_BASE_URL || '/llm-api/v1',
@@ -12,6 +16,8 @@ const client = axios.create({
 
 export function getLlmToken() {
   if (typeof sessionStorage === 'undefined') return ''
+  const expiry = sessionStorage.getItem(AUTO_EXPIRY_KEY)
+  if (expiry && (!sessionStorage.getItem('accessToken') || Date.parse(expiry) <= Date.now())) return ''
   return sessionStorage.getItem(LLM_TOKEN_KEY)?.trim() || ''
 }
 /** 令牌是否已配置。
@@ -21,20 +27,51 @@ export const llmTokenConfigured = ref(!!getLlmToken())
 /** 令牌是否已失效：模型服务返回 401/403 时置位，保存新令牌时复位。
  *  令牌状态胶囊据此标红，提示需要重新填写。 */
 export const llmTokenInvalid = ref(false)
-/* ── 开发便利：本地令牌由未跟踪的 .env.local 注入（VITE_LLM_ACCESS_TOKEN），
-   打开页面无需手填；令牌值不进 git 提交与前端构建产物（.env.local 已被忽略）。
-   正式版（用户登录后由后端签发令牌并入库）请删除本段，改为登录成功后调用 saveLlmToken()。
-   对外部署/公开演示前请轮换该令牌。── */
-const DEV_LLM_TOKEN = import.meta.env.VITE_LLM_ACCESS_TOKEN?.trim() || ''
+// Local development only. Docker obtains tokens at runtime after platform login.
+const DEV_LLM_TOKEN = import.meta.env.DEV && !dockerAutoToken
+  ? import.meta.env.VITE_LLM_ACCESS_TOKEN?.trim() || ''
+  : ''
 if (DEV_LLM_TOKEN && !getLlmToken()) saveLlmToken(DEV_LLM_TOKEN)
 export function saveLlmToken(token: string) {
-  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LLM_TOKEN_KEY, token.trim())
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(LLM_TOKEN_KEY, token.trim())
+    sessionStorage.removeItem(AUTO_EXPIRY_KEY)
+  }
   llmTokenConfigured.value = true
   llmTokenInvalid.value = false
 }
 export function clearLlmToken() {
-  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(LLM_TOKEN_KEY)
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem(LLM_TOKEN_KEY)
+    sessionStorage.removeItem(AUTO_EXPIRY_KEY)
+  }
   llmTokenConfigured.value = false
+  llmTokenInvalid.value = false
+}
+
+export function clearDockerLlmToken() {
+  if (sessionStorage.getItem(AUTO_EXPIRY_KEY)) clearLlmToken()
+}
+
+export async function ensureDockerLlmToken() {
+  if (!dockerAutoToken || !isGovernanceLlm || getLlmToken()) return
+  const session = sessionStorage.getItem('accessToken')
+  if (!session) return
+  try {
+    if (JSON.parse(sessionStorage.getItem('authUser') || '{}')?.tier === 'reader') return
+  } catch { /* The server checks the current account. */ }
+  if (!pendingToken) {
+    pendingToken = request<{ token: string; expiresAt: string }>({
+      method: 'POST', url: '/auth/model-service-token', timeout: 8000, silent: true,
+    }).then(({ token, expiresAt }) => {
+      if (sessionStorage.getItem('accessToken') !== session || getLlmToken()) return
+      saveLlmToken(token)
+      sessionStorage.setItem(AUTO_EXPIRY_KEY, expiresAt)
+    }).catch(() => {
+      // Keep platform navigation available if the model service is unavailable.
+    }).finally(() => { pendingToken = undefined })
+  }
+  await pendingToken
 }
 
 client.interceptors.request.use((config) => {
@@ -63,6 +100,7 @@ export async function llmRequest<T>(
   config: AxiosRequestConfig,
   options: LlmRequestOptions = {},
 ): Promise<T> {
+  await ensureDockerLlmToken()
   const token = getLlmToken()
   if (!token) {
     const message = '尚未填写模型服务访问令牌，请先填写令牌后重试。'
@@ -84,6 +122,7 @@ export async function llmRequest<T>(
     if (axios.isCancel(error)) throw error
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
     if (status === 401 || status === 403) {
+      if (status === 401) clearDockerLlmToken()
       llmTokenInvalid.value = true
       const message = '模型服务访问令牌无效或已失效，请重新填写。'
       await showError(message)

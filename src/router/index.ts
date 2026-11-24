@@ -85,10 +85,14 @@ export const router = createRouter({
 export default router
 
 /** 平台登录守卫（#9）：真实接口模式下未登录一律先去登录页；mock 模式保持免登录演示。 */
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (isMock) return true
   const token = sessionStorage.getItem('accessToken')
   if (to.path === '/login') return token ? '/dashboard' : true
   if (!token) return { path: '/login', query: to.fullPath === '/dashboard' ? {} : { redirect: to.fullPath } }
+  if (import.meta.env.VITE_DOCKER_LLM_AUTO_TOKEN === 'true') {
+    const { ensureDockerLlmToken } = await import('../api/governance-llm')
+    await ensureDockerLlmToken()
+  }
   return true
 })
