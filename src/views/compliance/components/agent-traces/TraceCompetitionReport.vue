@@ -171,7 +171,7 @@ function print(value: unknown) {
         <el-tab-pane name="formatted" label="格式化预览" lazy>
           <div class="report-controls">
             <el-button
-              @click="download(formattedJson, 'submission-readable.json', 'application/json')"
+              @click="download(formattedJson, 'submission.json', 'application/json')"
             >下载可读版 JSON</el-button>
             <span>包含本批次全部轨迹和汇总。正式提交使用 submission.jsonl。</span>
           </div>
