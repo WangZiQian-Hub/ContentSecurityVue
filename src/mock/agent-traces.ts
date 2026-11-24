@@ -50,6 +50,23 @@ export const traceFormats: Format[] = [
     exampleText: JSON.stringify(openai, null, 2),
   },
   {
+    code: 'anthropic_messages',
+    label: 'Anthropic Messages',
+    containers: ['JSON', 'JSONL'],
+    description: 'Claude Messages 轨迹，支持工具调用、工具返回和 Token',
+    availability: 'available',
+    schemaVersion: '1',
+    exampleText: JSON.stringify({
+      provider: 'anthropic',
+      messages: [
+        { role: 'user', content: '查询公开报告' },
+        { role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_1', name: 'search', input: { query: '公开报告' } }] },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '找到公开报告' }] },
+      ],
+      usage: { input_tokens: 120, output_tokens: 30 },
+    }, null, 2),
+  },
+  {
     code: 'langchain_trace',
     label: 'LangChain / LangSmith Trace',
     containers: ['JSON', 'JSONL'],
@@ -130,9 +147,16 @@ export function parseTraceRecord(
       time: typeof root.duration_ms === 'number' && root.duration_ms >= 0,
       usage: typeof record(root.tokens).input === 'number' && typeof record(root.tokens).output === 'number' }
   }
-  if (messages.some(m => arr(record(m).content).some(c => ['tool_use', 'tool_result'].includes(String(record(c).type)))))
-    throw new Error('不再支持 Anthropic 格式')
-  const format = runs.length ? 'langchain_trace' : messages.length ? 'openai_messages' : ''
+  const openAiShape = messages.some(m => ['tool', 'function', 'developer'].includes(String(record(m).role)) || 'tool_calls' in record(m))
+  const nativeBlocks = messages.some(m => arr(record(m).content).some(c =>
+    ['tool_use', 'tool_result', 'thinking', 'redacted_thinking'].includes(String(record(c).type)),
+  ))
+  const isAnthropic = override === 'anthropic_messages' || nativeBlocks || (!openAiShape && (
+    String(root.provider || '').toLowerCase() === 'anthropic' ||
+    String(root.model || '').toLowerCase().startsWith('claude-') ||
+    typeof root.system === 'string' || Array.isArray(root.system)
+  ))
+  const format = messages.length ? (isAnthropic ? 'anthropic_messages' : 'openai_messages') : runs.length ? 'langchain_trace' : ''
   if (!format || (override !== 'auto' && override !== format))
     throw new Error('结构无法识别或与手动指定格式不匹配')
   const events: Event[] = [],
@@ -162,7 +186,40 @@ export function parseTraceRecord(
         `runs[${i}]`,
       )
     })
-  else
+  else if (format === 'anthropic_messages') {
+    const toolNames = new Map<string, string>()
+    messages.forEach((entry, i) => {
+      const msg = record(entry)
+      const role = String(msg.role)
+      if (!['user', 'assistant', 'system'].includes(role)) throw new Error('Anthropic 消息角色无效')
+      if (arr(msg.tool_calls).length) throw new Error('Anthropic 消息必须通过 tool_use 内容块记录调用')
+      const base = `messages[${i}].content`
+      const blocks = typeof msg.content === 'string' ? [{ type: 'text', text: msg.content }] : msg.content
+      if (!Array.isArray(blocks)) throw new Error('Anthropic 消息内容无效')
+      blocks.forEach((block, j) => {
+        const value = record(block)
+        const path = typeof msg.content === 'string' ? base : `${base}[${j}]`
+        if (value.type === 'tool_use') {
+          if (role !== 'assistant' || typeof value.id !== 'string' || !value.id || typeof value.name !== 'string' ||
+              !value.name || !value.input || typeof value.input !== 'object' || Array.isArray(value.input))
+            throw new Error('Anthropic tool_use 字段无效')
+          toolNames.set(value.id, value.name)
+          add({ role, eventType: 'tool_call', toolName: value.name, callId: value.id, inputJson: text(value.input) }, path)
+        } else if (value.type === 'tool_result') {
+          if (role !== 'user' || typeof value.tool_use_id !== 'string' || !value.tool_use_id)
+            throw new Error('Anthropic tool_result 字段无效')
+          const output = Array.isArray(value.content)
+            ? value.content.map(record).filter(c => c.type === 'text' && typeof c.text === 'string').map(c => c.text).join('\n')
+            : typeof value.content === 'string' ? value.content : ''
+          add({ role: 'tool', eventType: 'tool_result', toolName: toolNames.get(value.tool_use_id),
+            callId: value.tool_use_id, outputJson: output }, `${path}.content`)
+        } else if (value.type === 'text' && typeof value.text === 'string') {
+          add({ role, eventType: role === 'user' ? 'user_input' : 'model_response', outputJson: value.text },
+            typeof msg.content === 'string' ? path : `${path}.text`)
+        }
+      })
+    })
+  } else
     messages.forEach((m, i) => {
       const msg = record(m)
       if (!['user', 'assistant', 'tool', 'system', 'developer'].includes(String(msg.role)))
@@ -204,17 +261,21 @@ export function parseTraceRecord(
         )
     })
   const metadata = record(root.metadata),
-    usage = record(root.usage)
+    usage = record(root.usage ?? root.token_totals)
+  const duration = root.duration_ms ?? metadata.duration_ms
+  const hasUsage = (value: Record<string, unknown>) => {
+    const input = value.input_tokens ?? value.prompt_tokens
+    const output = value.output_tokens ?? value.completion_tokens
+    return typeof input === 'number' && input >= 0 && typeof output === 'number' && output >= 0
+  }
+  const turns = arr(root.api_turns)
   return {
     format,
     events,
     paths,
-    time: typeof metadata.duration_ms === 'number' && metadata.duration_ms >= 0,
-    usage:
-      typeof usage.input_tokens === 'number' &&
-      usage.input_tokens >= 0 &&
-      typeof usage.output_tokens === 'number' &&
-      usage.output_tokens >= 0,
+    time: typeof duration === 'number' && duration >= 0,
+    usage: hasUsage(usage) || (format === 'anthropic_messages' && turns.length > 0 &&
+      turns.every(turn => hasUsage(record(record(record(turn).response).usage)))),
   }
 }
 interface Stored extends Sample {
@@ -561,7 +622,7 @@ export function createAgentTraceMock(): AgentTraceApi {
       })
       const summary = {
         fileCount: new Set(rows.map((r) => r.sourceId)).size,
-        supportedFormatCount: 3,
+        supportedFormatCount: traceFormats.length,
         importedFormatCount: new Set(rows.map((r) => r.sourceFormat)).size,
         parsedTraceCount: rows.length,
         failedRecordCount: s?.files.reduce((n, f) => n + f.failedRecordCount, 0) ?? 0,
@@ -873,6 +934,7 @@ export function createAgentTraceMock(): AgentTraceApi {
               if (!u) continue
               const parsed: Stored[] = [],
                 errors: FileRow['errorExamples'] = []
+              const detectedFormats = new Set<string>()
               const candidates = u.name.endsWith('.jsonl')
                 ? u.content.split(/\r?\n/).filter((l) => l.trim())
                 : [u.content]
@@ -896,8 +958,7 @@ export function createAgentTraceMock(): AgentTraceApi {
                     ...(!p.usage ? ['usage_missing'] : []),
                     ...(!linked ? ['call_unlinked'] : []),
                   ]
-                  file.detectedFormat = p.format
-                  file.recognitionState = 'recognized'
+                  detectedFormats.add(p.format)
                   parsed.push({
                     traceId: `${file.fileId}_${i}`,
                     displayId: `NEW-${i + 1}`,
@@ -924,6 +985,8 @@ export function createAgentTraceMock(): AgentTraceApi {
                 }
               })
               s.rows = [...s.rows.filter((r) => r.sourceId !== file.fileId), ...parsed]
+              file.detectedFormat = detectedFormats.size > 1 ? 'mixed' : detectedFormats.values().next().value ?? null
+              file.recognitionState = detectedFormats.size ? 'recognized' : 'unknown'
               file.parsedTraceCount = parsed.length
               file.failedRecordCount = errors.length
               file.errorExamples = errors.slice(0, 3)

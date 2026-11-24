@@ -14,7 +14,7 @@ const modelLabel = { deepseek: 'DeepSeek', internlm: '书生 9B' }
       <el-tag :type="f.category === 'security' ? 'danger' : f.category === 'policy' ? 'warning' : 'info'">{{ group[f.category] }}</el-tag>
       <strong>{{ f.label }}</strong><span v-if="f.eventId && f.outcome !== 'model_judgment'">{{ outcome[f.outcome] || f.outcome }}</span>
       <el-button v-if="f.eventId" link type="primary" @click="$emit('locate', f.eventId, f.callId)">{{ f.competitionStep ? `赛题第 ${f.competitionStep} 步 · ` : '' }}{{ f.eventDisplayId }} · 定位</el-button>
-      <span v-else>整条轨迹</span>
+      <span v-else>{{ f.detectionSource === 'model_fallback' ? '未定位到具体步骤' : '整条轨迹' }}</span>
       <pre v-if="f.evidenceText">{{ f.evidenceText }}</pre>
       <small v-if="f.detectionSource === 'model_fallback'" :title="f.modelId">
         {{ f.ruleId }} · {{ f.modelProvider ? modelLabel[f.modelProvider] : '模型' }}补查

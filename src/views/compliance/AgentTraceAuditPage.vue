@@ -694,7 +694,9 @@ onUnmounted(() => {
                 <div class="at-recognition">
                   <span class="at-recognition-label">识别结果：</span
                   ><el-tag size="large" aria-label="文件格式识别结果">{{
-                    f.detectedFormat
+                    f.detectedFormat === 'mixed'
+                      ? '混合格式'
+                      : f.detectedFormat
                       ? w.formats.find((format) => format.code === f.detectedFormat)?.label || f.detectedFormat
                       : '未识别'
                   }}</el-tag>
